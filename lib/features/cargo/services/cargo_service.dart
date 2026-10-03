@@ -1,14 +1,29 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../models/location_model.dart';
+import '../../../core/network/api_client.dart';
 
 class CargoService {
-  // Stocado Kargo Paneli API Temel Adresi
-  static const String baseUrl = "https://api.kargopaneli.com/v1";
+  final ApiClient _apiClient = ApiClient();
 
-  /// Yeni kargo oluşturma isteği atar.
-  /// API dokümanına uygun olarak [foreign_address] ve [package] objeleri zorunludur.
+  // DİKKAT: Artık parametre olarak token almıyoruz!
+  Future<List<Country>> getCountries() async {
+    try {
+      // Sadece endpoint'i yazıyoruz, gerisini ApiClient hallediyor
+      final response = await _apiClient.get('/locations/countries');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => Country.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Lokasyonlar çekilemedi: $e');
+      return [];
+    }
+  }
+
+  // DİKKAT: Artık parametre olarak token almıyoruz!
   Future<bool> createCargo({
-    required String token,
     required String recipientName,
     required String recipientPhone,
     required String recipientAddressDetails,
@@ -19,21 +34,15 @@ class CargoService {
     required double length,
     required double height,
     required double weight,
-    required String cargoCompanyId, // Örn: "ups", "hepsijet", "ptt-kargo", "surat-kargo", "yurtici-kargo", "kolay-gelsin"
+    required String cargoCompanyId,
   }) async {
-    
-    // Sunucuya gönderilecek tam JSON gövdesi (Request Body)
     final Map<String, dynamic> cargoData = {
-      // TODO: Giriş yapan kullanıcının kendi account_id ve local_id (gönderici adres) verilerini API'den çekip buraya eklemelisin.
-      // Şimdilik sunucunun 400 Bad Request dönmemesi için dokümandaki örnek/test ID'leri kullanıyoruz.
       "account_id": "01JTKX1J501BSD8DAG1A6ZPBPM", 
       "local_id": "01JTKX24X2GCVNHST3HJGJC8JP",   
       "cargo_company_id": cargoCompanyId,
-      "direction": 1, // Kargo Yönü (1 genelde normal gönderimdir)
-      "source": "mobile", // Kargonun mobil uygulamadan oluşturulduğunu belirtir
-      "status": 1, // 1: Aktif, 2: Taslak
-      
-      // Alıcı Adres Objesi
+      "direction": 1,
+      "source": "mobile",
+      "status": 1,
       "foreign_address": {
         "name": recipientName,
         "phone": recipientPhone,
@@ -41,43 +50,23 @@ class CargoService {
         "country_id": "TR", 
         "city_id": cityId,
         "district_id": districtId,
-        "type": 1 // 1: Şahıs/Bireysel, 4: Kurumsal
+        "type": 1 
       },
-      
-      // Paket Ölçüleri Objesi
       "package": {
         "desi": desi,
         "width": width,
         "length": length,
         "height": height,
-        "weight": weight // Gram cinsinden ağırlık
+        "weight": weight
       },
-      
-      "pay_on_delivery": false // Kapıda ödeme seçeneği
+      "pay_on_delivery": false
     };
 
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/cargos'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(cargoData),
-      );
-
-      // Başarılı durum kontrolü (200 OK veya 201 Created)
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('Kargo başarıyla oluşturuldu: ${response.body}');
-        return true;
-      } else {
-        // Hata durumunda konsola detaylı bilgi yazdırıyoruz ki sorunu anında çözelim
-        print('HATA: Kargo reddedildi. Status Kodu: ${response.statusCode}');
-        print('Hata Detayı: ${response.body}');
-        return false;
-      }
+      // Sadece endpoint ve body yolluyoruz
+      final response = await _apiClient.post('/cargos', body: cargoData);
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print('Ağ veya sunucu bağlantı hatası: $e');
       return false;
     }
   }

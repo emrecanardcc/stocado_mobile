@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Eklendi
 import '../../../core/constants/app_colors.dart';
 import '../services/auth_service.dart';
-import '../../cargo/screens/create_cargo_screen.dart';
+import '../providers/auth_provider.dart'; // Eklendi
+import '../../../core/network/api_tester.dart';
 
-
-
-class LoginScreen extends StatefulWidget {
+// ConsumerStatefulWidget'a çevrildi
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
   Future<void> _handleLogin() async {
-    // Boş alan kontrolü
     if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen tüm alanları doldurun.'), backgroundColor: AppColors.warning),
@@ -39,15 +39,15 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (token != null) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Giriş Başarılı!'), backgroundColor: AppColors.secondary),
-  );
-  // Giriş başarılıysa Kargo Oluşturma ekranına yönlendir
-  Navigator.pushReplacement(
-    context, 
-    MaterialPageRoute(builder: (context) => CreateCargoScreen(token: token)),
-  );
-}else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Giriş Başarılı!'), backgroundColor: AppColors.secondary),
+      );
+      
+      // YENİ MANTIK: Token'ı Provider'a ver. 
+      // Provider bunu Secure Storage'a yazar ve main.dart bunu algılayıp ekranı otomatik değiştirir!
+      await ref.read(authProvider.notifier).setToken(token);
+      
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Giriş başarısız. Bilgileri kontrol edin.'), backgroundColor: AppColors.error),
       );
@@ -64,7 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Logo veya İkon
               const Icon(Icons.local_shipping, size: 80, color: AppColors.primary),
               const SizedBox(height: 16),
               const Text(
@@ -80,7 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 48),
               
-              // Form Alanları (Temadan otomatik şekillenir)
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -100,16 +98,38 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 32),
               
-              // Aksiyon Butonu
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleLogin,
                 child: _isLoading
-                    ? const SizedBox(
-                        height: 20, 
-                        width: 20, 
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                      )
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : const Text('Giriş Yap', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(height: 16),
+
+              // API Test Butonu
+              OutlinedButton.icon(
+                onPressed: () {
+                  if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Test için e-posta ve şifre girin.'), backgroundColor: AppColors.warning),
+                    );
+                    return;
+                  }
+                  ApiTester().runAllTests(
+                    _emailController.text.trim(), 
+                    _passwordController.text.trim()
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Testler başladı, Konsolu kontrol edin.'), backgroundColor: AppColors.primary),
+                  );
+                },
+                icon: const Icon(Icons.bug_report),
+                label: const Text('API Test Et (Konsola Yazdır)'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  minimumSize: const Size(double.infinity, 50),
+                ),
               ),
             ],
           ),

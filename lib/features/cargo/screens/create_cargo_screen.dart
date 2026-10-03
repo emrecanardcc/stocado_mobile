@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../services/cargo_service.dart';
+import '../models/location_model.dart'; // Lokasyon modelimizi import ettik
 
 class CreateCargoScreen extends StatefulWidget {
-  final String token;
-
-  const CreateCargoScreen({Key? key, required this.token}) : super(key: key);
+  // DİKKAT: Token parametresi tamamen silindi!
+  const CreateCargoScreen({Key? key}) : super(key: key);
 
   @override
   State<CreateCargoScreen> createState() => _CreateCargoScreenState();
@@ -14,7 +14,14 @@ class CreateCargoScreen extends StatefulWidget {
 class _CreateCargoScreenState extends State<CreateCargoScreen> {
   final CargoService _cargoService = CargoService();
   bool _isLoading = false;
+  bool _isLoadingLocations = true;
   double _calculatedDesi = 0.0;
+
+  // Lokasyon Verileri
+  List<Country> _countries = [];
+  Country? _selectedCountry;
+  City? _selectedCity;
+  District? _selectedDistrict;
 
   // Form Kontrolcüleri
   final TextEditingController _nameController = TextEditingController();
@@ -24,6 +31,24 @@ class _CreateCargoScreenState extends State<CreateCargoScreen> {
   final TextEditingController _lengthController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocations();
+  }
+
+  // API'den ülkeleri, şehirleri ve ilçeleri çeker
+  Future<void> _fetchLocations() async {
+    // DİKKAT: Artık parametre olarak token göndermiyoruz, ApiClient hallediyor!
+    final countries = await _cargoService.getCountries();
+    if (mounted) {
+      setState(() {
+        _countries = countries;
+        _isLoadingLocations = false;
+      });
+    }
+  }
 
   void _calculateDesi() {
     double width = double.tryParse(_widthController.text) ?? 0;
@@ -36,35 +61,34 @@ class _CreateCargoScreenState extends State<CreateCargoScreen> {
   }
 
   Future<void> _submitCargo() async {
-    if (_nameController.text.trim().isEmpty || _calculatedDesi <= 0) {
+    // Şehir ve ilçe seçimi de kontrol ediliyor
+    if (_nameController.text.trim().isEmpty || _calculatedDesi <= 0 || _selectedCity == null || _selectedDistrict == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen geçerli ölçüler ve alıcı bilgisi girin.'), backgroundColor: AppColors.warning),
+        const SnackBar(content: Text('Lütfen il/ilçe dahil tüm zorunlu alanları doldurun.'), backgroundColor: AppColors.warning),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    // Ölçü Değerleri
     double width = double.tryParse(_widthController.text) ?? 0;
     double length = double.tryParse(_lengthController.text) ?? 0;
     double height = double.tryParse(_heightController.text) ?? 0;
     double weight = double.tryParse(_weightController.text) ?? 0;
 
-    // API servisimizi yeni zorunlu parametrelerle çağırıyoruz
+    // DİKKAT: token: widget.token satırı silindi!
     final success = await _cargoService.createCargo(
-      token: widget.token,
       recipientName: _nameController.text.trim(),
       recipientPhone: _phoneController.text.trim(),
       recipientAddressDetails: _addressController.text.trim().isEmpty ? "Açık adres girilmedi" : _addressController.text.trim(),
-      cityId: 34, // TODO: GET locations/cities API'si ile Dropdown'dan alınacak
-      districtId: 123, // TODO: GET locations/districts API'si ile Dropdown'dan alınacak
+      cityId: _selectedCity!.id,         // Statik 34 yerine dinamik ID
+      districtId: _selectedDistrict!.id, // Statik 123 yerine dinamik ID
       desi: _calculatedDesi,
       width: width,
       length: length,
       height: height,
       weight: weight,
-      cargoCompanyId: "ups", // TODO: Kargo firmaları listesinden seçilecek
+      cargoCompanyId: "ups",
     );
 
     setState(() => _isLoading = false);
@@ -83,7 +107,12 @@ class _CreateCargoScreenState extends State<CreateCargoScreen> {
       _lengthController.clear();
       _heightController.clear();
       _weightController.clear();
-      setState(() => _calculatedDesi = 0.0);
+      setState(() {
+        _calculatedDesi = 0.0;
+        _selectedCountry = null;
+        _selectedCity = null;
+        _selectedDistrict = null;
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('İşlem başarısız. Lütfen konsolu kontrol edin.'), backgroundColor: AppColors.error),
@@ -107,7 +136,9 @@ class _CreateCargoScreenState extends State<CreateCargoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Yeni Kargo Oluştur')),
-      body: SingleChildScrollView(
+      body: _isLoadingLocations 
+        ? const Center(child: CircularProgressIndicator()) 
+        : SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,6 +149,56 @@ class _CreateCargoScreenState extends State<CreateCargoScreen> {
             const SizedBox(height: 12),
             TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telefon')),
             const SizedBox(height: 12),
+            
+            // Dinamik Ülke Seçimi
+            DropdownButtonFormField<Country>(
+              decoration: const InputDecoration(labelText: 'Ülke'),
+              value: _selectedCountry,
+              items: _countries.map((country) => DropdownMenuItem(value: country, child: Text(country.name))).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedCountry = value;
+                  _selectedCity = null;     
+                  _selectedDistrict = null;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                // Dinamik İl Seçimi
+                Expanded(
+                  child: DropdownButtonFormField<City>(
+                    decoration: const InputDecoration(labelText: 'İl'),
+                    value: _selectedCity,
+                    items: _selectedCountry?.cities.map((city) => DropdownMenuItem(value: city, child: Text(city.name))).toList() ?? [],
+                    onChanged: _selectedCountry == null ? null : (value) {
+                      setState(() {
+                        _selectedCity = value;
+                        _selectedDistrict = null; 
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Dinamik İlçe Seçimi
+                Expanded(
+                  child: DropdownButtonFormField<District>(
+                    decoration: const InputDecoration(labelText: 'İlçe'),
+                    value: _selectedDistrict,
+                    items: _selectedCity?.districts.map((district) => DropdownMenuItem(value: district, child: Text(district.name))).toList() ?? [],
+                    onChanged: _selectedCity == null ? null : (value) {
+                      setState(() {
+                        _selectedDistrict = value;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
             TextField(
               controller: _addressController,
               maxLines: 2,
