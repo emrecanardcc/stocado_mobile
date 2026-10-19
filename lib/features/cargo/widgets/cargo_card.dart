@@ -134,21 +134,57 @@ class CargoCard extends StatelessWidget {
                   )
                 else
                   const SizedBox(),
-                if (cargo.payOnDelivery)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.amber.shade400),
-                    ),
-                    child: const Text(
-                      'Kapıda Ödemeli',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber),
-                    ),
-                  ),
               ],
             ),
+
+            // Kapıda Ödeme Detay Şeridi (Varsa)
+            if (cargo.payOnDelivery) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.payments_outlined, size: 16, color: Colors.amber.shade800),
+                        const SizedBox(width: 6),
+                        Text(
+                          'K.Ö: ₺ ${cargo.payOnDeliveryAmount?.toStringAsFixed(2) ?? '0,00'}',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                        ),
+                        if (cargo.payOnDeliveryTypeText != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '(${cargo.payOnDeliveryTypeText})',
+                            style: TextStyle(fontSize: 11, color: Colors.amber.shade800),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (cargo.payOnDeliveryStatusText != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.amber.shade300),
+                        ),
+                        child: Text(
+                          cargo.payOnDeliveryStatusText!,
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
 
             // Son Hareket Açıklaması (Varsa)
             if (cargo.latestTransaction != null && cargo.latestTransaction!.description.isNotEmpty) ...[

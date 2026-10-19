@@ -72,6 +72,9 @@ class CargoModel {
   final int status; // 0 = taslak, 1 = aktif vb.
   final bool payOnDelivery;
   final double? payOnDeliveryAmount;
+  final int? payOnDeliveryType;
+  final int? payOnDeliveryStatus;
+  final DateTime? payOnDeliveryOffsetDate;
   final double? totalPrice;
   final double? userDesi;
   final double? validDesi;
@@ -93,6 +96,9 @@ class CargoModel {
     required this.status,
     required this.payOnDelivery,
     this.payOnDeliveryAmount,
+    this.payOnDeliveryType,
+    this.payOnDeliveryStatus,
+    this.payOnDeliveryOffsetDate,
     this.totalPrice,
     this.userDesi,
     this.validDesi,
@@ -126,6 +132,31 @@ class CargoModel {
     }
   }
 
+  String? get payOnDeliveryTypeText {
+    if (payOnDeliveryType == 1) return 'Nakit';
+    if (payOnDeliveryType == 2) return 'Kredi Kartı';
+    return null;
+  }
+
+  String? get payOnDeliveryStatusText {
+    switch (payOnDeliveryStatus) {
+      case 0:
+        return 'Tahsil Edilecek';
+      case 1:
+        return 'Tahsil Edildi';
+      case 2:
+        return 'Stocado\'da';
+      case 3:
+        return 'Tamamlandı';
+      case 4:
+        return 'İptal';
+      case 5:
+        return 'Firma Ödedi';
+      default:
+        return null;
+    }
+  }
+
   CargoModel copyWith({
     CargoParty? receiver,
     CargoParty? sender,
@@ -139,6 +170,9 @@ class CargoModel {
       status: status,
       payOnDelivery: payOnDelivery,
       payOnDeliveryAmount: payOnDeliveryAmount,
+      payOnDeliveryType: payOnDeliveryType,
+      payOnDeliveryStatus: payOnDeliveryStatus,
+      payOnDeliveryOffsetDate: payOnDeliveryOffsetDate,
       totalPrice: totalPrice,
       userDesi: userDesi,
       validDesi: validDesi,
@@ -181,6 +215,15 @@ class CargoModel {
       payOnDeliveryAmount: (json['pay_on_delivery_amount'] is num)
           ? (json['pay_on_delivery_amount'] as num).toDouble()
           : double.tryParse(json['pay_on_delivery_amount']?.toString() ?? ''),
+      payOnDeliveryType: json['pay_on_delivery_type'] is int
+          ? json['pay_on_delivery_type']
+          : int.tryParse(json['pay_on_delivery_type']?.toString() ?? ''),
+      payOnDeliveryStatus: json['pay_on_delivery_status'] is int
+          ? json['pay_on_delivery_status']
+          : int.tryParse(json['pay_on_delivery_status']?.toString() ?? ''),
+      payOnDeliveryOffsetDate: json['pay_on_delivery_offset_date'] != null
+          ? DateTime.tryParse(json['pay_on_delivery_offset_date'].toString())
+          : null,
       totalPrice: (json['total_price'] is num)
           ? (json['total_price'] as num).toDouble()
           : double.tryParse(json['total_price']?.toString() ?? ''),

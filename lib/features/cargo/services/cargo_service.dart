@@ -259,6 +259,8 @@ class CargoService {
             {"name": "pay_on_delivery"},
           {"name": "pay_on_delivery_amount"},
           {"name": "pay_on_delivery_type"},
+          {"name": "pay_on_delivery_status"},
+          {"name": "pay_on_delivery_offset_date"},
           {"name": "total_price"},
           {"name": "user_desi"},
           {"name": "valid_desi"},

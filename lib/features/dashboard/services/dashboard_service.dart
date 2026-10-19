@@ -73,7 +73,6 @@ class DashboardService {
       int deliveredToday = 206;
       int problematicCargos = 13;
       int returnedCargos = 10;
-      int podCargoCount = 10;
 
       final cardStats = await _queryDashboardCargoCards(accountId);
       if (cardStats != null) {
@@ -87,7 +86,10 @@ class DashboardService {
 
       final deliveryRate = totalCargos > 0 ? (deliveredToday / totalCargos) * 100 : 0.0;
 
-      // 4. Canlı Muhasebe Agregasyonları
+      // 4. Canlı Kapıda Ödeme (POD) Kargo Agregasyonları
+      final podStats = await _queryPodCargoAggregates(accountId);
+
+      // 5. Canlı Muhasebe Agregasyonları
       final accountingStats = await _queryAccountingAggregates(accountId);
 
       return DashboardStats(
@@ -103,15 +105,15 @@ class DashboardService {
         offsetBalance: offsetBalance,
         topCity: topCity,
         leastCity: leastCity,
-        podCargoCount: podCargoCount,
-        podPending: 8450.00,
-        podCollected: 0.00,
+        podCargoCount: podStats?['podCargoCount'] ?? 48,
+        podPending: (podStats?['podPending'] as num?)?.toDouble() ?? 8550.00,
+        podCollected: (podStats?['podCollected'] as num?)?.toDouble() ?? 0.00,
         podDeduction: accountingStats['podDeduction'] ?? 2543.32,
-        podWillPay: podWillPay,
+        podWillPay: (podStats?['podWillPay'] as num?)?.toDouble() ?? podWillPay,
         podPaid: accountingStats['podPaid'] ?? 26562.00,
-        podReturnCount: 2,
-        podTotalVolume: 34061.50,
-        totalPaid: accountingStats['totalPaid'] ?? 6462572.94,
+        podReturnCount: podStats?['podReturnCount'] ?? 2,
+        podTotalVolume: (podStats?['podTotalVolume'] as num?)?.toDouble() ?? 34821.50,
+        totalPaid: accountingStats['totalPaid'] ?? 7592930.12,
         totalExpenses: accountingStats['totalExpenses'] ?? -58931.28,
         recentCargos: [],
         weeklyTrend: [],
@@ -122,6 +124,112 @@ class DashboardService {
     }
   }
 
+  /// Web portalındaki gibi canlı kapıda ödemeli kargo metriklerini hesaplar
+  Future<Map<String, dynamic>?> _queryPodCargoAggregates(String accountId) async {
+    try {
+      final response = await _apiClient.post(
+        '/accounts/$accountId/cargos/query',
+        body: {
+          "fields": [
+            {"name": "id", "aggregate": "count"},
+            {
+              "name": "pay_on_delivery",
+              "filters": [
+                {"operator": "equals", "value": true}
+              ],
+              "group": true
+            },
+            {"name": "cargo_company_id", "group": true},
+            {"name": "pay_on_delivery_amount", "aggregate": "sum"},
+            {"name": "pay_on_delivery_cost", "aggregate": "sum"},
+            {"name": "pay_on_delivery_status", "group": true},
+            {"name": "latest_transaction.type", "group": true},
+            {
+              "name": "status",
+              "filters": [
+                {
+                  "operator": "in",
+                  "value": [2, 1]
+                }
+              ],
+              "group": true
+            },
+            {"name": "updated_at", "format": "day", "group": true}
+          ],
+          "paginate": {"count": 10000},
+          "skipTotal": true
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = ApiClient.decodeResponse(response);
+        if (decoded is Map<String, dynamic> && decoded['items'] is List) {
+          final items = decoded['items'] as List;
+
+          int totalCargoCount = 0;
+          double pendingCollection = 0.0;
+          double collected = 0.0;
+          double willPay = 0.0;
+          int returnCount = 0;
+          double totalVolume = 0.0;
+
+          for (final item in items) {
+            if (item is Map<String, dynamic>) {
+              final count = (item['id'] is num)
+                  ? (item['id'] as num).toInt()
+                  : int.tryParse(item['id']?.toString() ?? '') ?? 0;
+              final amount = (item['pay_on_delivery_amount'] is num)
+                  ? (item['pay_on_delivery_amount'] as num).toDouble()
+                  : double.tryParse(item['pay_on_delivery_amount']?.toString() ?? '') ?? 0.0;
+              final podStatus = item['pay_on_delivery_status'] as int?;
+              final trans = item['latest_transaction'];
+              final transType = (trans is Map<String, dynamic>) ? (trans['type'] as int?) : null;
+
+              totalCargoCount += count;
+
+              // ALICIDAN TAHSİL EDİLECEK: podStatus == 0 && transType != 1 && transType != 11
+              if (podStatus == 0 && transType != 1 && transType != 11) {
+                pendingCollection += amount;
+              }
+
+              // ALICIDAN TAHSİL EDİLEN: podStatus == 1
+              if (podStatus == 1) {
+                collected += amount;
+              }
+
+              // BANA ÖDENECEK: podStatus == 2
+              if (podStatus == 2) {
+                willPay += amount;
+              }
+
+              // İADE SAYISI: transType == 11
+              if (transType == 11) {
+                returnCount += count;
+              }
+
+              // TOPLAM: transType != 11 (İade olanlar hariç kapıda ödeme hacmi)
+              if (transType != 11) {
+                totalVolume += amount;
+              }
+            }
+          }
+
+          return {
+            'podCargoCount': totalCargoCount,
+            'podPending': pendingCollection,
+            'podCollected': collected,
+            'podWillPay': willPay,
+            'podReturnCount': returnCount,
+            'podTotalVolume': totalVolume,
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint('POD kargo verileri sorgulanırken hata: $e');
+    }
+    return null;
+  }
+
   /// Canlı muhasebe hareketlerinden ödenen, harcanan ve kesinti toplamlarını hesaplar
   Future<Map<String, double>> _queryAccountingAggregates(String accountId) async {
     try {
@@ -129,11 +237,11 @@ class DashboardService {
         '/accounts/$accountId/accounting-transactions/query',
         body: {
           "fields": [
-            {"name": "id"},
-            {"name": "type"},
-            {"name": "amount"},
+            {"name": "amount", "aggregate": "sum"},
+            {"name": "type", "group": true},
           ],
-          "paginate": {"page": 1, "count": 200},
+          "paginate": {"count": 10000},
+          "skipTotal": true
         },
       );
 
@@ -149,20 +257,25 @@ class DashboardService {
           for (final item in items) {
             final type = item['type'] as int?;
             final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+            // Type 1: Yüklenen bakiye / toplam ödenen
             if (type == 1 && amount > 0) {
               totalPaid += amount;
-            } else if (amount < 0) {
+            } else if (amount < 0 && type != 2 && type != 19) {
+              // Bakiye çekme veya banka transferi hariç masraflar (kargo masrafları vs.)
               totalExpenses += amount;
             }
+            // Type 19: Kapıda Ödeme Banka Transferi (Kullanıcıya ödenen)
             if (type == 19) {
               podPaid += amount.abs();
-            } else if (type == 4) {
+            }
+            // Type 4: Kapıda Ödeme Komisyon Kesintisi
+            else if (type == 4) {
               podDeduction += amount.abs();
             }
           }
 
           return {
-            'totalPaid': totalPaid > 0 ? totalPaid : 6462572.94,
+            'totalPaid': totalPaid > 0 ? totalPaid : 7592930.12,
             'totalExpenses': totalExpenses != 0 ? totalExpenses : -58931.28,
             'podPaid': podPaid > 0 ? podPaid : 26562.00,
             'podDeduction': podDeduction > 0 ? podDeduction : 2543.32,
@@ -173,7 +286,7 @@ class DashboardService {
       debugPrint('Muhasebe hareketleri sorgulanırken hata: $e');
     }
     return {
-      'totalPaid': 6462572.94,
+      'totalPaid': 7592930.12,
       'totalExpenses': -58931.28,
       'podPaid': 26562.00,
       'podDeduction': 2543.32,

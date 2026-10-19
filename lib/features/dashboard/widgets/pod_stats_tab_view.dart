@@ -35,12 +35,12 @@ class PodStatsTabView extends StatelessWidget {
               icon: Icons.local_shipping_outlined,
             ),
             SmallStatCard(
-              title: 'TAHSİL EDİLECEK',
+              title: 'ALICIDAN TAHSİL EDİLECEK',
               value: '₺ ${stats != null ? stats!.podPending.toStringAsFixed(2) : '0,00'}',
               icon: Icons.pending_actions,
             ),
             SmallStatCard(
-              title: 'TAHSİL EDİLEN',
+              title: 'ALICIDAN TAHSİL EDİLEN',
               value: '₺ ${stats != null ? stats!.podCollected.toStringAsFixed(2) : '0,00'}',
               icon: Icons.check_circle_outline,
             ),
