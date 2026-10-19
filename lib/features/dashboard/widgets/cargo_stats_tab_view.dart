@@ -16,78 +16,125 @@ class CargoStatsTabView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Paket Durumları',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Paket Durumları',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceSecondary,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textSecondary),
+                  SizedBox(width: 4),
+                  Text(
+                    'Tüm Zamanlar',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
 
-        // 6'lı Sayaç Gridi
+        // 6'lı Sayaç Gridi (Web Paneli Birebir Eşleşmesi)
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          childAspectRatio: 1.5,
+          childAspectRatio: 1.85,
           children: [
             MetricCard(
               title: 'BEKLEYEN PAKETLER',
               count: '${stats?.pendingCargos ?? 0}',
-              icon: Icons.hourglass_top,
-              color: Colors.amber.shade700,
+              icon: Icons.inventory_2_outlined,
+              color: AppColors.warning,
+              backgroundColor: AppColors.warningLight,
             ),
             MetricCard(
               title: 'YOLDA OLAN PAKETLER',
               count: '${stats?.activeCargos ?? 0}',
-              icon: Icons.local_shipping,
-              color: Colors.blue.shade700,
+              icon: Icons.local_shipping_outlined,
+              color: AppColors.info,
+              backgroundColor: AppColors.infoLight,
             ),
             MetricCard(
               title: 'TESLİM EDİLEN PAKETLER',
               count: '${stats?.deliveredToday ?? 0}',
-              icon: Icons.check_circle,
-              color: Colors.green.shade700,
+              icon: Icons.check_circle_outline_rounded,
+              color: AppColors.secondary,
+              backgroundColor: AppColors.secondaryLight,
             ),
             MetricCard(
               title: 'SORUNLU PAKETLER',
               count: '${stats?.problematicCargos ?? 0}',
               icon: Icons.warning_amber_rounded,
               color: AppColors.error,
+              backgroundColor: AppColors.errorLight,
             ),
             MetricCard(
               title: 'GERİ DÖNEN PAKETLER',
               count: '${stats?.returnedCargos ?? 0}',
-              icon: Icons.assignment_return,
-              color: Colors.purple.shade700,
+              icon: Icons.replay_rounded,
+              color: AppColors.returned,
+              backgroundColor: AppColors.returnedLight,
             ),
             MetricCard(
               title: 'TÜMÜ',
               count: '${stats?.totalCargos ?? 0}',
-              icon: Icons.inventory_2,
+              icon: Icons.format_list_bulleted_rounded,
               color: AppColors.primary,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.08),
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
 
         // Şehir Analiz Kartları
         Row(
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade200),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppColors.softShadow,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('EN ÇOK KARGO ALAN', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(stats?.topCity ?? 'Eskişehir / 1182', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    const Row(
+                      children: [
+                        Icon(Icons.trending_up, size: 14, color: AppColors.secondary),
+                        SizedBox(width: 4),
+                        Text(
+                          'EN ÇOK KARGO ALAN',
+                          style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      stats?.topCity ?? 'Eskişehir / 1182',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                    ),
                   ],
                 ),
               ),
@@ -95,18 +142,31 @@ class CargoStatsTabView extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade200),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppColors.softShadow,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('EN AZ KARGO ALAN', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(stats?.leastCity ?? 'Tokat / 1', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    const Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
+                        SizedBox(width: 4),
+                        Text(
+                          'EN AZ KARGO ALAN',
+                          style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      stats?.leastCity ?? 'Tokat / 1',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                    ),
                   ],
                 ),
               ),

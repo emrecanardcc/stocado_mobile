@@ -13,17 +13,38 @@ class CargoEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox_outlined, size: 72, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surfaceSecondary,
+                border: Border.all(color: AppColors.border, width: 1.5),
+              ),
+              child: const Icon(
+                Icons.inventory_2_outlined,
+                size: 38,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 18),
             const Text(
-              'Kayıtlı Kargo Bulunamadı',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              'Kargo Bulunamadı',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Bu sekmede listelenecek bir kargo bulunmuyor veya arama kriterinize uygun sonuç yok.',
+              'Bu sekmede listelenecek kargo kaydı bulunmuyor ya da arama kriterlerinize uygun sonuç yok.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
             ),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
 import '../providers/create_cargo_provider.dart';
@@ -115,6 +116,47 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     _podAmountController.clear();
   }
 
+  void _showResetConfirmation(CreateCargoNotifier notifier) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.restart_alt_rounded, color: AppColors.warning, size: 22),
+            SizedBox(width: 8),
+            Text('Formu Temizle', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: const Text(
+          'Girdiğiniz tüm kargo ve alıcı bilgileri sıfırlanacaktır. Devam etmek istiyor musunuz?',
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Vazgeç', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.warning,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(100, 40),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _clearAllFormFields();
+              notifier.reset();
+            },
+            child: const Text('Temizle', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(createCargoProvider);
@@ -122,21 +164,26 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     final productsState = ref.watch(productsProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Yeni Kargo Oluştur'),
+        title: const Row(
+          children: [
+            Icon(Icons.add_box_outlined, size: 20),
+            SizedBox(width: 8),
+            Text('Yeni Kargo Oluştur'),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.restart_alt_rounded),
             tooltip: 'Formu Temizle',
-            onPressed: () {
-              _clearAllFormFields();
-              notifier.reset();
-            },
+            onPressed: () => _showResetConfirmation(notifier),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: (state.isLoadingCities && state.cities.isEmpty)
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
               behavior: HitTestBehavior.opaque,
@@ -146,6 +193,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(16.0),
+                      physics: const AlwaysScrollableScrollPhysics(),
                       child: _buildCurrentStep(state, notifier, productsState.products),
                     ),
                   ),
@@ -205,7 +253,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           notifier: notifier,
         );
       default:
-        return const SizedBox();
+        return const SizedBox.shrink();
     }
   }
 }

@@ -15,7 +15,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-
   final Set<int> _loadedTabs = {0};
 
   Widget _buildScreen(int index) {
@@ -38,6 +37,62 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  void _onTabSelected(int index) {
+    setState(() {
+      _currentIndex = index;
+      _loadedTabs.add(index);
+    });
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+  }) {
+    final isSelected = _currentIndex == index;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onTabSelected(index),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  isSelected ? activeIcon : icon,
+                  size: 22,
+                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,46 +100,51 @@ class _MainScreenState extends State<MainScreen> {
         index: _currentIndex,
         children: List.generate(5, _buildScreen),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-            _loadedTabs.add(index);
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey,
-        selectedFontSize: 11,
-        unselectedFontSize: 10,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
-            label: 'Özet',
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: AppColors.border, width: 1),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_box_outlined),
-            activeIcon: Icon(Icons.add_box),
-            label: 'Yeni Kargo',
+          boxShadow: AppColors.softShadow,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              _buildNavItem(
+                index: 0,
+                icon: Icons.grid_view_outlined,
+                activeIcon: Icons.grid_view_rounded,
+                label: 'Özet',
+              ),
+              _buildNavItem(
+                index: 1,
+                icon: Icons.add_circle_outline_rounded,
+                activeIcon: Icons.add_circle_rounded,
+                label: 'Yeni Kargo',
+              ),
+              _buildNavItem(
+                index: 2,
+                icon: Icons.local_shipping_outlined,
+                activeIcon: Icons.local_shipping_rounded,
+                label: 'Kargolar',
+              ),
+              _buildNavItem(
+                index: 3,
+                icon: Icons.inventory_2_outlined,
+                activeIcon: Icons.inventory_2_rounded,
+                label: 'Ürünler',
+              ),
+              _buildNavItem(
+                index: 4,
+                icon: Icons.receipt_long_outlined,
+                activeIcon: Icons.receipt_long_rounded,
+                label: 'Fiyatlar',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_shipping_outlined),
-            activeIcon: Icon(Icons.local_shipping),
-            label: 'Kargolar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory_2_outlined),
-            activeIcon: Icon(Icons.inventory_2),
-            label: 'Ürünler',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.price_change_outlined),
-            activeIcon: Icon(Icons.price_change),
-            label: 'Fiyatlar',
-          ),
-        ],
+        ),
       ),
     );
   }

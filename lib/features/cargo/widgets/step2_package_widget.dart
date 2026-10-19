@@ -48,30 +48,39 @@ class Step2PackageWidget extends StatelessWidget {
       children: [
         // "Ürün Seçin" Dropdown
         const Text(
-          'Ürün Seçimi (Opsiyonel)',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary),
+          'Kayıtlı Ürün Seçimi (Opsiyonel)',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.amber.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.amber.shade200),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.softShadow,
           ),
           child: Row(
             children: [
+              const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+              const SizedBox(width: 10),
               Expanded(
                 child: DropdownButton<ProductModel?>(
                   isExpanded: true,
                   underline: const SizedBox(),
-                  hint: Text(products.isEmpty ? 'Kayıtlı ürün bulunamadı veya yükleniyor...' : 'Ürünlerim sayfasından bir ürün seçin...'),
+                  hint: Text(
+                    products.isEmpty
+                        ? 'Kayıtlı ürün bulunamadı veya yükleniyor...'
+                        : 'Ürünlerim sayfasından bir ürün seçin...',
+                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
                   value: matchedProduct,
                   items: products.map((prod) {
                     return DropdownMenuItem<ProductModel?>(
                       value: prod,
                       child: Text(
                         '${prod.name} (${prod.desi.toStringAsFixed(1)} Desi - ₺${prod.price.toStringAsFixed(2)})',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                       ),
                     );
@@ -87,7 +96,7 @@ class Step2PackageWidget extends StatelessWidget {
               ),
               if (matchedProduct != null)
                 IconButton(
-                  icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+                  icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
                   tooltip: 'Ürün Seçimini Temizle',
                   onPressed: onClearProduct,
                 ),
@@ -95,152 +104,175 @@ class Step2PackageWidget extends StatelessWidget {
           ),
         ),
         if (matchedProduct != null) ...[
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.check_circle_outline, size: 14, color: AppColors.secondary),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  'Seçili Ürün: ${matchedProduct.name} - Boyutlar, desi ve tutar otomatik aktarıldı.',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.secondaryLight.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.secondary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Seçili Ürün: ${matchedProduct.name} (Boyutlar, desi ve tutar otomatik dolduruldu)',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF065F46)),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
         const SizedBox(height: 20),
 
-        const Text(
-          'Paket ve Sipariş Detayları',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: orderNumberController,
-          decoration: InputDecoration(
-            labelText: 'Sipariş Numarası (Opsiyonel)',
-            prefixIcon: const Icon(Icons.confirmation_number_outlined),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-          onChanged: (val) => notifier.updatePackageNotes(orderNumber: val),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: descriptionController,
-          decoration: InputDecoration(
-            labelText: 'Açıklama (Örn: Ayakkabı kutusu)',
-            prefixIcon: const Icon(Icons.description_outlined),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-          onChanged: (val) => notifier.updatePackageNotes(description: val),
-        ),
-        const SizedBox(height: 24),
-
-        // Desi ve Boyut Girişi
-        const Text(
-          'Boyutlar ve Desi Bilgisi',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: widthController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'En (cm)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onChanged: (val) => notifier.updatePackageDimensions(width: double.tryParse(val) ?? 0),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: lengthController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Boy (cm)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onChanged: (val) => notifier.updatePackageDimensions(length: double.tryParse(val) ?? 0),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: heightController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Yükseklik (cm)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onChanged: (val) => notifier.updatePackageDimensions(height: double.tryParse(val) ?? 0),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: weightController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Ağırlık (Gram)',
-                  hintText: 'Örn: 1500',
-                  prefixIcon: const Icon(Icons.scale_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onChanged: (val) => notifier.updatePackageDimensions(weight: double.tryParse(val) ?? 0),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: desiController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Doğrudan Desi (Opsiyonel)',
-                  prefixIcon: const Icon(Icons.straighten),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onChanged: (val) {
-                  final d = double.tryParse(val);
-                  if (d != null) {
-                    notifier.updatePackageDimensions(directDesi: d);
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        // Canlı Desi Gösterge Kartı
+        // Paket ve Sipariş Detayları Kartı
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.softShadow,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const Text(
+                'Paket ve Sipariş Detayları',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: orderNumberController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Sipariş Numarası (Opsiyonel)',
+                  prefixIcon: Icon(Icons.confirmation_number_outlined, size: 20),
+                ),
+                onChanged: (val) => notifier.updatePackageNotes(orderNumber: val),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Açıklama (Örn: Ayakkabı kutusu)',
+                  prefixIcon: Icon(Icons.description_outlined, size: 20),
+                ),
+                onChanged: (val) => notifier.updatePackageNotes(description: val),
+              ),
+              const SizedBox(height: 20),
+
+              // Desi ve Boyut Girişi
+              const Text(
+                'Boyutlar ve Desi Bilgisi',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  Text('Hesaplanan Desi', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                  Text('(En x Boy x Yükseklik) / 3000', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  Expanded(
+                    child: TextField(
+                      controller: widthController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'En (cm)',
+                      ),
+                      onChanged: (val) => notifier.updatePackageDimensions(width: double.tryParse(val) ?? 0),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: lengthController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Boy (cm)',
+                      ),
+                      onChanged: (val) => notifier.updatePackageDimensions(length: double.tryParse(val) ?? 0),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: heightController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Yükseklik',
+                      ),
+                      onChanged: (val) => notifier.updatePackageDimensions(height: double.tryParse(val) ?? 0),
+                    ),
+                  ),
                 ],
               ),
-              Text(
-                state.desi.toStringAsFixed(2),
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.primary),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: weightController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Ağırlık (Gram)',
+                        hintText: 'Örn: 1500',
+                        prefixIcon: Icon(Icons.scale_outlined, size: 20),
+                      ),
+                      onChanged: (val) => notifier.updatePackageDimensions(weight: double.tryParse(val) ?? 0),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: desiController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Doğrudan Desi',
+                        prefixIcon: Icon(Icons.straighten_rounded, size: 20),
+                      ),
+                      onChanged: (val) {
+                        final d = double.tryParse(val);
+                        if (d != null) {
+                          notifier.updatePackageDimensions(directDesi: d);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Canlı Desi Gösterge Kartı
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hesaplanan Desi Değeri',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Standart Kargo Formülü: (E x B x Y) / 3000',
+                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      state.desi.toStringAsFixed(2),
+                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.primary),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

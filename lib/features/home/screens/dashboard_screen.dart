@@ -37,22 +37,69 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Çıkış Yap'),
-        content: const Text('Oturumunuzu kapatmak istediğinize emin misiniz?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout, color: AppColors.error, size: 22),
+            SizedBox(width: 8),
+            Text('Çıkış Yap', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: const Text(
+          'Oturumunuzu kapatmak istediğinize emin misiniz? Tekrar giriş yapmanız gerekecektir.',
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('İptal'),
+            child: const Text('Vazgeç', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(100, 42),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               ref.read(authProvider.notifier).logout();
             },
-            child: const Text('Çıkış Yap'),
+            child: const Text('Çıkış Yap', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSegmentedTabItem({required int index, required String title}) {
+    final isSelected = _tabController.index == index;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          _tabController.animateTo(index);
+          setState(() {});
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isSelected ? AppColors.softShadow : null,
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -69,38 +116,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
     final podReceivable = stats?.podWillPay ?? 0.0;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Stocado Paneli'),
+        titleSpacing: 16,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                height: 20,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.local_shipping,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text('Stocado Paneli'),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: dashboardState.isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded),
             tooltip: 'Yenile',
-            onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
+            onPressed: dashboardState.isLoading ? null : () => ref.read(dashboardProvider.notifier).refresh(),
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout_rounded),
             tooltip: 'Çıkış Yap',
             onPressed: _showLogoutDialog,
           ),
+          const SizedBox(width: 4),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white60,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'Kargolar'),
-            Tab(text: 'Kapıda Ödemeler'),
-            Tab(text: 'Finans'),
-          ],
-        ),
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
+        color: AppColors.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -110,7 +177,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 podReceivable: podReceivable,
                 isLoading: dashboardState.isLoading,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
+
+              // Modern Pill-Style Segmented Tab Seçici
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    _buildSegmentedTabItem(index: 0, title: 'Kargolar'),
+                    _buildSegmentedTabItem(index: 1, title: 'Kapıda Ödemeler'),
+                    _buildSegmentedTabItem(index: 2, title: 'Finans'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // Sekme İçerikleri
               AnimatedBuilder(
@@ -124,10 +209,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                     case 2:
                       return FinanceStatsTabView(stats: stats, currentBalance: currentBalance);
                     default:
-                      return const SizedBox();
+                      return const SizedBox.shrink();
                   }
                 },
               ),
+              const SizedBox(height: 24),
             ],
           ),
         ),

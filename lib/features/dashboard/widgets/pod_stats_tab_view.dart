@@ -18,7 +18,7 @@ class PodStatsTabView extends StatelessWidget {
       children: [
         const Text(
           'Tahsilat Verileri',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 12),
         GridView.count(
@@ -27,7 +27,7 @@ class PodStatsTabView extends StatelessWidget {
           crossAxisCount: 3,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
-          childAspectRatio: 1.1,
+          childAspectRatio: 1.15,
           children: [
             SmallStatCard(
               title: 'KARGO SAYISI',
@@ -35,14 +35,14 @@ class PodStatsTabView extends StatelessWidget {
               icon: Icons.local_shipping_outlined,
             ),
             SmallStatCard(
-              title: 'ALICIDAN TAHSİL EDİLECEK',
+              title: 'TAHSİL EDİLECEK',
               value: '₺ ${stats != null ? stats!.podPending.toStringAsFixed(2) : '0,00'}',
-              icon: Icons.pending_actions,
+              icon: Icons.pending_actions_rounded,
             ),
             SmallStatCard(
-              title: 'ALICIDAN TAHSİL EDİLEN',
+              title: 'TAHSİL EDİLEN',
               value: '₺ ${stats != null ? stats!.podCollected.toStringAsFixed(2) : '0,00'}',
-              icon: Icons.check_circle_outline,
+              icon: Icons.check_circle_outline_rounded,
             ),
           ],
         ),
@@ -50,7 +50,7 @@ class PodStatsTabView extends StatelessWidget {
 
         const Text(
           'Ödeme Durumu',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 12),
         GridView.count(
@@ -59,40 +59,59 @@ class PodStatsTabView extends StatelessWidget {
           crossAxisCount: 3,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
-          childAspectRatio: 1.1,
+          childAspectRatio: 1.15,
           children: [
             SmallStatCard(
               title: 'TOPLAM KESİNTİ',
               value: '₺ ${stats != null ? stats!.podDeduction.toStringAsFixed(2) : '0,00'}',
-              icon: Icons.percent,
+              icon: Icons.percent_rounded,
             ),
             SmallStatCard(
               title: 'BANA ÖDENECEK',
               value: '₺ ${stats != null ? stats!.podWillPay.toStringAsFixed(2) : '0,00'}',
-              icon: Icons.hourglass_bottom,
+              icon: Icons.hourglass_bottom_rounded,
             ),
             SmallStatCard(
               title: 'BANA ÖDENEN',
               value: '₺ ${stats != null ? stats!.podPaid.toStringAsFixed(2) : '0,00'}',
-              icon: Icons.done_all,
+              icon: Icons.done_all_rounded,
               isHighlight: true,
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
 
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade200),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.softShadow,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('İade Sayısı: ${stats?.podReturnCount ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.error)),
-              Text('Toplam K.Ö Hacmi: ₺ ${stats != null ? stats!.podTotalVolume.toStringAsFixed(2) : '0,00'}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+              Row(
+                children: [
+                  const Icon(Icons.reply_all_rounded, size: 16, color: AppColors.error),
+                  const SizedBox(width: 6),
+                  Text(
+                    'İade Sayısı: ${stats?.podReturnCount ?? 0}',
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 13),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.account_balance_outlined, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Toplam K.Ö Hacmi: ₺ ${stats != null ? stats!.podTotalVolume.toStringAsFixed(2) : '0,00'}',
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary, fontSize: 13),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

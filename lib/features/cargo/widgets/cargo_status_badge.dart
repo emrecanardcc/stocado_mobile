@@ -13,48 +13,69 @@ class CargoStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color statusColor;
-    Color statusBgColor;
+    Color dotColor;
+    Color textColor;
+    Color bgColor;
 
     switch (status) {
-      case 0: // Bekleyen / Oluşturuldu
-        statusColor = Colors.grey.shade800;
-        statusBgColor = Colors.grey.shade200;
+      case 0: // Taslak / Bekleyen
+        dotColor = AppColors.warning;
+        textColor = const Color(0xFFB45309);
+        bgColor = AppColors.warningLight;
         break;
       case 1: // Yolda / Transfer
-        statusColor = Colors.blue.shade800;
-        statusBgColor = Colors.blue.shade100;
+        dotColor = AppColors.info;
+        textColor = const Color(0xFF1D4ED8);
+        bgColor = AppColors.infoLight;
         break;
       case 2: // Dağıtımda
-        statusColor = Colors.orange.shade800;
-        statusBgColor = Colors.orange.shade100;
+        dotColor = const Color(0xFF0284C7);
+        textColor = const Color(0xFF0369A1);
+        bgColor = const Color(0xFFE0F2FE);
         break;
       case 3: // Teslim Edildi
-        statusColor = Colors.green.shade800;
-        statusBgColor = Colors.green.shade100;
+        dotColor = AppColors.secondary;
+        textColor = const Color(0xFF065F46);
+        bgColor = AppColors.secondaryLight;
         break;
       case 4: // İade / Sorunlu
-        statusColor = Colors.red.shade800;
-        statusBgColor = Colors.red.shade100;
+        dotColor = AppColors.error;
+        textColor = const Color(0xFF991B1B);
+        bgColor = AppColors.errorLight;
         break;
       default:
-        statusColor = AppColors.primary;
-        statusBgColor = AppColors.primary.withValues(alpha: 0.1);
+        dotColor = AppColors.primary;
+        textColor = AppColors.primary;
+        bgColor = AppColors.primary.withValues(alpha: 0.1);
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: statusBgColor,
-        borderRadius: BorderRadius.circular(8),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        statusText,
-        style: TextStyle(
-          color: statusColor,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: dotColor,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            statusText,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -19,51 +19,48 @@ class CargoCard extends StatelessWidget {
         ? receiverName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join()
         : 'AK';
 
-    return Card(
+    final trackingCode = cargo.outTrackingCode.isNotEmpty ? cargo.outTrackingCode : cargo.processNumber;
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: AppColors.softShadow,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Satır: Alıcı Avatarı, Adı ve Durum Rozeti
+            // 1. Satır: Kargo Taşıyıcı Rozeti ve Durum Rozeti
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        child: Text(
-                          receiverInitials.toUpperCase(),
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
-                        ),
+                // Taşıyıcı Firma
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              receiverName,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (cargo.receiver?.phone.isNotEmpty ?? false)
-                              Text(
-                                cargo.receiver!.phone,
-                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                              ),
-                          ],
-                        ),
+                      child: const Icon(Icons.local_shipping_rounded, size: 16, color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      cargo.cargoCompany?.title ?? 'Kargo',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+                // Durum Rozeti
                 CargoStatusBadge(
                   status: cargo.status,
                   statusText: cargo.statusText,
@@ -71,70 +68,129 @@ class CargoCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
+            const Divider(color: AppColors.border, height: 1),
+            const SizedBox(height: 12),
 
-            // 2. Satır: Barkod ve Kargo Şirketi
+            // 2. Satır: Alıcı Bilgileri
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Barkod
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.surfaceSecondary,
+                  child: Text(
+                    receiverInitials.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.qr_code_2, size: 20, color: AppColors.textSecondary),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          cargo.outTrackingCode.isNotEmpty ? cargo.outTrackingCode : cargo.processNumber,
-                          style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        receiverName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: AppColors.textPrimary,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.copy, size: 16, color: AppColors.textSecondary),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: 'Barkodu Kopyala',
-                        onPressed: () {
-                          final code = cargo.outTrackingCode.isNotEmpty ? cargo.outTrackingCode : cargo.processNumber;
-                          Clipboard.setData(ClipboardData(text: code));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Barkod kopyalandı!'), duration: Duration(seconds: 1)),
-                          );
-                        },
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          if (cargo.receiver?.phone.isNotEmpty ?? false) ...[
+                            const Icon(Icons.phone_outlined, size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 4),
+                            Text(
+                              cargo.receiver!.phone,
+                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          if (cargo.receiver?.city != null) ...[
+                            const Icon(Icons.location_on_outlined, size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                '${cargo.receiver!.city!.name}${cargo.receiver?.district != null ? ' / ${cargo.receiver!.district!.name}' : ''}',
+                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
                 ),
-                // Kargo Şirketi
-                if (cargo.cargoCompany != null)
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // 3. Satır: Barkod / Takip Kodu Kutusu
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceSecondary,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Row(
                     children: [
-                      const Icon(Icons.local_shipping, size: 18, color: AppColors.primary),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.qr_code_2_rounded, size: 18, color: AppColors.textSecondary),
+                      const SizedBox(width: 8),
                       Text(
-                        cargo.cargoCompany!.title,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        trackingCode,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ],
                   ),
-              ],
-            ),
-
-            // 3. Satır: Şehir / İlçe ve Ek Rozetler
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (cargo.receiver?.city != null)
-                  Text(
-                    '${cargo.receiver!.city!.name}${cargo.receiver?.district != null ? ' / ${cargo.receiver!.district!.name}' : ''}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                  )
-                else
-                  const SizedBox(),
-              ],
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: trackingCode));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Takip numarası panoya kopyalandı'),
+                          duration: Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy_rounded, size: 14, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Kopyala',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             // Kapıda Ödeme Detay Şeridi (Varsa)
@@ -142,43 +198,43 @@ class CargoCard extends StatelessWidget {
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.shade200),
+                  color: AppColors.warningLight.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.payments_outlined, size: 16, color: Colors.amber.shade800),
+                        const Icon(Icons.payments_outlined, size: 16, color: Color(0xFFB45309)),
                         const SizedBox(width: 6),
                         Text(
                           'K.Ö: ₺ ${cargo.payOnDeliveryAmount?.toStringAsFixed(2) ?? '0,00'}',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
                         ),
                         if (cargo.payOnDeliveryTypeText != null) ...[
                           const SizedBox(width: 6),
                           Text(
                             '(${cargo.payOnDeliveryTypeText})',
-                            style: TextStyle(fontSize: 11, color: Colors.amber.shade800),
+                            style: const TextStyle(fontSize: 11, color: Color(0xFFB45309), fontWeight: FontWeight.w500),
                           ),
                         ],
                       ],
                     ),
                     if (cargo.payOnDeliveryStatusText != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.amber.shade300),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
                         ),
                         child: Text(
                           cargo.payOnDeliveryStatusText!,
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
                         ),
                       ),
                   ],
@@ -191,19 +247,19 @@ class CargoCard extends StatelessWidget {
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(6),
+                  color: AppColors.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, size: 14, color: Colors.grey),
+                    const Icon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'Son Hareket: ${cargo.latestTransaction!.description}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

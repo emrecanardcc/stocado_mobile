@@ -14,19 +14,21 @@ class Step4OffersWidget extends StatelessWidget {
 
   Widget _buildSummaryRow(String label, String value, {bool isHighlight = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.end,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isHighlight ? AppColors.warning : AppColors.textPrimary,
+                fontWeight: isHighlight ? FontWeight.w700 : FontWeight.w600,
+                fontSize: 13,
+                color: isHighlight ? AppColors.primary : AppColors.textPrimary,
               ),
             ),
           ),
@@ -44,27 +46,36 @@ class Step4OffersWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Tekliflerim',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+              'Firma Teklifleri',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
             TextButton.icon(
               onPressed: state.isLoadingOffers ? null : () => notifier.calculateOffers(),
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Teklifleri Yenile'),
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Yenile'),
             ),
           ],
         ),
         const SizedBox(height: 8),
 
         if (state.isLoadingOffers)
-          const Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Center(
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32.0),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Center(
               child: Column(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 12),
-                  Text('Fiyat teklifleri sorgulanıyor...'),
+                  CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
+                  SizedBox(height: 14),
+                  Text(
+                    'Anlık kargo teklifleri hesaplanıyor...',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                  ),
                 ],
               ),
             ),
@@ -73,24 +84,41 @@ class Step4OffersWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.amber.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.amber.shade300),
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+              boxShadow: AppColors.softShadow,
             ),
             child: Column(
               children: [
-                const Icon(Icons.info_outline, color: Colors.amber, size: 36),
-                const SizedBox(height: 8),
-                const Text(
-                  'Teklifleri görmek için teklif hesaplama butonuna dokunun.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.warningLight,
+                  ),
+                  child: const Icon(Icons.calculate_outlined, color: AppColors.warning, size: 32),
                 ),
                 const SizedBox(height: 12),
+                const Text(
+                  'Teklifleri Görmek İçin Hesaplayın',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Girdiğiniz paket ölçüleri ve adreslere göre firmaların fiyat tekliflerini anında getirin.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () => notifier.calculateOffers(),
-                  icon: const Icon(Icons.calculate_outlined),
+                  icon: const Icon(Icons.bolt, size: 18),
                   label: const Text('Teklifleri Hesapla'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    minimumSize: const Size(200, 44),
+                  ),
                 ),
               ],
             ),
@@ -104,83 +132,123 @@ class Step4OffersWidget extends StatelessWidget {
               final offer = state.offers[index];
               final isSelected = state.selectedOffer?.cargoCompany.id == offer.cargoCompany.id;
 
-              return Card(
-                elevation: isSelected ? 3 : 1,
-                color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: isSelected ? AppColors.primary : Colors.grey.shade200,
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary.withValues(alpha: 0.04) : AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.border,
                     width: isSelected ? 2 : 1,
                   ),
+                  boxShadow: AppColors.softShadow,
                 ),
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.grey.shade100,
-                    child: const Icon(Icons.local_shipping, color: AppColors.primary),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : AppColors.surfaceSecondary,
+                    ),
+                    child: Icon(
+                      Icons.local_shipping_rounded,
+                      color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                      size: 22,
+                    ),
                   ),
                   title: Text(
                     offer.cargoCompany.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text('Tahmini Teslimat: 1-3 İş Günü · ${state.desi.toStringAsFixed(1)} Desi'),
-                  trailing: Text(
-                    '₺${offer.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
                     ),
+                  ),
+                  subtitle: Text(
+                    'Tahmini 1-3 İş Günü • ${state.desi.toStringAsFixed(1)} Desi',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '₺${offer.price.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                        color: isSelected ? AppColors.primary : AppColors.textMuted,
+                        size: 22,
+                      ),
+                    ],
                   ),
                   onTap: () => notifier.selectOffer(offer),
                 ),
               );
             },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
         ],
 
         // Özet Tablosu
-        Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Gönderi Özeti',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
-                ),
-                const Divider(),
-                _buildSummaryRow('Yön', state.direction == 'send' ? 'Kargo Gönder' : 'Kargo Bana Gelsin'),
-                _buildSummaryRow('Gönderici Adresi', state.selectedSenderAddress?.displayName ?? '-'),
-                _buildSummaryRow('Alıcı', state.recipientName.isNotEmpty ? state.recipientName : '-'),
-                _buildSummaryRow('Alıcı Telefon', state.recipientPhone.isNotEmpty ? state.recipientPhone : '-'),
-                _buildSummaryRow('Hedef', '${state.selectedDistrict?.name ?? ""}, ${state.selectedCity?.name ?? ""}'),
-                _buildSummaryRow('Desi', '${state.desi.toStringAsFixed(2)} Desi'),
-                if (state.payOnDelivery) ...[
-                  _buildSummaryRow(
-                    'Kapıda Ödeme',
-                    '₺${state.payOnDeliveryAmount.toStringAsFixed(2)} (${state.payOnDeliveryType == 'cash' ? 'Nakit' : 'Kredi Kartı'})',
-                    isHighlight: true,
+        Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.softShadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.assignment_outlined, size: 18, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Text(
+                    'Gönderi Özeti',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                   ),
-                  if (state.canOffsetCargoFee)
-                    _buildSummaryRow('Kargo Ücreti Mahsubu', 'Kapıda ödemeden kesilecek'),
                 ],
-                if (state.receiverPays)
-                  _buildSummaryRow('Ödeme Şekli', 'Kapıda Alıcı Ödemeli', isHighlight: true),
-                if (state.controlledDelivery)
-                  _buildSummaryRow('Özel Hizmet', 'Kontrollü Teslimat (PTT)', isHighlight: true),
-                if (state.selectedOffer != null)
-                  _buildSummaryRow(
-                    'Seçili Firma',
-                    '${state.selectedOffer!.cargoCompany.title} (₺${state.selectedOffer!.price.toStringAsFixed(2)})',
-                    isHighlight: true,
-                  ),
-                _buildSummaryRow('Kargo Durumu', state.isDraft ? 'Taslak Olarak Kaydedilecek' : 'Aktif Kargo Oluşturulacak'),
+              ),
+              const SizedBox(height: 8),
+              const Divider(color: AppColors.border, height: 1),
+              const SizedBox(height: 8),
+              _buildSummaryRow('Yön', state.direction == 'send' ? 'Kargo Gönder' : 'Kargo Bana Gelsin'),
+              _buildSummaryRow('Gönderici Adresi', state.selectedSenderAddress?.displayName ?? '-'),
+              _buildSummaryRow('Alıcı', state.recipientName.isNotEmpty ? state.recipientName : '-'),
+              _buildSummaryRow('Alıcı Telefon', state.recipientPhone.isNotEmpty ? state.recipientPhone : '-'),
+              _buildSummaryRow('Hedef', '${state.selectedDistrict?.name ?? ""}, ${state.selectedCity?.name ?? ""}'),
+              _buildSummaryRow('Desi', '${state.desi.toStringAsFixed(2)} Desi'),
+              if (state.payOnDelivery) ...[
+                _buildSummaryRow(
+                  'Kapıda Ödeme',
+                  '₺${state.payOnDeliveryAmount.toStringAsFixed(2)} (${state.payOnDeliveryType == 'cash' ? 'Nakit' : 'Kredi Kartı'})',
+                  isHighlight: true,
+                ),
+                if (state.canOffsetCargoFee)
+                  _buildSummaryRow('Kargo Ücreti Mahsubu', 'Kapıda ödemeden kesilecek'),
               ],
-            ),
+              if (state.receiverPays)
+                _buildSummaryRow('Ödeme Şekli', 'Kapıda Alıcı Ödemeli', isHighlight: true),
+              if (state.controlledDelivery)
+                _buildSummaryRow('Özel Hizmet', 'Kontrollü Teslimat (PTT)', isHighlight: true),
+              if (state.selectedOffer != null)
+                _buildSummaryRow(
+                  'Seçili Firma',
+                  '${state.selectedOffer!.cargoCompany.title} (₺${state.selectedOffer!.price.toStringAsFixed(2)})',
+                  isHighlight: true,
+                ),
+              _buildSummaryRow('Kargo Durumu', state.isDraft ? 'Taslak Olarak Kaydedilecek' : 'Aktif Kargo Oluşturulacak'),
+            ],
           ),
         ),
       ],

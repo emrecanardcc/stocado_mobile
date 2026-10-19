@@ -43,25 +43,45 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ürünü Sil'),
-        content: Text('"${product.name}" ürününü silmek istediğinize emin misiniz?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 22),
+            SizedBox(width: 8),
+            Text('Ürünü Sil', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Text(
+          '"${product.name}" ürününü envanterinizden silmek istediğinize emin misiniz?',
+          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(90, 40),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () async {
               Navigator.pop(ctx);
               final success = await ref.read(productsProvider.notifier).deleteProduct(product.id);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(success ? 'Ürün silindi.' : 'Silme işlemi başarısız.'),
+                    content: Text(success ? 'Ürün başarıyla silindi.' : 'Silme işlemi başarısız oldu.'),
                     backgroundColor: success ? AppColors.secondary : AppColors.error,
+                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               }
             },
-            child: const Text('Sil'),
+            child: const Text('Sil', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -74,23 +94,36 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final notifier = ref.read(productsProvider.notifier);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: _isSearching
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 15),
+                cursorColor: Colors.white,
                 decoration: const InputDecoration(
                   hintText: 'Ürün adı, kod veya barkod...',
-                  hintStyle: TextStyle(color: Colors.white70),
+                  hintStyle: TextStyle(color: Colors.white60, fontSize: 14),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  filled: false,
                 ),
                 onSubmitted: (val) => notifier.setSearch(val.trim()),
               )
-            : const Text('Ürünlerim'),
+            : const Row(
+                children: [
+                  Icon(Icons.inventory_2_outlined, size: 20),
+                  SizedBox(width: 8),
+                  Text('Ürünlerim'),
+                ],
+              ),
         actions: [
           IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
+            tooltip: _isSearching ? 'Aramayı Kapat' : 'Ara',
             onPressed: () {
               setState(() {
                 if (_isSearching) {
@@ -104,37 +137,48 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: state.isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded),
             tooltip: 'Yenile',
-            onPressed: () => notifier.refresh(),
+            onPressed: state.isLoading ? null : () => notifier.refresh(),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AddEditProductModal.show(context, ref),
         backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Yeni Ürün', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        label: const Text('Yeni Ürün', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: RefreshIndicator(
         onRefresh: () => notifier.refresh(),
+        color: AppColors.primary,
         child: state.isLoading && state.products.isEmpty
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
             : state.products.isEmpty
                 ? ProductEmptyState(onAddProduct: () => AddEditProductModal.show(context, ref))
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: state.products.length + (state.isLoadingMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == state.products.length) {
                         return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          padding: EdgeInsets.symmetric(vertical: 20.0),
                           child: Center(
                             child: SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                             ),
                           ),
                         );
