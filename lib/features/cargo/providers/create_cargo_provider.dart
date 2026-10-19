@@ -566,14 +566,37 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     bool? controlledDelivery,
     bool? isDraft,
   }) {
+    bool newPayOnDelivery = payOnDelivery ?? state.payOnDelivery;
+    double newAmount = payOnDeliveryAmount ?? state.payOnDeliveryAmount;
+    bool newOffset = canOffsetCargoFee ?? state.canOffsetCargoFee;
+    bool newReceiverPays = receiverPays ?? state.receiverPays;
+    bool newControlled = controlledDelivery ?? state.controlledDelivery;
+    bool newDraft = isDraft ?? state.isDraft;
+
+    // Eğer Kapıda Ödeme kapatıldıysa tutarı ve mahsubu sıfırla
+    if (payOnDelivery == false) {
+      newAmount = 0.0;
+      newOffset = false;
+    }
+
+    // Karşılıklı Kısıtlama: Kapıda Alıcı Ödemeli (pod_receiver_pays) açılırsa, mahsup (past_pay_on_delivery) kapanmalıdır
+    if (receiverPays == true) {
+      newOffset = false;
+    }
+
+    // Karşılıklı Kısıtlama: Mahsup açılırsa, Kapıda Alıcı Ödemeli kapanmalıdır
+    if (canOffsetCargoFee == true) {
+      newReceiverPays = false;
+    }
+
     state = state.copyWith(
-      payOnDelivery: payOnDelivery ?? state.payOnDelivery,
-      payOnDeliveryAmount: payOnDeliveryAmount ?? state.payOnDeliveryAmount,
+      payOnDelivery: newPayOnDelivery,
+      payOnDeliveryAmount: newAmount,
       payOnDeliveryType: payOnDeliveryType ?? state.payOnDeliveryType,
-      canOffsetCargoFee: canOffsetCargoFee ?? state.canOffsetCargoFee,
-      receiverPays: receiverPays ?? state.receiverPays,
-      controlledDelivery: controlledDelivery ?? state.controlledDelivery,
-      isDraft: isDraft ?? state.isDraft,
+      canOffsetCargoFee: newOffset,
+      receiverPays: newReceiverPays,
+      controlledDelivery: newControlled,
+      isDraft: newDraft,
     );
   }
 
@@ -593,10 +616,31 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
 
     state = state.copyWith(isLoadingOffers: true, errorMessage: null);
 
+    // Alıcı Adres ID'sini (foreign_id) Çöz
+    String? foreignId = state.selectedRecipientAddress?.id;
+    if ((foreignId == null || foreignId.isEmpty) &&
+        state.recipientName.trim().isNotEmpty &&
+        state.recipientPhone.trim().isNotEmpty) {
+      final addResult = await createRecipientAddress(
+        name: state.recipientName.trim(),
+        phone: state.recipientPhone.trim(),
+        email: state.recipientEmail.trim().isNotEmpty ? state.recipientEmail.trim() : null,
+        cityId: state.selectedCity?.id ?? 34,
+        districtId: state.selectedDistrict?.id ?? 1101,
+        details: state.addressDetails.trim().isNotEmpty
+            ? state.addressDetails.trim()
+            : '${state.selectedDistrict?.name ?? ""}, ${state.selectedCity?.name ?? ""}',
+        postalCode: state.recipientPostalCode.trim().isNotEmpty ? state.recipientPostalCode.trim() : null,
+      );
+      if (addResult.isSuccess && addResult.address != null) {
+        foreignId = addResult.address!.id;
+      }
+    }
+
     final request = CargoCalculateRequest(
       accountId: accountId,
       localId: state.selectedSenderAddress?.id,
-      foreignId: state.selectedRecipientAddress?.id,
+      foreignId: foreignId,
       package: PackageData(
         desi: double.parse((desi > 0 ? desi : 1.0).toStringAsFixed(2)),
         width: state.width > 0 ? double.parse(state.width.toStringAsFixed(2)) : null,
@@ -607,13 +651,22 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       payOnDelivery: state.payOnDelivery,
       payOnDeliveryAmount: state.payOnDelivery ? state.payOnDeliveryAmount : 0,
       payOnDeliveryType: state.payOnDelivery ? state.payOnDeliveryType : null,
+      pastPayOnDelivery: state.payOnDelivery ? state.canOffsetCargoFee : false,
+      podReceiverPays: state.receiverPays,
+      controlledDelivery: state.controlledDelivery,
+      status: state.isDraft ? 0 : 1,
       direction: state.direction,
     );
 
     var offers = await _cargoService.calculateOffers(request);
 
+    // Eğer kontrollü teslimat seçilmişse, yalnızca PTT Kargo destekler
+    if (state.controlledDelivery && offers.isNotEmpty) {
+      offers = offers.where((o) => o.cargoCompany.id.toString().contains('ptt')).toList();
+    }
+
     if (offers.isEmpty) {
-      offers = _generateFallbackOffers(desi, state.payOnDelivery);
+      offers = _generateFallbackOffers(desi, state.payOnDelivery, state.controlledDelivery);
     }
 
     state = state.copyWith(
@@ -623,8 +676,16 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     );
   }
 
-  List<CargoOffer> _generateFallbackOffers(double desi, bool isPod) {
+  List<CargoOffer> _generateFallbackOffers(double desi, bool isPod, [bool isControlled = false]) {
     final effectiveDesi = desi <= 2 ? 2.0 : desi;
+    if (isControlled) {
+      return [
+        CargoOffer(
+          cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
+          price: (96.14 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
+        ),
+      ];
+    }
     return [
       CargoOffer(
         cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
@@ -730,11 +791,14 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       "pay_on_delivery": state.payOnDelivery,
       "pay_on_delivery_amount": state.payOnDelivery ? state.payOnDeliveryAmount : 0,
       "pay_on_delivery_type": state.payOnDelivery ? (state.payOnDeliveryType == 'cash' ? 1 : 2) : 1,
+      "past_pay_on_delivery": state.payOnDelivery ? state.canOffsetCargoFee : false,
+      "pod_receiver_pays": state.receiverPays,
+      "receiver_pays": false,
+      "controlled_delivery": state.controlledDelivery,
       "status": state.isDraft ? 0 : 1, // 0 = Taslak, 1 = Aktif
       "order_number": state.orderNumber.isNotEmpty ? state.orderNumber : null,
       "description": state.description.isNotEmpty ? state.description : 'Mobil Gönderi',
-      "controlled_delivery": state.controlledDelivery,
-      "receiver_pays": state.receiverPays,
+      "create_failed": true,
       "source": "app",
       if (state.selectedProduct != null) "product_id": state.selectedProduct!.id,
       "quantity": 1,

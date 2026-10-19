@@ -75,6 +75,15 @@ class CargoBottomBar extends ConsumerWidget {
 
                         // 3. ADIM -> 4. ADIM (Teklif Hesaplama)
                         if (state.currentStep == 2) {
+                          if (state.payOnDelivery && state.payOnDeliveryAmount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Lütfen kapıda ödeme tahsilat tutarını giriniz.'),
+                                backgroundColor: AppColors.warning,
+                              ),
+                            );
+                            return;
+                          }
                           notifier.calculateOffers();
                         }
 

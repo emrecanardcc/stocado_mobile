@@ -78,6 +78,10 @@ class CargoCalculateRequest {
   final bool payOnDelivery;
   final double? payOnDeliveryAmount;
   final String? payOnDeliveryType; // cash, credit_card
+  final bool pastPayOnDelivery;
+  final bool podReceiverPays;
+  final bool controlledDelivery;
+  final int status;
   final String direction; // send, receive
   final bool printBarcode;
 
@@ -89,6 +93,10 @@ class CargoCalculateRequest {
     this.payOnDelivery = false,
     this.payOnDeliveryAmount,
     this.payOnDeliveryType,
+    this.pastPayOnDelivery = false,
+    this.podReceiverPays = false,
+    this.controlledDelivery = false,
+    this.status = 1,
     this.direction = 'send',
     this.printBarcode = false,
   });
@@ -101,6 +109,11 @@ class CargoCalculateRequest {
         'pay_on_delivery': payOnDelivery,
         if (payOnDelivery && payOnDeliveryAmount != null) 'pay_on_delivery_amount': payOnDeliveryAmount,
         if (payOnDelivery) 'pay_on_delivery_type': payOnDeliveryType == 'credit_card' ? 2 : 1,
+        'past_pay_on_delivery': pastPayOnDelivery,
+        'pod_receiver_pays': podReceiverPays,
+        'receiver_pays': false,
+        'controlled_delivery': controlledDelivery,
+        'status': status,
         'direction': (direction == 'receive' || direction == '2') ? 2 : 1,
         'print_barcode': printBarcode,
       };

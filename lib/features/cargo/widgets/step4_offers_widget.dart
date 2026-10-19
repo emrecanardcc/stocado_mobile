@@ -159,8 +159,19 @@ class Step4OffersWidget extends StatelessWidget {
                 _buildSummaryRow('Alıcı Telefon', state.recipientPhone.isNotEmpty ? state.recipientPhone : '-'),
                 _buildSummaryRow('Hedef', '${state.selectedDistrict?.name ?? ""}, ${state.selectedCity?.name ?? ""}'),
                 _buildSummaryRow('Desi', '${state.desi.toStringAsFixed(2)} Desi'),
-                if (state.payOnDelivery)
-                  _buildSummaryRow('Kapıda Ödeme', '₺${state.payOnDeliveryAmount.toStringAsFixed(2)}', isHighlight: true),
+                if (state.payOnDelivery) ...[
+                  _buildSummaryRow(
+                    'Kapıda Ödeme',
+                    '₺${state.payOnDeliveryAmount.toStringAsFixed(2)} (${state.payOnDeliveryType == 'cash' ? 'Nakit' : 'Kredi Kartı'})',
+                    isHighlight: true,
+                  ),
+                  if (state.canOffsetCargoFee)
+                    _buildSummaryRow('Kargo Ücreti Mahsubu', 'Kapıda ödemeden kesilecek'),
+                ],
+                if (state.receiverPays)
+                  _buildSummaryRow('Ödeme Şekli', 'Kapıda Alıcı Ödemeli', isHighlight: true),
+                if (state.controlledDelivery)
+                  _buildSummaryRow('Özel Hizmet', 'Kontrollü Teslimat (PTT)', isHighlight: true),
                 if (state.selectedOffer != null)
                   _buildSummaryRow(
                     'Seçili Firma',
