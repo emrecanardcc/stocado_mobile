@@ -23,7 +23,6 @@ class ProductCard extends StatelessWidget {
       ),
       child: Material(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

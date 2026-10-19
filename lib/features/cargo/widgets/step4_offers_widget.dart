@@ -139,7 +139,6 @@ class Step4OffersWidget extends StatelessWidget {
                 ),
                 child: Material(
                   color: isSelected ? AppColors.primary.withValues(alpha: 0.04) : AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
                   clipBehavior: Clip.antiAlias,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
