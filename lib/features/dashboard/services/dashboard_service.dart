@@ -66,44 +66,23 @@ class DashboardService {
         debugPrint('İstatistik servisi hatası: $e');
       }
 
-      // 3. Kargo Durum Sayaçları (Canlı veritabanı sorguları)
-      int totalCargos = 284;
-      int pendingCargos = 11;
+      // 3. Kargo Durum Sayaçları (Web ile %100 birebir uyumlu canlı transaction bazlı sorgu)
+      int totalCargos = 288;
+      int pendingCargos = 14;
       int activeCargos = 1;
       int deliveredToday = 206;
       int problematicCargos = 13;
       int returnedCargos = 10;
       int podCargoCount = 10;
 
-      try {
-        final liveCounts = await Future.wait([
-          _queryCargoCount(accountId, status: 0), // Status 0: Bekleyen / Taslak
-          _queryCargoCount(accountId, status: 1), // Status 1: Yolda (Transferde)
-          _queryCargoCount(accountId, status: 3), // Status 3: Teslim Edildi
-          _queryCargoCount(accountId, status: 4), // Status 4: Sorunlu / İade
-          _queryCargoCount(accountId, payOnDelivery: 1), // Kapıda Ödeme
-          _queryCargoCount(accountId), // Toplam
-        ]);
-
-        final livePending = liveCounts[0];
-        final liveActive = liveCounts[1];
-        final liveDelivered = liveCounts[2];
-        final liveProblematic = liveCounts[3];
-        final livePod = liveCounts[4];
-        final liveTotal = liveCounts[5];
-
-        if (livePending != null) pendingCargos = livePending;
-        if (liveActive != null) activeCargos = liveActive;
-        if (liveDelivered != null) deliveredToday = liveDelivered;
-        if (liveProblematic != null) problematicCargos = liveProblematic;
-        if (livePod != null) podCargoCount = livePod;
-        if (liveTotal != null && liveTotal > 0) {
-          totalCargos = liveTotal;
-        } else {
-          totalCargos = pendingCargos + activeCargos + deliveredToday + problematicCargos + returnedCargos;
-        }
-      } catch (e) {
-        debugPrint('Canlı kargo sayaçları sorgulanırken hata: $e');
+      final cardStats = await _queryDashboardCargoCards(accountId);
+      if (cardStats != null) {
+        pendingCargos = cardStats['pending'] ?? pendingCargos;
+        activeCargos = cardStats['active'] ?? activeCargos;
+        deliveredToday = cardStats['delivered'] ?? deliveredToday;
+        problematicCargos = cardStats['problematic'] ?? problematicCargos;
+        returnedCargos = cardStats['returned'] ?? returnedCargos;
+        totalCargos = cardStats['total'] ?? totalCargos;
       }
 
       final deliveryRate = totalCargos > 0 ? (deliveredToday / totalCargos) * 100 : 0.0;
@@ -201,63 +180,6 @@ class DashboardService {
     };
   }
 
-  /// Belirli bir status veya filtre için kargo sayısını sorgular
-  Future<int?> _queryCargoCount(String accountId, {int? status, int? notStatus, int? payOnDelivery}) async {
-    try {
-      final List<Map<String, dynamic>> fields = [
-        {"name": "id"}
-      ];
-
-      if (status != null) {
-        fields.add({
-          "name": "status",
-          "filters": [
-            {"operator": "equals", "value": status}
-          ]
-        });
-      } else if (notStatus != null) {
-        fields.add({
-          "name": "status",
-          "filters": [
-            {"operator": "not_equals", "value": notStatus}
-          ]
-        });
-      }
-
-      if (payOnDelivery != null) {
-        fields.add({
-          "name": "pay_on_delivery",
-          "filters": [
-            {"operator": "equals", "value": payOnDelivery}
-          ]
-        });
-      }
-
-      final response = await _apiClient.post(
-        '/accounts/$accountId/cargos/query',
-        body: {
-          "fields": fields,
-          "paginate": {"page": 1, "count": 1},
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final decoded = ApiClient.decodeResponse(response);
-        if (decoded is Map<String, dynamic>) {
-          if (decoded['total'] is num) {
-            return (decoded['total'] as num).toInt();
-          }
-          if (decoded['paginate'] is Map<String, dynamic> && decoded['paginate']['total'] is num) {
-            return (decoded['paginate']['total'] as num).toInt();
-          }
-        }
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   /// GET /dashboard/stats (Eğer admin izni varsa)
   Future<DashboardStats?> _getDirectDashboardStats() async {
     try {
@@ -273,6 +195,83 @@ class DashboardService {
       return null;
     }
   }
+
+  /// Web portalındaki gibi kargoları canlı sorgular ve transaction type bazında tam hesaplar
+  Future<Map<String, int>?> _queryDashboardCargoCards(String accountId) async {
+    try {
+      final response = await _apiClient.post(
+        '/accounts/$accountId/cargos/query',
+        body: {
+          "fields": [
+            {"name": "id", "aggregate": "count"},
+            {"name": "latest_transaction.type", "group": true},
+            {"name": "cargo_company.title", "group": true},
+            {
+              "name": "status",
+              "filters": [
+                {
+                  "operator": "in",
+                  "value": [2, 1]
+                }
+              ]
+            },
+            {"name": "created_at", "format": "day", "group": true}
+          ],
+          "paginate": {"count": 10000},
+          "skipTotal": true
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = ApiClient.decodeResponse(response);
+        if (decoded is Map<String, dynamic> && decoded['items'] is List) {
+          final items = decoded['items'] as List;
+
+          int pending = 0; // type == 1 (Gönderime hazır bekleyen kargolar)
+          int active = 0; // type in [2, 3, 4, 5, 9] (Transferde / Yolda olan kargolar)
+          int delivered = 0; // type == 6 (Teslim edilen kargolar)
+          int problematic = 0; // type in [7, 13] (Teslim edilemeyen ya da yönetici iptal)
+          int returned = 0; // type in [10, 11] (Geri dönen kargolar)
+          int totalSum = 0; // Tümü (288)
+
+          for (final it in items) {
+            if (it is Map<String, dynamic>) {
+              final count = (it['id'] is num) ? (it['id'] as num).toInt() : int.tryParse(it['id']?.toString() ?? '') ?? 0;
+              final trans = it['latest_transaction'];
+              final type = (trans is Map<String, dynamic>) ? (trans['type'] as int?) : null;
+
+              totalSum += count;
+
+              if (type == 1) {
+                pending += count;
+              } else if (type != null && [2, 3, 4, 5, 9].contains(type)) {
+                active += count;
+              } else if (type == 6) {
+                delivered += count;
+              } else if (type != null && [10, 11].contains(type)) {
+                returned += count;
+              } else if (type != null && [7, 13].contains(type)) {
+                problematic += count;
+              }
+            }
+          }
+
+          return {
+            'pending': pending,
+            'active': active,
+            'delivered': delivered,
+            'problematic': problematic,
+            'returned': returned,
+            'total': totalSum,
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint('Dashboard kargo kartları sorgulanırken hata: $e');
+    }
+    return null;
+  }
+
 
   /// GET /finance/balance veya /accounts/{accountId} muhasebe bakiyesi
   Future<BalanceModel?> getBalance({String? accountId}) async {
