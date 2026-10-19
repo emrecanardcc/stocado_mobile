@@ -1,117 +1,153 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../models/product_model.dart';
+import '../providers/products_provider.dart';
+import '../widgets/add_edit_product_modal.dart';
+import '../widgets/product_card.dart';
+import '../widgets/product_empty_state.dart';
 
-class ProductsScreen extends StatelessWidget {
-  const ProductsScreen({Key? key}) : super(key: key);
-
-  // API bağlanana kadar görünümü test etmek için örnek ürün listesi
-  final List<Map<String, dynamic>> _mockProducts = const [
-    {
-      "name": "Siyah T-Shirt (Erkek - M)",
-      "sku": "TSH-BLK-M-01",
-      "stock": 145,
-      "price": "299,90 ₺",
-      "desi": 0.5,
-      "image": Icons.checkroom
-    },
-    {
-      "name": "Kablosuz Kulaklık V2",
-      "sku": "ELK-KUL-V2",
-      "stock": 32,
-      "price": "1.499,00 ₺",
-      "desi": 1.2,
-      "image": Icons.headphones
-    },
-    {
-      "name": "Spor Su Matarası 750ml",
-      "sku": "SPR-MAT-750",
-      "stock": 0, // Stokta olmayan ürün senaryosu
-      "price": "149,50 ₺",
-      "desi": 0.8,
-      "image": Icons.local_drink
-    },
-  ];
+class ProductsScreen extends ConsumerStatefulWidget {
+  const ProductsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ürünlerim'),
+  ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
+}
+
+class _ProductsScreenState extends ConsumerState<ProductsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  late final ScrollController _scrollController;
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_handleScroll);
+  }
+
+  void _handleScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      ref.read(productsProvider.notifier).loadNextPage();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _confirmDelete(ProductModel product) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ürünü Sil'),
+        content: Text('"${product.name}" ürününü silmek istediğinize emin misiniz?'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {}, // TODO: Ürünlerde arama
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await ref.read(productsProvider.notifier).deleteProduct(product.id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success ? 'Ürün silindi.' : 'Silme işlemi başarısız.'),
+                    backgroundColor: success ? AppColors.secondary : AppColors.error,
+                  ),
+                );
+              }
+            },
+            child: const Text('Sil'),
           ),
         ],
       ),
-      // Yeni ürün ekleme butonu (Sağ altta havada duran buton)
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(productsProvider);
+    final notifier = ref.read(productsProvider.notifier);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Ürün adı, kod veya barkod...',
+                  hintStyle: TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+                onSubmitted: (val) => notifier.setSearch(val.trim()),
+              )
+            : const Text('Ürünlerim'),
+        actions: [
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _searchController.clear();
+                  notifier.setSearch('');
+                  _isSearching = false;
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Yenile',
+            onPressed: () => notifier.refresh(),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Yeni ürün ekleme formu (Bottom Sheet veya Dialog) açılacak
-        },
+        onPressed: () => AddEditProductModal.show(context, ref),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Yeni Ürün', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: _mockProducts.length,
-        itemBuilder: (context, index) {
-          final product = _mockProducts[index];
-          final isOutOfStock = product['stock'] == 0;
+      body: RefreshIndicator(
+        onRefresh: () => notifier.refresh(),
+        child: state.isLoading && state.products.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : state.products.isEmpty
+                ? ProductEmptyState(onAddProduct: () => AddEditProductModal.show(context, ref))
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(12),
+                    itemCount: state.products.length + (state.isLoadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == state.products.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      }
 
-          return Card(
-            elevation: 2,
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(12),
-              leading: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(product['image'] as IconData, color: AppColors.primary),
-              ),
-              title: Text(product['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 6),
-                  Text('Stok Kodu: ${product['sku']}'),
-                  const SizedBox(height: 2),
-                  Text('Desi: ${product['desi']}  •  Fiyat: ${product['price']}'),
-                ],
-              ),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Stok', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isOutOfStock ? Colors.red.shade50 : Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      product['stock'].toString(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isOutOfStock ? Colors.red : Colors.green.shade700,
-                      ),
-                    ),
+                      final product = state.products[index];
+                      return ProductCard(
+                        product: product,
+                        onEdit: () => AddEditProductModal.show(context, ref, product: product),
+                        onDelete: () => _confirmDelete(product),
+                      );
+                    },
                   ),
-                ],
-              ),
-              onTap: () {
-                // TODO: Ürün detayı veya düzenleme sayfası açılacak
-              },
-            ),
-          );
-        },
       ),
     );
   }

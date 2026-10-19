@@ -1,35 +1,137 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../core/network/api_client.dart';
+import '../models/user_model.dart';
+import '../services/auth_service.dart';
 
-const _secureStorage = FlutterSecureStorage();
+class AuthState {
+  final String? token;
+  final UserModel? user;
+  final bool isLoading;
+  final String? errorMessage;
+  final bool isInitialized;
 
-// Riverpod'un en güncel yapısı olan Notifier kullanıyoruz
-class AuthNotifier extends Notifier<String?> {
-  
-  @override
-  String? build() {
-    // Uygulama açıldığında hafızadaki token'ı okuma işlemini başlatır
-    _loadTokenFromStorage();
-    return null; // İlk anda token bilinmiyor
-  }
+  const AuthState({
+    this.token,
+    this.user,
+    this.isLoading = false,
+    this.errorMessage,
+    this.isInitialized = false,
+  });
 
-  Future<void> _loadTokenFromStorage() async {
-    final token = await _secureStorage.read(key: 'auth_token');
-    state = token;
-  }
+  bool get isAuthenticated => token != null && token!.isNotEmpty;
+  String? get accountId => user?.accountId;
 
-  Future<void> setToken(String token) async {
-    await _secureStorage.write(key: 'auth_token', value: token);
-    state = token;
-  }
-
-  Future<void> logout() async {
-    await _secureStorage.delete(key: 'auth_token');
-    state = null;
+  AuthState copyWith({
+    String? token,
+    UserModel? user,
+    bool? isLoading,
+    String? errorMessage,
+    bool? isInitialized,
+    bool clearToken = false,
+    bool clearUser = false,
+  }) {
+    return AuthState(
+      token: clearToken ? null : (token ?? this.token),
+      user: clearUser ? null : (user ?? this.user),
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage,
+      isInitialized: isInitialized ?? this.isInitialized,
+    );
   }
 }
 
-// Global Provider Tanımlaması
-final authProvider = NotifierProvider<AuthNotifier, String?>(() {
+class AuthNotifier extends Notifier<AuthState> {
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  late final AuthService _authService;
+
+  @override
+  AuthState build() {
+    _authService = AuthService();
+    
+    // Global 401 hatası yakalandığında otomatik logout tetikle
+    ApiClient.onUnauthorized = () {
+      logout();
+    };
+
+    // Uygulama açılışında kayıtlı oturumu doğrula
+    Future.microtask(() => _initializeAuth());
+
+    return const AuthState();
+  }
+
+  /// Açılışta Secure Storage'dan token okur ve kullanıcı bilgilerini doğrular
+  Future<void> _initializeAuth() async {
+    try {
+      final token = await _storage.read(key: ApiClient.tokenKey);
+      if (token != null && token.isNotEmpty) {
+        state = state.copyWith(token: token, isLoading: true);
+        final user = await _authService.getMe();
+        if (user != null) {
+          state = state.copyWith(
+            token: token,
+            user: user,
+            isLoading: false,
+            isInitialized: true,
+          );
+          return;
+        } else {
+          // Token geçersiz veya süresi dolmuşsa temizle
+          await _storage.delete(key: ApiClient.tokenKey);
+        }
+      }
+    } catch (e) {
+      debugPrint('Oturum doğrulama hatası: $e');
+    }
+
+    state = const AuthState(isInitialized: true);
+  }
+
+  /// Giriş Yapma İşlemi
+  Future<bool> login(String email, String password) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    final result = await _authService.login(email, password);
+
+    if (result.isSuccess && result.token != null) {
+      await _storage.write(key: ApiClient.tokenKey, value: result.token!);
+
+      // Giriş yapan kullanıcının hesap detaylarını (/auth/me) anında çek
+      final user = await _authService.getMe();
+
+      state = state.copyWith(
+        token: result.token,
+        user: user,
+        isLoading: false,
+        isInitialized: true,
+      );
+      return true;
+    } else {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: result.errorMessage ?? 'Giriş başarısız.',
+      );
+      return false;
+    }
+  }
+
+  /// Manuel Token Atama (Örn. mock veya test için)
+  Future<void> setToken(String token) async {
+    await _storage.write(key: ApiClient.tokenKey, value: token);
+    state = state.copyWith(token: token, isLoading: true);
+    final user = await _authService.getMe();
+    state = state.copyWith(token: token, user: user, isLoading: false, isInitialized: true);
+  }
+
+  /// Çıkış Yapma İşlemi
+  Future<void> logout() async {
+    await _storage.delete(key: ApiClient.tokenKey);
+    state = const AuthState(isInitialized: true);
+  }
+}
+
+// Global Provider Tanımlaması (Riverpod 3.0 NotifierProvider)
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(() {
   return AuthNotifier();
 });

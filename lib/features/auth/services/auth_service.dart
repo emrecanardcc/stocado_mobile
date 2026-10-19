@@ -1,32 +1,102 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+import '../../../core/network/api_client.dart';
+import '../models/user_model.dart';
+
+class LoginResult {
+  final bool isSuccess;
+  final String? token;
+  final String? errorMessage;
+
+  LoginResult({required this.isSuccess, this.token, this.errorMessage});
+}
 
 class AuthService {
-  // Stocado Kargo Paneli API Temel Adresi
-  static const String baseUrl = "https://api.kargopaneli.com/v1";
+  final ApiClient _apiClient;
 
-  Future<String?> login(String email, String password) async {
+  AuthService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  /// POST /auth/login
+  Future<LoginResult> login(String email, String password) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email, // Ekip aksini söylerse 'username' olarak değiştireceğiz
+      final response = await _apiClient.post(
+        '/auth/login',
+        body: {
+          'email': email,
           'password': password,
-        }),
+        },
       );
 
-      // 200 Başarılı giriş kodu
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['token']; // API'den dönen JWT token
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final token = data['token'] as String?;
+        if (token != null && token.isNotEmpty) {
+          return LoginResult(isSuccess: true, token: token);
+        }
+        return LoginResult(isSuccess: false, errorMessage: 'Token alınamadı.');
+      } else if (response.statusCode == 401 || response.statusCode == 422) {
+        try {
+          final data = jsonDecode(utf8.decode(response.bodyBytes));
+          final message = data['message'] ?? 'E-posta veya şifre hatalı.';
+          return LoginResult(isSuccess: false, errorMessage: message.toString());
+        } catch (_) {
+          return LoginResult(isSuccess: false, errorMessage: 'Giriş bilgileri geçersiz.');
+        }
       } else {
-        print('Giriş reddedildi. Durum Kodu: ${response.statusCode}');
-        print('Sunucu Yanıtı: ${response.body}');
+        return LoginResult(
+          isSuccess: false,
+          errorMessage: 'Sunucu hatası (${response.statusCode}). Lütfen tekrar deneyin.',
+        );
+      }
+    } catch (e) {
+      debugPrint('AuthService.login hatası: $e');
+      return LoginResult(
+        isSuccess: false,
+        errorMessage: 'Ağ bağlantısı kurulamadı. Lütfen internetinizi kontrol edin.',
+      );
+    }
+  }
+
+  /// GET /auth/me & GET /users/{userId}/accounts
+  Future<UserModel?> getMe() async {
+    try {
+      final response = await _apiClient.get('/auth/me');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        final userId = data['id']?.toString() ?? '';
+
+        List<AccountModel> accounts = [];
+        if (userId.isNotEmpty) {
+          try {
+            final accResponse = await _apiClient.get('/users/$userId/accounts');
+            if (accResponse.statusCode == 200) {
+              final accData = jsonDecode(utf8.decode(accResponse.bodyBytes));
+              if (accData is List) {
+                accounts = accData
+                    .map((item) => AccountModel.fromJson(item as Map<String, dynamic>))
+                    .toList();
+              } else if (accData is Map<String, dynamic>) {
+                if (accData['data'] is List) {
+                  accounts = (accData['data'] as List)
+                      .map((item) => AccountModel.fromJson(item as Map<String, dynamic>))
+                      .toList();
+                } else if (accData['id'] != null) {
+                  accounts = [AccountModel.fromJson(accData)];
+                }
+              }
+            }
+          } catch (e) {
+            debugPrint('Kullanıcı hesapları çekilirken hata: $e');
+          }
+        }
+
+        return UserModel.fromJson(data, accountsList: accounts);
+      } else {
+        debugPrint('AuthService.getMe başarısız: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      print('Ağ hatası veya sunucuya ulaşılamadı: $e');
+      debugPrint('AuthService.getMe hatası: $e');
       return null;
     }
   }

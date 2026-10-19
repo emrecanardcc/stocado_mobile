@@ -20,10 +20,18 @@ class Country {
       zoneCode: json['zone_code'],
       region: json['region'],
       cities: json['cities'] != null 
-          ? (json['cities'] as List).map((i) => City.fromJson(i)).toList() 
+          ? (json['cities'] as List).map((i) => City.fromJson(i as Map<String, dynamic>)).toList() 
           : [],
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Country && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 class City {
@@ -39,13 +47,21 @@ class City {
 
   factory City.fromJson(Map<String, dynamic> json) {
     return City(
-      id: json['id'] ?? 0,
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '') ?? 0,
       name: json['name'] ?? '',
       districts: json['districts'] != null 
-          ? (json['districts'] as List).map((i) => District.fromJson(i)).toList() 
+          ? (json['districts'] as List).map((i) => District.fromJson(i as Map<String, dynamic>)).toList() 
           : [],
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is City && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 class District {
@@ -59,8 +75,16 @@ class District {
 
   factory District.fromJson(Map<String, dynamic> json) {
     return District(
-      id: json['id'] ?? 0,
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '') ?? 0,
       name: json['name'] ?? '',
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is District && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
