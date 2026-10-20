@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../cargo/screens/create_cargo_screen.dart';
 import '../../cargo/screens/cargos_screen.dart';
+import '../../cargo/screens/create_cargo_screen.dart';
 import '../../pricing/screens/pricing_screen.dart';
-import '../../products/screens/products_screen.dart';
+import '../providers/navigation_provider.dart';
 import 'dashboard_screen.dart';
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+class _MainScreenState extends ConsumerState<MainScreen> {
   final Set<int> _loadedTabs = {0};
 
   Widget _buildScreen(int index) {
@@ -25,23 +25,14 @@ class _MainScreenState extends State<MainScreen> {
       case 0:
         return const DashboardScreen();
       case 1:
-        return const CreateCargoScreen();
-      case 2:
         return const CargosScreen();
+      case 2:
+        return const CreateCargoScreen();
       case 3:
-        return const ProductsScreen();
-      case 4:
         return const PricingScreen();
       default:
         return const SizedBox.shrink();
     }
-  }
-
-  void _onTabSelected(int index) {
-    setState(() {
-      _currentIndex = index;
-      _loadedTabs.add(index);
-    });
   }
 
   Widget _buildNavItem({
@@ -49,12 +40,15 @@ class _MainScreenState extends State<MainScreen> {
     required IconData icon,
     required IconData activeIcon,
     required String label,
+    required int currentIndex,
   }) {
-    final isSelected = _currentIndex == index;
+    final isSelected = currentIndex == index;
 
     return Expanded(
       child: InkWell(
-        onTap: () => _onTabSelected(index),
+        onTap: () {
+          ref.read(mainNavigationProvider.notifier).selectTab(index);
+        },
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
         child: Padding(
@@ -82,7 +76,7 @@ class _MainScreenState extends State<MainScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected ? AppColors.primary : AppColors.textSecondary,
                 ),
               ),
@@ -95,10 +89,16 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final navState = ref.watch(mainNavigationProvider);
+    final currentIndex = navState.tabIndex;
+
+    // Aktif sekmeyi lazy-load kümesine ekle
+    _loadedTabs.add(currentIndex);
+
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
-        children: List.generate(5, _buildScreen),
+        index: currentIndex,
+        children: List.generate(4, _buildScreen),
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -117,30 +117,28 @@ class _MainScreenState extends State<MainScreen> {
                 icon: Icons.grid_view_outlined,
                 activeIcon: Icons.grid_view_rounded,
                 label: 'Özet',
+                currentIndex: currentIndex,
               ),
               _buildNavItem(
                 index: 1,
-                icon: Icons.add_circle_outline_rounded,
-                activeIcon: Icons.add_circle_rounded,
-                label: 'Yeni Kargo',
-              ),
-              _buildNavItem(
-                index: 2,
                 icon: Icons.local_shipping_outlined,
                 activeIcon: Icons.local_shipping_rounded,
                 label: 'Kargolar',
+                currentIndex: currentIndex,
+              ),
+              _buildNavItem(
+                index: 2,
+                icon: Icons.add_circle_outline_rounded,
+                activeIcon: Icons.add_circle_rounded,
+                label: 'Yeni Kargo',
+                currentIndex: currentIndex,
               ),
               _buildNavItem(
                 index: 3,
-                icon: Icons.inventory_2_outlined,
-                activeIcon: Icons.inventory_2_rounded,
-                label: 'Ürünler',
-              ),
-              _buildNavItem(
-                index: 4,
                 icon: Icons.receipt_long_outlined,
                 activeIcon: Icons.receipt_long_rounded,
-                label: 'Fiyatlar',
+                label: 'Tarifeler & Ürünler',
+                currentIndex: currentIndex,
               ),
             ],
           ),

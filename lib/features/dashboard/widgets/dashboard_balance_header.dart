@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../../auth/models/user_model.dart';
 
 class DashboardBalanceHeader extends StatelessWidget {
@@ -7,6 +8,9 @@ class DashboardBalanceHeader extends StatelessWidget {
   final double currentBalance;
   final double podReceivable;
   final bool isLoading;
+  final VoidCallback? onNewCargoTap;
+  final VoidCallback? onProductsTap;
+  final VoidCallback? onRatesTap;
 
   const DashboardBalanceHeader({
     super.key,
@@ -14,7 +18,53 @@ class DashboardBalanceHeader extends StatelessWidget {
     required this.currentBalance,
     required this.podReceivable,
     required this.isLoading,
+    this.onNewCargoTap,
+    this.onProductsTap,
+    this.onRatesTap,
   });
+
+  Widget _buildQuickActionChip({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+    bool isPrimary = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isPrimary ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isPrimary ? AppColors.primary : AppColors.border,
+            width: 1,
+          ),
+          boxShadow: AppColors.softShadow,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: isPrimary ? Colors.white : AppColors.primary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isPrimary ? Colors.white : AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +73,8 @@ class DashboardBalanceHeader extends StatelessWidget {
             ? user!.accounts.first.companyName!
             : user!.accounts.first.name
         : '';
+
+    final balanceSplit = AppFormatters.splitCurrency(currentBalance);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +153,7 @@ class DashboardBalanceHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Üst Satır: Bakiye Başlığı ve Simge
+              // Üst Satır: Bakiye Başlığı ve Canlı Rozeti
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -146,21 +198,53 @@ class DashboardBalanceHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              // Ana Bakiye Tutarı
-              Text(
-                '₺ ${currentBalance.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
+              // Ana Bakiye Tutarı (Hero Tipografi: Tam Sayı Büyük, Kuruş Küçük)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    balanceSplit.whole,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  Text(
+                    '${balanceSplit.decimal} ${balanceSplit.symbol}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (currentBalance.abs() >= 10000) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        AppFormatters.formatCompactCurrency(currentBalance),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 16),
 
-              // Alt Bölüm: K.Ö. Alacak ve Kullanılabilir Bakiye Çipleri
+              // Alt Bölüm: K.Ö. Alacak ve Hesap Durumu Çipleri
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -172,8 +256,8 @@ class DashboardBalanceHeader extends StatelessWidget {
                     Expanded(
                       child: Row(
                         children: [
-                          const Icon(Icons.payments_outlined, color: Colors.greenAccent, size: 16),
-                          const SizedBox(width: 6),
+                          const Icon(Icons.payments_outlined, color: Colors.greenAccent, size: 18),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,9 +266,14 @@ class DashboardBalanceHeader extends StatelessWidget {
                                   'K.Ö. Alacak',
                                   style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w500),
                                 ),
+                                const SizedBox(height: 1),
                                 Text(
-                                  '₺ ${podReceivable.toStringAsFixed(2)}',
-                                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                                  AppFormatters.formatCurrency(podReceivable),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -199,17 +288,18 @@ class DashboardBalanceHeader extends StatelessWidget {
                     Expanded(
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle_outline, color: Colors.lightBlueAccent, size: 16),
-                          const SizedBox(width: 6),
-                          Expanded(
+                          const Icon(Icons.check_circle_outline, color: Colors.lightBlueAccent, size: 18),
+                          const SizedBox(width: 8),
+                          const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Hesap Durumu',
                                   style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w500),
                                 ),
-                                const Text(
+                                SizedBox(height: 1),
+                                Text(
                                   'Aktif / Onaylı',
                                   style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
                                   maxLines: 1,
@@ -223,6 +313,34 @@ class DashboardBalanceHeader extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Mobil Hızlı İşlem Çipleri (Thumb-Friendly Ergonomics)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildQuickActionChip(
+                icon: Icons.add_circle_outline_rounded,
+                label: 'Yeni Kargo',
+                onTap: onNewCargoTap,
+                isPrimary: true,
+              ),
+              const SizedBox(width: 8),
+              _buildQuickActionChip(
+                icon: Icons.inventory_2_outlined,
+                label: 'Ürün Kataloğu',
+                onTap: onProductsTap,
+              ),
+              const SizedBox(width: 8),
+              _buildQuickActionChip(
+                icon: Icons.receipt_long_outlined,
+                label: 'Tarifeler & Fiyat',
+                onTap: onRatesTap,
               ),
             ],
           ),

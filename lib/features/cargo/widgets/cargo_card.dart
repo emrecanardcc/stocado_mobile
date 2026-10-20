@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../models/cargo_model.dart';
 import 'cargo_status_badge.dart';
 
@@ -105,11 +106,34 @@ class CargoCard extends StatelessWidget {
                       Row(
                         children: [
                           if (cargo.receiver?.phone.isNotEmpty ?? false) ...[
-                            const Icon(Icons.phone_outlined, size: 12, color: AppColors.textSecondary),
-                            const SizedBox(width: 4),
-                            Text(
-                              cargo.receiver!.phone,
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            InkWell(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                Clipboard.setData(ClipboardData(text: cargo.receiver!.phone));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Telefon kopyalandı: ${cargo.receiver!.phone}'),
+                                    duration: const Duration(seconds: 1),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.phone_outlined, size: 12, color: AppColors.primary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    cargo.receiver!.phone,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(width: 10),
                           ],
@@ -161,6 +185,7 @@ class CargoCard extends StatelessWidget {
                   ),
                   InkWell(
                     onTap: () {
+                      HapticFeedback.lightImpact();
                       Clipboard.setData(ClipboardData(text: trackingCode));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -212,7 +237,7 @@ class CargoCard extends StatelessWidget {
                         const Icon(Icons.payments_outlined, size: 16, color: Color(0xFFB45309)),
                         const SizedBox(width: 6),
                         Text(
-                          'K.Ö: ₺ ${cargo.payOnDeliveryAmount?.toStringAsFixed(2) ?? '0,00'}',
+                          'K.Ö: ${AppFormatters.formatCurrency(cargo.payOnDeliveryAmount)}',
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
                         ),
                         if (cargo.payOnDeliveryTypeText != null) ...[

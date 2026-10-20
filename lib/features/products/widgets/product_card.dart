@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../models/product_model.dart';
 
 class ProductCard extends StatelessWidget {
@@ -72,7 +73,7 @@ class ProductCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              '${product.desi.toStringAsFixed(1)} Desi',
+                              AppFormatters.formatDesi(product.desi),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -127,10 +128,10 @@ class ProductCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '₺ ${product.price.toStringAsFixed(2)}',
+                      AppFormatters.formatCurrency(product.price),
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 16,
+                        fontSize: 15,
                         color: AppColors.primary,
                       ),
                     ),

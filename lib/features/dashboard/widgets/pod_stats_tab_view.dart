@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../models/dashboard_stats_model.dart';
 import 'metric_card.dart';
 
@@ -31,17 +32,17 @@ class PodStatsTabView extends StatelessWidget {
           children: [
             SmallStatCard(
               title: 'KARGO SAYISI',
-              value: '${stats?.podCargoCount ?? 0}',
+              value: AppFormatters.formatNumber(stats?.podCargoCount),
               icon: Icons.local_shipping_outlined,
             ),
             SmallStatCard(
               title: 'TAHSİL EDİLECEK',
-              value: '₺ ${stats != null ? stats!.podPending.toStringAsFixed(2) : '0,00'}',
+              value: AppFormatters.formatCurrency(stats?.podPending),
               icon: Icons.pending_actions_rounded,
             ),
             SmallStatCard(
               title: 'TAHSİL EDİLEN',
-              value: '₺ ${stats != null ? stats!.podCollected.toStringAsFixed(2) : '0,00'}',
+              value: AppFormatters.formatCurrency(stats?.podCollected),
               icon: Icons.check_circle_outline_rounded,
             ),
           ],
@@ -63,17 +64,17 @@ class PodStatsTabView extends StatelessWidget {
           children: [
             SmallStatCard(
               title: 'TOPLAM KESİNTİ',
-              value: '₺ ${stats != null ? stats!.podDeduction.toStringAsFixed(2) : '0,00'}',
+              value: AppFormatters.formatCurrency(stats?.podDeduction),
               icon: Icons.percent_rounded,
             ),
             SmallStatCard(
               title: 'BANA ÖDENECEK',
-              value: '₺ ${stats != null ? stats!.podWillPay.toStringAsFixed(2) : '0,00'}',
+              value: AppFormatters.formatCurrency(stats?.podWillPay),
               icon: Icons.hourglass_bottom_rounded,
             ),
             SmallStatCard(
               title: 'BANA ÖDENEN',
-              value: '₺ ${stats != null ? stats!.podPaid.toStringAsFixed(2) : '0,00'}',
+              value: AppFormatters.formatCurrency(stats?.podPaid),
               icon: Icons.done_all_rounded,
               isHighlight: true,
             ),
@@ -97,7 +98,7 @@ class PodStatsTabView extends StatelessWidget {
                   const Icon(Icons.reply_all_rounded, size: 16, color: AppColors.error),
                   const SizedBox(width: 6),
                   Text(
-                    'İade Sayısı: ${stats?.podReturnCount ?? 0}',
+                    'İade Sayısı: ${AppFormatters.formatNumber(stats?.podReturnCount)}',
                     style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 13),
                   ),
                 ],
@@ -107,7 +108,7 @@ class PodStatsTabView extends StatelessWidget {
                   const Icon(Icons.account_balance_outlined, size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
                   Text(
-                    'Toplam K.Ö Hacmi: ₺ ${stats != null ? stats!.podTotalVolume.toStringAsFixed(2) : '0,00'}',
+                    'Toplam K.Ö Hacmi: ${AppFormatters.formatCurrency(stats?.podTotalVolume)}',
                     style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary, fontSize: 13),
                   ),
                 ],

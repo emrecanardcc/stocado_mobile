@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
+import '../../products/widgets/add_edit_product_modal.dart';
 import '../providers/create_cargo_provider.dart';
 import '../widgets/cargo_bottom_bar.dart';
 import '../widgets/step1_addresses_widget.dart';
@@ -240,6 +241,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           desiController: _desiController,
           onProductSelected: (prod) => _populateFromProduct(prod, notifier),
           onClearProduct: () => _clearSelectedProduct(notifier),
+          onAddNewProduct: () => AddEditProductModal.show(context, ref),
         );
       case 2:
         return Step3ServicesWidget(

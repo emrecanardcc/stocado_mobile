@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../models/dashboard_stats_model.dart';
 import 'metric_card.dart';
 
@@ -26,21 +27,21 @@ class FinanceStatsTabView extends StatelessWidget {
 
         FinanceRowCard(
           title: 'TOPLAM ÖDENEN / YÜKLENEN',
-          amount: '₺ ${stats != null ? stats!.totalPaid.toStringAsFixed(2) : '0,00'}',
+          amount: AppFormatters.formatCurrency(stats?.totalPaid),
           icon: Icons.arrow_downward_rounded,
           color: AppColors.secondary,
         ),
         const SizedBox(height: 10),
         FinanceRowCard(
           title: 'HARCANAN (GİDERLER)',
-          amount: '₺ ${stats != null ? stats!.totalExpenses.toStringAsFixed(2) : '0,00'}',
+          amount: AppFormatters.formatCurrency(stats?.totalExpenses),
           icon: Icons.arrow_upward_rounded,
           color: AppColors.error,
         ),
         const SizedBox(height: 10),
         FinanceRowCard(
           title: 'MEVCUT KULLANILABİLİR BAKİYE',
-          amount: '₺ ${currentBalance.toStringAsFixed(2)}',
+          amount: AppFormatters.formatCurrency(currentBalance),
           icon: Icons.account_balance_wallet_rounded,
           color: AppColors.primary,
         ),

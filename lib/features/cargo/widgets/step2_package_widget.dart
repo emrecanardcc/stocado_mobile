@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../../products/models/product_model.dart';
 import '../providers/create_cargo_provider.dart';
 
@@ -16,6 +17,7 @@ class Step2PackageWidget extends StatelessWidget {
   final TextEditingController desiController;
   final void Function(ProductModel product) onProductSelected;
   final VoidCallback onClearProduct;
+  final VoidCallback? onAddNewProduct;
 
   const Step2PackageWidget({
     super.key,
@@ -31,6 +33,7 @@ class Step2PackageWidget extends StatelessWidget {
     required this.desiController,
     required this.onProductSelected,
     required this.onClearProduct,
+    this.onAddNewProduct,
   });
 
   @override
@@ -46,10 +49,29 @@ class Step2PackageWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // "Ürün Seçin" Dropdown
-        const Text(
-          'Kayıtlı Ürün Seçimi (Opsiyonel)',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+        // "Ürün Seçin" Başlık & Hızlı Ekleme Butonu
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Kayıtlı Ürün Seçimi (Opsiyonel)',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            ),
+            if (onAddNewProduct != null)
+              TextButton.icon(
+                onPressed: onAddNewProduct,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.primary),
+                label: const Text(
+                  'Yeni Ürün',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
         Container(
@@ -79,7 +101,7 @@ class Step2PackageWidget extends StatelessWidget {
                     return DropdownMenuItem<ProductModel?>(
                       value: prod,
                       child: Text(
-                        '${prod.name} (${prod.desi.toStringAsFixed(1)} Desi - ₺${prod.price.toStringAsFixed(2)})',
+                        '${prod.name} (${AppFormatters.formatDesi(prod.desi)} - ${AppFormatters.formatCurrency(prod.price)})',
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                       ),

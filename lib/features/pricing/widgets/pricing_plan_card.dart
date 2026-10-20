@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../models/pricing_plan_model.dart';
 
 class PricingPlanCard extends StatelessWidget {
@@ -147,17 +148,17 @@ class PricingPlanCard extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildPricePill('0-2 Desi', '₺ ${plan.zeroTwoDesi.toStringAsFixed(2)}'),
+                  _buildPricePill('0-2 Desi', AppFormatters.formatCurrency(plan.zeroTwoDesi)),
                   const SizedBox(width: 8),
-                  _buildPricePill('5 Desi', '₺ ${plan.fiveDesi.toStringAsFixed(2)}'),
+                  _buildPricePill('5 Desi', AppFormatters.formatCurrency(plan.fiveDesi)),
                   const SizedBox(width: 8),
-                  _buildPricePill('10 Desi', '₺ ${plan.tenDesi.toStringAsFixed(2)}'),
+                  _buildPricePill('10 Desi', AppFormatters.formatCurrency(plan.tenDesi)),
                   const SizedBox(width: 8),
-                  _buildPricePill('20 Desi', '₺ ${plan.twentyDesi.toStringAsFixed(2)}'),
+                  _buildPricePill('20 Desi', AppFormatters.formatCurrency(plan.twentyDesi)),
                   const SizedBox(width: 8),
-                  _buildPricePill('30 Desi', '₺ ${plan.thirtyDesi.toStringAsFixed(2)}'),
+                  _buildPricePill('30 Desi', AppFormatters.formatCurrency(plan.thirtyDesi)),
                   const SizedBox(width: 8),
-                  _buildPricePill('+1 Ek Desi', '₺ ${plan.additionalDesi.toStringAsFixed(2)}'),
+                  _buildPricePill('+1 Ek Desi', AppFormatters.formatCurrency(plan.additionalDesi)),
                 ],
               ),
             ),

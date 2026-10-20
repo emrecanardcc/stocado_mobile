@@ -7,6 +7,7 @@ import '../../dashboard/widgets/cargo_stats_tab_view.dart';
 import '../../dashboard/widgets/dashboard_balance_header.dart';
 import '../../dashboard/widgets/finance_stats_tab_view.dart';
 import '../../dashboard/widgets/pod_stats_tab_view.dart';
+import '../providers/navigation_provider.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -176,6 +177,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
                 currentBalance: currentBalance,
                 podReceivable: podReceivable,
                 isLoading: dashboardState.isLoading,
+                onNewCargoTap: () => ref.read(mainNavigationProvider.notifier).selectTab(2),
+                onProductsTap: () => ref.read(mainNavigationProvider.notifier).selectTab(3, subIndex: 1),
+                onRatesTap: () => ref.read(mainNavigationProvider.notifier).selectTab(3, subIndex: 0),
               ),
               const SizedBox(height: 18),
 

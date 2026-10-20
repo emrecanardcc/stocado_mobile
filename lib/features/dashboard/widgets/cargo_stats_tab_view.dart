@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../models/dashboard_stats_model.dart';
 import 'metric_card.dart';
 
@@ -61,42 +62,42 @@ class CargoStatsTabView extends StatelessWidget {
           children: [
             MetricCard(
               title: 'BEKLEYEN PAKETLER',
-              count: '${stats?.pendingCargos ?? 0}',
+              count: AppFormatters.formatNumber(stats?.pendingCargos),
               icon: Icons.inventory_2_outlined,
               color: AppColors.warning,
               backgroundColor: AppColors.warningLight,
             ),
             MetricCard(
               title: 'YOLDA OLAN PAKETLER',
-              count: '${stats?.activeCargos ?? 0}',
+              count: AppFormatters.formatNumber(stats?.activeCargos),
               icon: Icons.local_shipping_outlined,
               color: AppColors.info,
               backgroundColor: AppColors.infoLight,
             ),
             MetricCard(
               title: 'TESLİM EDİLEN PAKETLER',
-              count: '${stats?.deliveredToday ?? 0}',
+              count: AppFormatters.formatNumber(stats?.deliveredToday),
               icon: Icons.check_circle_outline_rounded,
               color: AppColors.secondary,
               backgroundColor: AppColors.secondaryLight,
             ),
             MetricCard(
               title: 'SORUNLU PAKETLER',
-              count: '${stats?.problematicCargos ?? 0}',
+              count: AppFormatters.formatNumber(stats?.problematicCargos),
               icon: Icons.warning_amber_rounded,
               color: AppColors.error,
               backgroundColor: AppColors.errorLight,
             ),
             MetricCard(
               title: 'GERİ DÖNEN PAKETLER',
-              count: '${stats?.returnedCargos ?? 0}',
+              count: AppFormatters.formatNumber(stats?.returnedCargos),
               icon: Icons.replay_rounded,
               color: AppColors.returned,
               backgroundColor: AppColors.returnedLight,
             ),
             MetricCard(
               title: 'TÜMÜ',
-              count: '${stats?.totalCargos ?? 0}',
+              count: AppFormatters.formatNumber(stats?.totalCargos),
               icon: Icons.format_list_bulleted_rounded,
               color: AppColors.primary,
               backgroundColor: AppColors.primary.withValues(alpha: 0.08),
