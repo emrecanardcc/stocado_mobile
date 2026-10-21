@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
 import '../../dashboard/widgets/cargo_stats_tab_view.dart';
@@ -163,7 +164,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
           const SizedBox(width: 4),
         ],
       ),
-      body: RefreshIndicator(
+      body: dashboardState.errorMessage != null && stats == null && !dashboardState.isLoading
+          ? AppErrorState(
+              title: 'Gösterge Paneli Yüklenemedi',
+              message: dashboardState.errorMessage!,
+              onRetry: () => ref.read(dashboardProvider.notifier).refresh(),
+            )
+          : RefreshIndicator(
         onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
         color: AppColors.primary,
         child: SingleChildScrollView(

@@ -27,10 +27,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Lütfen e-posta ve şifrenizi girin.'),
+          content: Text('Lütfen e-posta adresinizi giriniz.'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen geçerli bir e-posta adresi formatı giriniz (ör: ad@firma.com).'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen şifrenizi giriniz.'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Şifreniz en az 6 karakter olmalıdır.'),
           backgroundColor: AppColors.warning,
           behavior: SnackBarBehavior.floating,
         ),
@@ -51,10 +84,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       );
     } else {
-      final error = ref.read(authProvider).errorMessage ?? 'Giriş başarısız. Bilgilerinizi kontrol edin.';
+      final error = ref.read(authProvider).errorMessage;
+      final displayError = (error != null && error.trim().isNotEmpty)
+          ? error
+          : 'Giriş başarısız. Bilgilerinizi kontrol ediniz.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error),
+          content: Text(displayError),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),

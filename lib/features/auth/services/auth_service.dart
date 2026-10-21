@@ -33,26 +33,21 @@ class AuthService {
         if (token != null && token.isNotEmpty) {
           return LoginResult(isSuccess: true, token: token);
         }
-        return LoginResult(isSuccess: false, errorMessage: 'Token alınamadı.');
-      } else if (response.statusCode == 401 || response.statusCode == 422) {
-        try {
-          final data = jsonDecode(utf8.decode(response.bodyBytes));
-          final message = data['message'] ?? 'E-posta veya şifre hatalı.';
-          return LoginResult(isSuccess: false, errorMessage: message.toString());
-        } catch (_) {
-          return LoginResult(isSuccess: false, errorMessage: 'Giriş bilgileri geçersiz.');
-        }
+        return LoginResult(isSuccess: false, errorMessage: 'Sunucudan yetkilendirme anahtarı alınamadı.');
       } else {
-        return LoginResult(
-          isSuccess: false,
-          errorMessage: 'Sunucu hatası (${response.statusCode}). Lütfen tekrar deneyin.',
+        final errorMsg = ApiClient.parseError(
+          response,
+          defaultMessage: response.statusCode == 401
+              ? 'E-posta adresi veya şifre hatalı.'
+              : 'Giriş yapılamadı. Lütfen bilgilerinizi kontrol ediniz.',
         );
+        return LoginResult(isSuccess: false, errorMessage: errorMsg);
       }
     } catch (e) {
       debugPrint('AuthService.login hatası: $e');
       return LoginResult(
         isSuccess: false,
-        errorMessage: 'Ağ bağlantısı kurulamadı. Lütfen internetinizi kontrol edin.',
+        errorMessage: ApiClient.parseError(e, defaultMessage: 'Ağ bağlantısı kurulamadı. Lütfen internetinizi kontrol edin.'),
       );
     }
   }

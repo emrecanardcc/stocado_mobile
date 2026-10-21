@@ -674,7 +674,8 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       direction: state.direction,
     );
 
-    var offers = await _cargoService.calculateOffers(request);
+    final offerResult = await _cargoService.calculateOffers(request);
+    var offers = offerResult.offers;
 
     // Eğer kontrollü teslimat seçilmişse, yalnızca PTT Kargo destekler
     if (state.controlledDelivery && offers.isNotEmpty) {
@@ -689,6 +690,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       isLoadingOffers: false,
       offers: offers,
       selectedOffer: offers.isNotEmpty ? offers.first : null,
+      errorMessage: offerResult.isSuccess ? null : offerResult.errorMessage,
     );
   }
 
@@ -751,30 +753,49 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
 
     // Eğer manuel girilmişse veya seçili alıcı yoksa backend için adresi oluşturup ID al
     if (foreignId == null || foreignId.isEmpty) {
-      if (state.recipientName.trim().isEmpty || state.recipientPhone.trim().isEmpty) {
+      if (state.recipientName.trim().isEmpty) {
         state = state.copyWith(
           isSubmitting: false,
-          errorMessage: 'Lütfen alıcı ad soyad ve telefon bilgilerini giriniz.',
+          errorMessage: 'Lütfen alıcı ad ve soyadını giriniz.',
         );
         return false;
       }
+
+      final phoneDigits = state.recipientPhone.replaceAll(RegExp(r'\D'), '');
+      if (phoneDigits.length < 10) {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: 'Lütfen en az 10 haneli geçerli bir alıcı telefon numarası giriniz.',
+        );
+        return false;
+      }
+
+      if (state.selectedCity == null) {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: 'Lütfen alıcı ilini seçiniz.',
+        );
+        return false;
+      }
+
+      final details = state.addressDetails.trim().isNotEmpty
+          ? state.addressDetails.trim()
+          : '${state.selectedDistrict?.name ?? ""}, ${state.selectedCity?.name ?? ""}';
 
       final addResult = await createRecipientAddress(
         name: state.recipientName.trim(),
         phone: state.recipientPhone.trim(),
         email: state.recipientEmail.trim().isNotEmpty ? state.recipientEmail.trim() : null,
-        cityId: state.selectedCity?.id ?? 34,
+        cityId: state.selectedCity!.id,
         districtId: state.selectedDistrict?.id ?? 1101,
-        details: state.addressDetails.trim().isNotEmpty
-            ? state.addressDetails.trim()
-            : '${state.selectedDistrict?.name ?? ""}, ${state.selectedCity?.name ?? ""}',
+        details: details,
         postalCode: state.recipientPostalCode.trim().isNotEmpty ? state.recipientPostalCode.trim() : null,
       );
 
       if (!addResult.isSuccess || addResult.address == null) {
         state = state.copyWith(
           isSubmitting: false,
-          errorMessage: 'Alıcı adresi oluşturulamadı: ${addResult.message}',
+          errorMessage: 'Alıcı adresi oluşturulamadı: ${addResult.message ?? "Bilgileri kontrol ediniz."}',
         );
         return false;
       }

@@ -60,12 +60,55 @@ class CargoBottomBar extends ConsumerWidget {
                               return;
                             }
 
-                            if (state.recipientName.trim().isEmpty ||
-                                state.recipientPhone.trim().isEmpty ||
-                                state.selectedCity == null) {
+                            if (state.recipientName.trim().isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Lütfen Alıcı Ad Soyad, Telefon ve İl seçimini yapınız.'),
+                                  content: Text('Lütfen alıcı ad ve soyadını giriniz.'),
+                                  backgroundColor: AppColors.warning,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+
+                            final phoneDigits = state.recipientPhone.replaceAll(RegExp(r'\D'), '');
+                            if (phoneDigits.length < 10) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Lütfen en az 10 haneli geçerli bir telefon numarası giriniz.'),
+                                  backgroundColor: AppColors.warning,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (state.selectedCity == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Lütfen alıcı ilini seçiniz.'),
+                                  backgroundColor: AppColors.warning,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (state.selectedDistrict == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Lütfen alıcı ilçesini seçiniz.'),
+                                  backgroundColor: AppColors.warning,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (state.addressDetails.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Lütfen alıcı açık adresini (cadde, sokak, bina no) giriniz.'),
                                   backgroundColor: AppColors.warning,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -93,7 +136,7 @@ class CargoBottomBar extends ConsumerWidget {
                             if (state.payOnDelivery && state.payOnDeliveryAmount <= 0) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Lütfen kapıda ödeme tahsilat tutarını giriniz.'),
+                                  content: Text('Kapıda ödeme seçildiğinde tahsilat tutarı 0 TL\'den büyük olmalıdır.'),
                                   backgroundColor: AppColors.warning,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -109,7 +152,7 @@ class CargoBottomBar extends ConsumerWidget {
                           if (!state.isDraft && state.selectedOffer == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Lütfen bir kargo firması teklifi seçiniz veya teklifleri hesaplayınız.'),
+                                content: Text('Lütfen kargonuzu taşımak için bir kargo firması teklifi seçiniz.'),
                                 backgroundColor: AppColors.warning,
                                 behavior: SnackBarBehavior.floating,
                               ),
@@ -121,9 +164,10 @@ class CargoBottomBar extends ConsumerWidget {
                           if (!context.mounted) return;
 
                           if (success) {
+                            final successMsg = ref.read(createCargoProvider).successMessage;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(state.successMessage ?? 'Kargo başarıyla oluşturuldu!'),
+                                content: Text(successMsg ?? 'Kargo başarıyla oluşturuldu!'),
                                 backgroundColor: AppColors.secondary,
                                 behavior: SnackBarBehavior.floating,
                               ),
@@ -134,11 +178,16 @@ class CargoBottomBar extends ConsumerWidget {
                             ref.read(dashboardProvider.notifier).refresh();
                             ref.read(mainNavigationProvider.notifier).selectTab(1);
                           } else {
+                            final error = ref.read(createCargoProvider).errorMessage;
+                            final displayError = (error != null && error.trim().isNotEmpty)
+                                ? error
+                                : 'Kargo oluşturulamadı. Lütfen bilgilerinizi kontrol ediniz.';
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(state.errorMessage ?? 'Kargo oluşturulamadı.'),
+                                content: Text(displayError),
                                 backgroundColor: AppColors.error,
                                 behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 4),
                               ),
                             );
                           }

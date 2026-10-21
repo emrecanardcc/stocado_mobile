@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../models/product_model.dart';
 import '../providers/products_provider.dart';
 import '../widgets/add_edit_product_modal.dart';
@@ -73,13 +74,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              final success = await ref.read(productsProvider.notifier).deleteProduct(product.id);
+              final result = await ref.read(productsProvider.notifier).deleteProduct(product.id);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(success ? 'Ürün başarıyla silindi.' : 'Silme işlemi başarısız oldu.'),
-                    backgroundColor: success ? AppColors.secondary : AppColors.error,
+                    content: Text(result.message ?? (result.isSuccess ? 'Ürün başarıyla silindi.' : 'Silme işlemi gerçekleştirilemedi.')),
+                    backgroundColor: result.isSuccess ? AppColors.secondary : AppColors.error,
                     behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 4),
                   ),
                 );
               }
@@ -176,9 +178,15 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         color: AppColors.primary,
         child: state.isLoading && state.products.isEmpty
             ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-            : state.products.isEmpty
-                ? ProductEmptyState(onAddProduct: () => AddEditProductModal.show(context, ref))
-                : ListView.builder(
+            : state.errorMessage != null && state.products.isEmpty
+                ? AppErrorState(
+                    title: 'Ürünler Yüklenemedi',
+                    message: state.errorMessage!,
+                    onRetry: () => notifier.refresh(),
+                  )
+                : state.products.isEmpty
+                    ? ProductEmptyState(onAddProduct: () => AddEditProductModal.show(context, ref))
+                    : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     physics: const AlwaysScrollableScrollPhysics(),

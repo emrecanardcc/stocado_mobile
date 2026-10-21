@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_client.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/pricing_plan_model.dart';
 import '../services/pricing_service.dart';
@@ -58,16 +59,17 @@ class PricingNotifier extends Notifier<PricingState> {
         return;
       }
 
-      final plans = await _pricingService.getPricingPlans(accountId);
+      final response = await _pricingService.getPricingPlans(accountId);
 
       state = state.copyWith(
         isLoading: false,
-        plans: plans,
+        plans: response.plans,
+        errorMessage: response.errorMessage,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Fiyat listesi yüklenirken bir sorun oluştu.',
+        errorMessage: ApiClient.parseError(e, defaultMessage: 'Fiyat listesi yüklenirken bir sorun oluştu.'),
       );
     }
   }

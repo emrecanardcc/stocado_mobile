@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_client.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/balance_model.dart';
 import '../models/dashboard_stats_model.dart';
@@ -67,11 +68,12 @@ class DashboardNotifier extends Notifier<DashboardState> {
         isLoading: false,
         stats: stats,
         balance: balance,
+        errorMessage: (stats == null && balance == null) ? 'İstatistik verileri sunucudan alınamadı.' : null,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Veriler yüklenirken bir hata oluştu.',
+        errorMessage: ApiClient.parseError(e, defaultMessage: 'Panel verileri yüklenirken bir sorun oluştu.'),
       );
     }
   }

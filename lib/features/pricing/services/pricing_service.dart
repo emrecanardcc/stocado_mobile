@@ -2,6 +2,16 @@ import 'package:flutter/foundation.dart';
 import '../../../core/network/api_client.dart';
 import '../models/pricing_plan_model.dart';
 
+class PricingPlansResponse {
+  final List<PricingPlan> plans;
+  final String? errorMessage;
+
+  const PricingPlansResponse({
+    this.plans = const [],
+    this.errorMessage,
+  });
+}
+
 class PricingService {
   final ApiClient _apiClient;
 
@@ -10,7 +20,7 @@ class PricingService {
   /// Hesaba tanımlı aktif fiyat tarifelerini ve detay desi fiyatlarını veritabanından çeker:
   /// 1. POST /accounts/{accountId}/pricing-plans/query
   /// 2. GET /accounts/{accountId}/pricing-plans/{planId} (her tarife için kademeler)
-  Future<List<PricingPlan>> getPricingPlans(String accountId) async {
+  Future<PricingPlansResponse> getPricingPlans(String accountId) async {
     try {
       final response = await _apiClient.post(
         '/accounts/$accountId/pricing-plans/query',
@@ -59,15 +69,16 @@ class PricingService {
           }).toList();
 
           final results = await Future.wait(planFutures);
-          return results.whereType<PricingPlan>().toList();
+          final plans = results.whereType<PricingPlan>().toList();
+          return PricingPlansResponse(plans: plans);
         }
-      } else {
-        debugPrint('PricingService.getPricingPlans başarısız: ${response.statusCode}');
       }
-      return [];
+      final errorMsg = ApiClient.parseError(response, defaultMessage: 'Fiyat tarifeleri yüklenemedi.');
+      return PricingPlansResponse(errorMessage: errorMsg);
     } catch (e) {
       debugPrint('PricingService.getPricingPlans hatası: $e');
-      return [];
+      final errorMsg = ApiClient.parseError(e, defaultMessage: 'Ağ bağlantısı kurulamadı.');
+      return PricingPlansResponse(errorMessage: errorMsg);
     }
   }
 }

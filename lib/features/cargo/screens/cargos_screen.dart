@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../providers/cargo_list_provider.dart';
 import '../widgets/cargo_card.dart';
 import '../widgets/cargo_empty_state.dart';
@@ -189,6 +190,29 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
           ),
           const Divider(height: 1, color: AppColors.border),
 
+          if (state.errorMessage != null && state.cargos.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.errorLight,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.error),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      state.errorMessage!,
+                      style: const TextStyle(fontSize: 12, color: AppColors.error, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Liste Görünümü
           Expanded(
             child: RefreshIndicator(
@@ -196,9 +220,15 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
               color: AppColors.primary,
               child: state.isLoading && state.cargos.isEmpty
                   ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                  : state.cargos.isEmpty
-                      ? const CargoEmptyState()
-                      : ListView.builder(
+                  : state.errorMessage != null && state.cargos.isEmpty
+                      ? AppErrorState(
+                          title: 'Kargolar Yüklenemedi',
+                          message: state.errorMessage!,
+                          onRetry: () => notifier.refresh(),
+                        )
+                      : state.cargos.isEmpty
+                          ? const CargoEmptyState()
+                          : ListView.builder(
                           controller: _scrollController,
                           padding: const EdgeInsets.all(16),
                           physics: const AlwaysScrollableScrollPhysics(),

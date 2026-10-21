@@ -6,8 +6,25 @@ import '../models/product_model.dart';
 class PaginatedProductsResponse {
   final List<ProductModel> data;
   final PaginationMeta? meta;
+  final String? errorMessage;
 
-  PaginatedProductsResponse({required this.data, this.meta});
+  PaginatedProductsResponse({
+    required this.data,
+    this.meta,
+    this.errorMessage,
+  });
+}
+
+class ProductActionResult {
+  final bool isSuccess;
+  final String? message;
+  final Map<String, dynamic>? errors;
+
+  const ProductActionResult({
+    required this.isSuccess,
+    this.message,
+    this.errors,
+  });
 }
 
 class ProductsService {
@@ -79,6 +96,9 @@ class ProductsService {
             );
             return PaginatedProductsResponse(data: list, meta: meta);
           }
+        } else {
+          final errorMsg = ApiClient.parseError(response, defaultMessage: 'Ürünler yüklenemedi.');
+          return PaginatedProductsResponse(data: [], errorMessage: errorMsg);
         }
       }
 
@@ -106,52 +126,81 @@ class ProductsService {
           return PaginatedProductsResponse(data: list, meta: meta);
         }
       }
-      return PaginatedProductsResponse(data: []);
+      final errorMsg = ApiClient.parseError(response, defaultMessage: 'Ürünler yüklenemedi.');
+      return PaginatedProductsResponse(data: [], errorMessage: errorMsg);
     } catch (e) {
       debugPrint('ProductsService.getProducts hatası: $e');
-      return PaginatedProductsResponse(data: []);
+      final errorMsg = ApiClient.parseError(e, defaultMessage: 'Ağ bağlantısı kurulamadı.');
+      return PaginatedProductsResponse(data: [], errorMessage: errorMsg);
     }
   }
 
   /// POST /accounts/{accountId}/products veya POST /products
-  Future<bool> createProduct(ProductModel product, {String? accountId}) async {
+  Future<ProductActionResult> createProduct(ProductModel product, {String? accountId}) async {
     try {
       final path = (accountId != null && accountId.isNotEmpty)
           ? '/accounts/$accountId/products'
           : '/products';
       final response = await _apiClient.post(path, body: product.toJson());
-      return response.statusCode == 200 || response.statusCode == 201;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return const ProductActionResult(isSuccess: true, message: 'Ürün başarıyla eklendi.');
+      } else {
+        final errorMsg = ApiClient.parseError(response, defaultMessage: 'Ürün kaydedilemedi.');
+        return ProductActionResult(isSuccess: false, message: errorMsg);
+      }
     } catch (e) {
       debugPrint('ProductsService.createProduct hatası: $e');
-      return false;
+      return ProductActionResult(
+        isSuccess: false,
+        message: ApiClient.parseError(e, defaultMessage: 'Ağ hatası: Ürün kaydedilemedi.'),
+      );
     }
   }
 
   /// PUT /accounts/{accountId}/products/{id}
-  Future<bool> updateProduct(String id, ProductModel product, {String? accountId}) async {
+  Future<ProductActionResult> updateProduct(String id, ProductModel product, {String? accountId}) async {
     try {
       final path = (accountId != null && accountId.isNotEmpty)
           ? '/accounts/$accountId/products/$id'
           : '/products/$id';
       final response = await _apiClient.put(path, body: product.toJson());
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        return const ProductActionResult(isSuccess: true, message: 'Ürün başarıyla güncellendi.');
+      } else {
+        final errorMsg = ApiClient.parseError(response, defaultMessage: 'Ürün güncellenemedi.');
+        return ProductActionResult(isSuccess: false, message: errorMsg);
+      }
     } catch (e) {
       debugPrint('ProductsService.updateProduct hatası: $e');
-      return false;
+      return ProductActionResult(
+        isSuccess: false,
+        message: ApiClient.parseError(e, defaultMessage: 'Ağ hatası: Ürün güncellenemedi.'),
+      );
     }
   }
 
   /// DELETE /accounts/{accountId}/products/{id}
-  Future<bool> deleteProduct(String id, {String? accountId}) async {
+  Future<ProductActionResult> deleteProduct(String id, {String? accountId}) async {
     try {
       final path = (accountId != null && accountId.isNotEmpty)
           ? '/accounts/$accountId/products/$id'
           : '/products/$id';
       final response = await _apiClient.delete(path);
-      return response.statusCode == 200;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return const ProductActionResult(isSuccess: true, message: 'Ürün başarıyla silindi.');
+      } else {
+        final errorMsg = ApiClient.parseError(
+          response,
+          defaultMessage: 'Ürün silinemedi. Aktif bir kargoda kullanılıyor olabilir.',
+        );
+        return ProductActionResult(isSuccess: false, message: errorMsg);
+      }
     } catch (e) {
       debugPrint('ProductsService.deleteProduct hatası: $e');
-      return false;
+      return ProductActionResult(
+        isSuccess: false,
+        message: ApiClient.parseError(e, defaultMessage: 'Ağ hatası: Ürün silinemedi.'),
+      );
     }
   }
 }

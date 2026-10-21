@@ -82,6 +82,7 @@ class Step4OffersWidget extends StatelessWidget {
           )
         else if (state.offers.isEmpty)
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: AppColors.surface,
@@ -95,26 +96,30 @@ class Step4OffersWidget extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.warningLight,
+                    color: state.errorMessage != null ? AppColors.errorLight : AppColors.warningLight,
                   ),
-                  child: const Icon(Icons.calculate_outlined, color: AppColors.warning, size: 32),
+                  child: Icon(
+                    state.errorMessage != null ? Icons.error_outline_rounded : Icons.calculate_outlined,
+                    color: state.errorMessage != null ? AppColors.error : AppColors.warning,
+                    size: 32,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Teklifleri Görmek İçin Hesaplayın',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                Text(
+                  state.errorMessage != null ? 'Teklifler Alınamadı' : 'Teklifleri Görmek İçin Hesaplayın',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Girdiğiniz paket ölçüleri ve adreslere göre firmaların fiyat tekliflerini anında getirin.',
+                const SizedBox(height: 6),
+                Text(
+                  state.errorMessage ?? 'Girdiğiniz paket ölçüleri ve adreslere göre firmaların fiyat tekliflerini anında getirin.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () => notifier.calculateOffers(),
-                  icon: const Icon(Icons.bolt, size: 18),
-                  label: const Text('Teklifleri Hesapla'),
+                  icon: Icon(state.errorMessage != null ? Icons.refresh_rounded : Icons.bolt, size: 18),
+                  label: Text(state.errorMessage != null ? 'Tekrar Dene' : 'Teklifleri Hesapla'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     minimumSize: const Size(200, 44),
@@ -124,6 +129,28 @@ class Step4OffersWidget extends StatelessWidget {
             ),
           )
         else ...[
+          if (state.errorMessage != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Bilgi: ${state.errorMessage!} Standart tarife fiyatları gösterilmektedir.',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),

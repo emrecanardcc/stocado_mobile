@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_error_state.dart';
 import '../../home/providers/navigation_provider.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
@@ -92,13 +93,14 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              final success = await ref.read(productsProvider.notifier).deleteProduct(product.id);
+              final result = await ref.read(productsProvider.notifier).deleteProduct(product.id);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(success ? 'Ürün başarıyla silindi.' : 'Silme işlemi başarısız oldu.'),
-                    backgroundColor: success ? AppColors.secondary : AppColors.error,
+                    content: Text(result.message ?? (result.isSuccess ? 'Ürün başarıyla silindi.' : 'Silme işlemi gerçekleştirilemedi.')),
+                    backgroundColor: result.isSuccess ? AppColors.secondary : AppColors.error,
                     behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 4),
                   ),
                 );
               }
@@ -172,37 +174,11 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
       );
     }
 
-    if (pricingState.errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.errorLight,
-                ),
-                child: const Icon(Icons.error_outline_rounded, size: 40, color: AppColors.error),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                pricingState.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => pricingNotifier.refresh(),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Tekrar Dene'),
-                style: ElevatedButton.styleFrom(minimumSize: const Size(160, 44)),
-              ),
-            ],
-          ),
-        ),
+    if (pricingState.errorMessage != null && pricingState.plans.isEmpty) {
+      return AppErrorState(
+        title: 'Fiyat Tarifeleri Yüklenemedi',
+        message: pricingState.errorMessage!,
+        onRetry: () => pricingNotifier.refresh(),
       );
     }
 
@@ -318,9 +294,15 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
             color: AppColors.primary,
             child: productsState.isLoading && productsState.products.isEmpty
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : productsState.products.isEmpty
-                    ? ProductEmptyState(onAddProduct: () => AddEditProductModal.show(context, ref))
-                    : ListView.builder(
+                : productsState.errorMessage != null && productsState.products.isEmpty
+                    ? AppErrorState(
+                        title: 'Ürünler Yüklenemedi',
+                        message: productsState.errorMessage!,
+                        onRetry: () => productsNotifier.refresh(),
+                      )
+                    : productsState.products.isEmpty
+                        ? ProductEmptyState(onAddProduct: () => AddEditProductModal.show(context, ref))
+                        : ListView.builder(
                         controller: _productsScrollController,
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
                         physics: const AlwaysScrollableScrollPhysics(),

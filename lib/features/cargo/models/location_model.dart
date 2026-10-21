@@ -42,7 +42,7 @@ class City {
   City({
     required this.id,
     required this.name,
-    required this.districts,
+    this.districts = const [],
   });
 
   factory City.fromJson(Map<String, dynamic> json) {

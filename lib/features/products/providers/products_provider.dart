@@ -79,6 +79,7 @@ class ProductsNotifier extends Notifier<ProductsState> {
       isLoading: false,
       products: response.data,
       meta: response.meta,
+      errorMessage: response.errorMessage,
     );
   }
 
@@ -101,6 +102,7 @@ class ProductsNotifier extends Notifier<ProductsState> {
       isLoadingMore: false,
       products: [...state.products, ...response.data],
       meta: response.meta ?? state.meta,
+      errorMessage: response.errorMessage,
     );
   }
 
@@ -111,36 +113,36 @@ class ProductsNotifier extends Notifier<ProductsState> {
     }
   }
 
-  Future<bool> createProduct(ProductModel product) async {
+  Future<ProductActionResult> createProduct(ProductModel product) async {
     final auth = ref.read(authProvider);
     final accountId = auth.accountId ?? (auth.user?.accounts.isNotEmpty == true ? auth.user!.accounts.first.id : null);
-    final success = await _productsService.createProduct(product, accountId: accountId);
-    if (success) {
+    final result = await _productsService.createProduct(product, accountId: accountId);
+    if (result.isSuccess) {
       await loadProducts(reset: true);
     }
-    return success;
+    return result;
   }
 
-  Future<bool> updateProduct(String id, ProductModel product) async {
+  Future<ProductActionResult> updateProduct(String id, ProductModel product) async {
     final auth = ref.read(authProvider);
     final accountId = auth.accountId ?? (auth.user?.accounts.isNotEmpty == true ? auth.user!.accounts.first.id : null);
-    final success = await _productsService.updateProduct(id, product, accountId: accountId);
-    if (success) {
+    final result = await _productsService.updateProduct(id, product, accountId: accountId);
+    if (result.isSuccess) {
       await loadProducts(reset: true);
     }
-    return success;
+    return result;
   }
 
-  Future<bool> deleteProduct(String id) async {
+  Future<ProductActionResult> deleteProduct(String id) async {
     final auth = ref.read(authProvider);
     final accountId = auth.accountId ?? (auth.user?.accounts.isNotEmpty == true ? auth.user!.accounts.first.id : null);
-    final success = await _productsService.deleteProduct(id, accountId: accountId);
-    if (success) {
+    final result = await _productsService.deleteProduct(id, accountId: accountId);
+    if (result.isSuccess) {
       state = state.copyWith(
         products: state.products.where((p) => p.id != id).toList(),
       );
     }
-    return success;
+    return result;
   }
 
   Future<void> refresh() async {

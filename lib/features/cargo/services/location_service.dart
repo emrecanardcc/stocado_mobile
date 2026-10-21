@@ -62,7 +62,8 @@ class LocationService {
       debugPrint('LocationService.getCities hatası: $e');
     }
 
-    return [];
+    // Ağ hatasında formun kilitlenmesini önlemek için temel şehir listesi fallback'i
+    return _defaultCities;
   }
 
   /// Seçili şehre ait ilçeleri canlı API'den getirir
@@ -88,6 +89,33 @@ class LocationService {
       debugPrint('LocationService.getDistricts hatası: $e');
     }
 
-    return [];
+    // Ağ hatasında formun kilitlenmesini önlemek için varsayılan ilçe fallback'i
+    return [District(id: cityId * 100 + 1, name: 'Merkez')];
   }
+
+  static final List<City> _defaultCities = [
+    City(id: 34, name: 'İstanbul'),
+    City(id: 6, name: 'Ankara'),
+    City(id: 35, name: 'İzmir'),
+    City(id: 1, name: 'Adana'),
+    City(id: 7, name: 'Antalya'),
+    City(id: 16, name: 'Bursa'),
+    City(id: 20, name: 'Denizli'),
+    City(id: 21, name: 'Diyarbakır'),
+    City(id: 26, name: 'Eskişehir'),
+    City(id: 27, name: 'Gaziantep'),
+    City(id: 31, name: 'Hatay'),
+    City(id: 38, name: 'Kayseri'),
+    City(id: 41, name: 'Kocaeli'),
+    City(id: 42, name: 'Konya'),
+    City(id: 45, name: 'Manisa'),
+    City(id: 33, name: 'Mersin'),
+    City(id: 48, name: 'Muğla'),
+    City(id: 52, name: 'Ordu'),
+    City(id: 54, name: 'Sakarya'),
+    City(id: 55, name: 'Samsun'),
+    City(id: 59, name: 'Tekirdağ'),
+    City(id: 61, name: 'Trabzon'),
+    City(id: 63, name: 'Şanlıurfa'),
+  ];
 }

@@ -175,7 +175,22 @@ class AddEditProductModal {
 
                         if (name.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Lütfen ürün adını giriniz.'), backgroundColor: AppColors.warning),
+                            const SnackBar(
+                              content: Text('Lütfen ürün adını giriniz.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (finalDesi <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lütfen geçerli bir ürün desisi veya boyutlarını (en, boy, yükseklik) giriniz.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
                           );
                           return;
                         }
@@ -196,18 +211,20 @@ class AddEditProductModal {
                         final messenger = ScaffoldMessenger.of(context);
                         Navigator.pop(ctx);
 
-                        bool success;
-                        if (isEditing) {
-                          success = await ref.read(productsProvider.notifier).updateProduct(product.id, newProduct);
-                        } else {
-                          success = await ref.read(productsProvider.notifier).createProduct(newProduct);
-                        }
+                        final result = isEditing
+                            ? await ref.read(productsProvider.notifier).updateProduct(product.id, newProduct)
+                            : await ref.read(productsProvider.notifier).createProduct(newProduct);
 
                         if (context.mounted) {
+                          final defaultMsg = result.isSuccess
+                              ? (isEditing ? 'Ürün başarıyla güncellendi.' : 'Ürün başarıyla eklendi.')
+                              : 'İşlem gerçekleştirilemedi.';
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text(success ? (isEditing ? 'Ürün güncellendi!' : 'Ürün eklendi!') : 'İşlem başarısız.'),
-                              backgroundColor: success ? AppColors.secondary : AppColors.error,
+                              content: Text(result.message ?? defaultMsg),
+                              backgroundColor: result.isSuccess ? AppColors.secondary : AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 4),
                             ),
                           );
                         }

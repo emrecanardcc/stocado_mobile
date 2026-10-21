@@ -146,6 +146,7 @@ class CargoListNotifier extends Notifier<CargoListState> {
       isLoading: false,
       cargos: resolved,
       meta: response.meta,
+      errorMessage: response.errorMessage,
     );
   }
 
@@ -178,6 +179,7 @@ class CargoListNotifier extends Notifier<CargoListState> {
       isLoadingMore: false,
       cargos: [...state.cargos, ...resolved],
       meta: response.meta ?? state.meta,
+      errorMessage: response.errorMessage,
     );
   }
 

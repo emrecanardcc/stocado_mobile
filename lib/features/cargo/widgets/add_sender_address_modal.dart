@@ -299,34 +299,116 @@ class AddSenderAddressModal {
                     height: 48,
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (nameCtrl.text.trim().isEmpty ||
-                            phoneCtrl.text.trim().isEmpty ||
-                            detailsCtrl.text.trim().isEmpty ||
-                            modalCity == null ||
-                            modalDistrict == null) {
+                        final name = nameCtrl.text.trim();
+                        final phone = phoneCtrl.text.trim();
+                        final phoneDigits = phone.replaceAll(RegExp(r'\D'), '');
+                        final email = emailCtrl.text.trim();
+                        final details = detailsCtrl.text.trim();
+                        final vkn = vknCtrl.text.trim();
+                        final tckn = respTcknCtrl.text.trim();
+
+                        if (name.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Lütfen Gönderici Adı, Telefon, İl, İlçe ve Açık Adres alanlarını doldurunuz.'),
+                              content: Text('Lütfen Firma / Gönderici Adı alanını doldurunuz.'),
                               backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (phone.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lütfen telefon numarasını giriniz.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (phoneDigits.length < 10) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lütfen en az 10 haneli geçerli bir telefon numarası giriniz.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (email.isNotEmpty && !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lütfen geçerli bir e-posta adresi giriniz.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (vkn.isNotEmpty && vkn.length != 10) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Vergi Numarası (VKN) tam olarak 10 haneli olmalıdır.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (tckn.isNotEmpty && tckn.length != 11) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Yetkili TCKN tam olarak 11 haneli olmalıdır.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (modalCity == null || modalDistrict == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lütfen il ve ilçe seçimini yapınız.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (details.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lütfen açık adres (cadde, sokak, no) bilgisini giriniz.'),
+                              backgroundColor: AppColors.warning,
+                              behavior: SnackBarBehavior.floating,
                             ),
                           );
                           return;
                         }
 
                         final result = await notifier.createSenderAddress(
-                          title: titleCtrl.text.trim(),
-                          name: nameCtrl.text.trim(),
-                          phone: phoneCtrl.text.trim(),
-                          email: emailCtrl.text.trim().isNotEmpty ? emailCtrl.text.trim() : null,
+                          title: titleCtrl.text.trim().isNotEmpty ? titleCtrl.text.trim() : name,
+                          name: name,
+                          phone: phone,
+                          email: email.isNotEmpty ? email : null,
                           corporateName: corpCtrl.text.trim().isNotEmpty ? corpCtrl.text.trim() : null,
-                          vkn: vknCtrl.text.trim().isNotEmpty ? vknCtrl.text.trim() : null,
+                          vkn: vkn.isNotEmpty ? vkn : null,
                           responsiblePersonName: respNameCtrl.text.trim().isNotEmpty ? respNameCtrl.text.trim() : null,
                           responsiblePersonLastname: respLastCtrl.text.trim().isNotEmpty ? respLastCtrl.text.trim() : null,
-                          responsiblePersonTckn: respTcknCtrl.text.trim().isNotEmpty ? respTcknCtrl.text.trim() : null,
+                          responsiblePersonTckn: tckn.isNotEmpty ? tckn : null,
                           postalCode: postalCtrl.text.trim().isNotEmpty ? postalCtrl.text.trim() : null,
                           cityId: modalCity!.id,
                           districtId: modalDistrict!.id,
-                          details: detailsCtrl.text.trim(),
+                          details: details,
                         );
 
                         if (result.isSuccess) {
@@ -336,6 +418,7 @@ class AddSenderAddressModal {
                               SnackBar(
                                 content: Text(result.message ?? 'Gönderici adresi başarıyla eklendi.'),
                                 backgroundColor: AppColors.secondary,
+                                behavior: SnackBarBehavior.floating,
                               ),
                             );
                           }
@@ -345,6 +428,8 @@ class AddSenderAddressModal {
                               SnackBar(
                                 content: Text(result.message ?? 'Adres eklenirken bir hata oluştu.'),
                                 backgroundColor: AppColors.error,
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 4),
                               ),
                             );
                           }

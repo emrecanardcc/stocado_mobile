@@ -8,8 +8,25 @@ import '../models/cargo_offer_model.dart';
 class PaginatedCargosResponse {
   final List<CargoModel> data;
   final PaginationMeta? meta;
+  final String? errorMessage;
 
-  PaginatedCargosResponse({required this.data, this.meta});
+  PaginatedCargosResponse({
+    required this.data,
+    this.meta,
+    this.errorMessage,
+  });
+}
+
+class OfferCalculationResult {
+  final bool isSuccess;
+  final List<CargoOffer> offers;
+  final String? errorMessage;
+
+  const OfferCalculationResult({
+    required this.isSuccess,
+    this.offers = const [],
+    this.errorMessage,
+  });
 }
 
 class CargoCreationResult {
@@ -167,17 +184,10 @@ class CargoService {
           address: newAddress,
         );
       } else {
-        String errorMsg = 'Adres kaydedilemedi.';
+        final errorMsg = ApiClient.parseError(response, defaultMessage: 'Adres kaydedilemedi.');
         Map<String, dynamic>? errors;
-        if (decoded is Map<String, dynamic>) {
-          errorMsg = decoded['message'] ?? errorMsg;
-          if (decoded['errors'] is Map<String, dynamic>) {
-            errors = decoded['errors'] as Map<String, dynamic>;
-            final firstErr = errors.values.first;
-            if (firstErr is List && firstErr.isNotEmpty) {
-              errorMsg = '$errorMsg (${firstErr.first})';
-            }
-          }
+        if (decoded is Map<String, dynamic> && decoded['errors'] is Map<String, dynamic>) {
+          errors = decoded['errors'] as Map<String, dynamic>;
         }
         return AddressCreationResult(
           isSuccess: false,
@@ -189,13 +199,13 @@ class CargoService {
       debugPrint('CargoService.createAddress hatası: $e');
       return AddressCreationResult(
         isSuccess: false,
-        message: 'Ağ hatası: Adres kaydedilemedi.',
+        message: ApiClient.parseError(e, defaultMessage: 'Ağ hatası: Adres kaydedilemedi.'),
       );
     }
   }
 
   /// POST /cargos/offer veya /cargos/calculate (Fiyat teklifi al)
-  Future<List<CargoOffer>> calculateOffers(CargoCalculateRequest request) async {
+  Future<OfferCalculationResult> calculateOffers(CargoCalculateRequest request) async {
     try {
       final response = await _apiClient.post(
         '/cargos/offer',
@@ -205,15 +215,18 @@ class CargoService {
       if (response.statusCode == 200) {
         final decoded = ApiClient.decodeResponse(response);
         if (decoded is List) {
-          return decoded.map((item) => CargoOffer.fromJson(item as Map<String, dynamic>)).toList();
+          final offers = decoded.map((item) => CargoOffer.fromJson(item as Map<String, dynamic>)).toList();
+          return OfferCalculationResult(isSuccess: true, offers: offers);
         }
-      } else {
-        debugPrint('Teklif hesaplama hatası: ${response.statusCode} - ${response.body}');
       }
-      return [];
+      final errorMsg = ApiClient.parseError(response, defaultMessage: 'Fiyat teklifleri hesaplanamadı.');
+      return OfferCalculationResult(isSuccess: false, errorMessage: errorMsg);
     } catch (e) {
       debugPrint('CargoService.calculateOffers hatası: $e');
-      return [];
+      return OfferCalculationResult(
+        isSuccess: false,
+        errorMessage: ApiClient.parseError(e, defaultMessage: 'Ağ bağlantısı kurulamadı. Teklifler alınamadı.'),
+      );
     }
   }
 
@@ -311,6 +324,9 @@ class CargoService {
 
             return PaginatedCargosResponse(data: list, meta: meta);
           }
+        } else {
+          final errorMsg = ApiClient.parseError(response, defaultMessage: 'Kargolar yüklenemedi.');
+          return PaginatedCargosResponse(data: [], errorMessage: errorMsg);
         }
       }
 
@@ -339,10 +355,12 @@ class CargoService {
           return PaginatedCargosResponse(data: list, meta: meta);
         }
       }
-      return PaginatedCargosResponse(data: []);
+      final errorMsg = ApiClient.parseError(response, defaultMessage: 'Kargolar yüklenemedi.');
+      return PaginatedCargosResponse(data: [], errorMessage: errorMsg);
     } catch (e) {
       debugPrint('CargoService.getCargos hatası: $e');
-      return PaginatedCargosResponse(data: []);
+      final errorMsg = ApiClient.parseError(e, defaultMessage: 'Ağ bağlantısı kurulamadı.');
+      return PaginatedCargosResponse(data: [], errorMessage: errorMsg);
     }
   }
 
@@ -372,17 +390,13 @@ class CargoService {
           data: decoded,
         );
       } else {
-        String errorMsg = 'Kargo oluşturulamadı.';
+        final errorMsg = ApiClient.parseError(
+          response,
+          defaultMessage: 'Kargo oluşturulamadı. Lütfen bilgilerinizi kontrol ediniz.',
+        );
         Map<String, dynamic>? errors;
-        if (decoded is Map<String, dynamic>) {
-          errorMsg = decoded['message'] ?? errorMsg;
-          if (decoded['errors'] is Map<String, dynamic>) {
-            errors = decoded['errors'] as Map<String, dynamic>;
-            final firstEntry = errors.entries.firstOrNull;
-            if (firstEntry != null && firstEntry.value is List && (firstEntry.value as List).isNotEmpty) {
-              errorMsg = '$errorMsg: ${(firstEntry.value as List).first}';
-            }
-          }
+        if (decoded is Map<String, dynamic> && decoded['errors'] is Map<String, dynamic>) {
+          errors = decoded['errors'] as Map<String, dynamic>;
         }
         return CargoCreationResult(
           isSuccess: false,
@@ -394,7 +408,7 @@ class CargoService {
       debugPrint('CargoService.createCargo hatası: $e');
       return CargoCreationResult(
         isSuccess: false,
-        message: 'Ağ hatası: Kargo sunucuya iletilemedi.',
+        message: ApiClient.parseError(e, defaultMessage: 'Ağ hatası: Kargo sunucuya iletilemedi.'),
       );
     }
   }
