@@ -29,18 +29,59 @@ class ProductActionResult {
 
 class ProductsService {
   final ApiClient _apiClient;
+  String? _cachedAccountId;
 
   ProductsService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
 
-  /// GET /products veya POST /accounts/{accountId}/products/query
+  /// Account ID'yi çözer: parametre olarak gelmemişse auth/me üzerinden dinamik alır
+  Future<String?> _resolveAccountId({String? accountId}) async {
+    if (accountId != null && accountId.isNotEmpty) {
+      _cachedAccountId = accountId;
+      return accountId;
+    }
+    if (_cachedAccountId != null && _cachedAccountId!.isNotEmpty) {
+      return _cachedAccountId;
+    }
+    try {
+      final meRes = await _apiClient.get('/auth/me');
+      if (meRes.statusCode == 200) {
+        final meData = ApiClient.decodeResponse(meRes);
+        if (meData is Map<String, dynamic>) {
+          final userId = meData['id']?.toString();
+          if (userId != null && userId.isNotEmpty) {
+            final accRes = await _apiClient.get('/users/$userId/accounts');
+            if (accRes.statusCode == 200) {
+              final accData = ApiClient.decodeResponse(accRes);
+              if (accData is List && accData.isNotEmpty) {
+                _cachedAccountId = accData.first['id']?.toString();
+                return _cachedAccountId;
+              } else if (accData is Map<String, dynamic> &&
+                  accData['data'] is List &&
+                  (accData['data'] as List).isNotEmpty) {
+                _cachedAccountId = (accData['data'] as List).first['id']?.toString();
+                return _cachedAccountId;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('ProductsService._resolveAccountId hatası: $e');
+    }
+    return null;
+  }
+
+  /// POST /accounts/{accountId}/products/query
   Future<PaginatedProductsResponse> getProducts({
     String? accountId,
     int page = 1,
-    int perPage = 6,
+    int perPage = 15,
     String? search,
   }) async {
     try {
-      if (accountId != null && accountId.isNotEmpty) {
+      final targetAccountId = await _resolveAccountId(accountId: accountId);
+
+      if (targetAccountId != null && targetAccountId.isNotEmpty) {
         final body = <String, dynamic>{
           "fields": [
             {"name": "id"},
@@ -53,7 +94,11 @@ class ProductsService {
             {"name": "height"},
             {"name": "length"},
             {"name": "weight"},
-            {"name": "status"},
+            {"name": "created_at"},
+            {"name": "updated_at"},
+          ],
+          "sort": [
+            {"name": "id", "direction": "desc"}
           ],
           "paginate": {"page": page, "count": perPage}
         };
@@ -66,7 +111,7 @@ class ProductsService {
         }
 
         final response = await _apiClient.post(
-          '/accounts/$accountId/products/query',
+          '/accounts/$targetAccountId/products/query',
           body: body,
         );
 
@@ -87,12 +132,20 @@ class ProductsService {
               ).toList();
             }
 
-            final total = decoded['total'] is int ? decoded['total'] as int : list.length;
+            final rawTotal = decoded['total'];
+            int total = list.length;
+            if (rawTotal is num && rawTotal > 0) {
+              total = rawTotal.toInt();
+            } else if (rawTotal != null && rawTotal != -1) {
+              total = int.tryParse(rawTotal.toString()) ?? list.length;
+            }
+
+            final lastPage = (total <= 0 || perPage <= 0) ? 1 : (total / perPage).ceil();
             final meta = PaginationMeta(
               currentPage: page,
               perPage: perPage,
               total: total,
-              lastPage: (total / perPage).ceil() > 0 ? (total / perPage).ceil() : 1,
+              lastPage: lastPage > 0 ? lastPage : 1,
             );
             return PaginatedProductsResponse(data: list, meta: meta);
           }
@@ -102,32 +155,7 @@ class ProductsService {
         }
       }
 
-      // Fallback: GET /products
-      final query = <String, dynamic>{
-        'page': page,
-        'per_page': perPage,
-        if (search != null && search.isNotEmpty) 'search': search,
-        'account_id': ?accountId,
-      };
-
-      final response = await _apiClient.get('/products', queryParameters: query);
-
-      if (response.statusCode == 200) {
-        final decoded = ApiClient.decodeResponse(response);
-        if (decoded is Map<String, dynamic>) {
-          final list = (decoded['data'] as List<dynamic>?)
-                  ?.map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
-                  .where((p) => p.isActive)
-                  .toList() ??
-              [];
-          final meta = decoded['meta'] is Map<String, dynamic>
-              ? PaginationMeta.fromJson(decoded['meta'] as Map<String, dynamic>)
-              : null;
-          return PaginatedProductsResponse(data: list, meta: meta);
-        }
-      }
-      final errorMsg = ApiClient.parseError(response, defaultMessage: 'Ürünler yüklenemedi.');
-      return PaginatedProductsResponse(data: [], errorMessage: errorMsg);
+      return PaginatedProductsResponse(data: [], errorMessage: 'Hesap bilgisi doğrulanamadı.');
     } catch (e) {
       debugPrint('ProductsService.getProducts hatası: $e');
       final errorMsg = ApiClient.parseError(e, defaultMessage: 'Ağ bağlantısı kurulamadı.');
@@ -135,11 +163,12 @@ class ProductsService {
     }
   }
 
-  /// POST /accounts/{accountId}/products veya POST /products
+  /// POST /accounts/{accountId}/products
   Future<ProductActionResult> createProduct(ProductModel product, {String? accountId}) async {
     try {
-      final path = (accountId != null && accountId.isNotEmpty)
-          ? '/accounts/$accountId/products'
+      final targetAccountId = await _resolveAccountId(accountId: accountId);
+      final path = (targetAccountId != null && targetAccountId.isNotEmpty)
+          ? '/accounts/$targetAccountId/products'
           : '/products';
       final response = await _apiClient.post(path, body: product.toJson());
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -160,8 +189,9 @@ class ProductsService {
   /// PUT /accounts/{accountId}/products/{id}
   Future<ProductActionResult> updateProduct(String id, ProductModel product, {String? accountId}) async {
     try {
-      final path = (accountId != null && accountId.isNotEmpty)
-          ? '/accounts/$accountId/products/$id'
+      final targetAccountId = await _resolveAccountId(accountId: accountId);
+      final path = (targetAccountId != null && targetAccountId.isNotEmpty)
+          ? '/accounts/$targetAccountId/products/$id'
           : '/products/$id';
       final response = await _apiClient.put(path, body: product.toJson());
       if (response.statusCode == 200) {
@@ -182,8 +212,9 @@ class ProductsService {
   /// DELETE /accounts/{accountId}/products/{id}
   Future<ProductActionResult> deleteProduct(String id, {String? accountId}) async {
     try {
-      final path = (accountId != null && accountId.isNotEmpty)
-          ? '/accounts/$accountId/products/$id'
+      final targetAccountId = await _resolveAccountId(accountId: accountId);
+      final path = (targetAccountId != null && targetAccountId.isNotEmpty)
+          ? '/accounts/$targetAccountId/products/$id'
           : '/products/$id';
       final response = await _apiClient.delete(path);
       if (response.statusCode == 200 || response.statusCode == 204) {
