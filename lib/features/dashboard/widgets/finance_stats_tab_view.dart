@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../models/dashboard_stats_model.dart';
+import '../screens/top_up_balance_screen.dart';
 
 class FinanceStatsTabView extends StatelessWidget {
   final DashboardStats? stats;
@@ -13,7 +14,7 @@ class FinanceStatsTabView extends StatelessWidget {
     required this.currentBalance,
   });
 
-  Widget _buildBalanceHeroCard() {
+  Widget _buildBalanceHeroCard(BuildContext context) {
     final offsetBalance = stats?.offsetBalance ?? 0.0;
 
     return Container(
@@ -74,17 +75,46 @@ class FinanceStatsTabView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              AppFormatters.formatCurrency(currentBalance),
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.5,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    AppFormatters.formatCurrency(currentBalance),
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TopUpBalanceScreen()),
+                  );
+                },
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: const Text('Bakiye Yükle', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           const Divider(height: 1, color: AppColors.border),
@@ -201,7 +231,7 @@ class FinanceStatsTabView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 1. Ana Bakiye Hero Kartı
-        _buildBalanceHeroCard(),
+        _buildBalanceHeroCard(context),
         const SizedBox(height: 20),
 
         // 2. Nakit Akışı Kartları (2-kolonlu ferah yapı)
