@@ -138,7 +138,7 @@ class CargoStatsTabView extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      stats?.topCity ?? 'Eskişehir / 1182',
+                      stats?.topCity ?? '-',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                     ),
                   ],
@@ -170,7 +170,7 @@ class CargoStatsTabView extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      stats?.leastCity ?? 'Tokat / 1',
+                      stats?.leastCity ?? '-',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                     ),
                   ],

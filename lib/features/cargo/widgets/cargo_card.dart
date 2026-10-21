@@ -168,20 +168,25 @@ class CargoCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.qr_code_2_rounded, size: 18, color: AppColors.textSecondary),
-                      const SizedBox(width: 8),
-                      Text(
-                        trackingCode,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: AppColors.textPrimary,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.qr_code_2_rounded, size: 18, color: AppColors.textSecondary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            trackingCode,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: AppColors.textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   InkWell(
                     onTap: () {
@@ -232,22 +237,27 @@ class CargoCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.payments_outlined, size: 16, color: Color(0xFFB45309)),
-                        const SizedBox(width: 6),
-                        Text(
-                          'K.Ö: ${AppFormatters.formatCurrency(cargo.payOnDeliveryAmount)}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
-                        ),
-                        if (cargo.payOnDeliveryTypeText != null) ...[
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.payments_outlined, size: 16, color: Color(0xFFB45309)),
                           const SizedBox(width: 6),
-                          Text(
-                            '(${cargo.payOnDeliveryTypeText})',
-                            style: const TextStyle(fontSize: 11, color: Color(0xFFB45309), fontWeight: FontWeight.w500),
+                          Flexible(
+                            child: Text(
+                              'K.Ö: ${AppFormatters.formatCurrency(cargo.payOnDeliveryAmount)}',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          if (cargo.payOnDeliveryTypeText != null) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              '(${cargo.payOnDeliveryTypeText})',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFFB45309), fontWeight: FontWeight.w500),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                     if (cargo.payOnDeliveryStatusText != null)
                       Container(

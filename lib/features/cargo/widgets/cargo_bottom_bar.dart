@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
+import '../../home/providers/navigation_provider.dart';
 import '../providers/cargo_list_provider.dart';
 import '../providers/create_cargo_provider.dart';
 
@@ -106,6 +107,7 @@ class CargoBottomBar extends ConsumerWidget {
                             notifier.reset();
                             ref.read(cargoListProvider.notifier).refresh();
                             ref.read(dashboardProvider.notifier).refresh();
+                            ref.read(mainNavigationProvider.notifier).selectTab(1);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(

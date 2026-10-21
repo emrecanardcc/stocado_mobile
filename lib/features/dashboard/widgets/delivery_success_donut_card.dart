@@ -315,26 +315,35 @@ class _DeliverySuccessDonutCardState extends State<DeliverySuccessDonutCard>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.inventory_2_outlined, size: 14, color: AppColors.textSecondary),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Toplam Paket Hacmi: ${AppFormatters.formatNumber(totalCount)} Adet',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.inventory_2_outlined, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Toplam Paket Hacmi: ${AppFormatters.formatNumber(totalCount)} Adet',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Text(
-                  successRate >= 90 ? 'Mükemmel Performans' : 'Normal Dağıtım',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: successRate >= 90 ? AppColors.secondary : AppColors.info,
+                const SizedBox(width: 8),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    successRate >= 90 ? 'Mükemmel Performans' : 'Normal Dağıtım',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: successRate >= 90 ? AppColors.secondary : AppColors.info,
+                    ),
                   ),
                 ),
               ],

@@ -193,48 +193,52 @@ class DashboardBalanceHeader extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // Ana Bakiye Tutarı (Hero Tipografi: Tam Sayı Büyük, Kuruş Küçük)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    balanceSplit.whole,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  Text(
-                    '${balanceSplit.decimal} ${balanceSplit.symbol}',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (currentBalance.abs() >= 10000) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.border),
+              // Ana Bakiye Tutarı (Hero Tipografi: Tam Sayı Büyük, Kuruş Küçük, Taşma Korumalı)
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      balanceSplit.whole,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
                       ),
-                      child: Text(
-                        AppFormatters.formatCompactCurrency(currentBalance),
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
+                    ),
+                    Text(
+                      '${balanceSplit.decimal} ${balanceSplit.symbol}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (currentBalance.abs() >= 10000) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSecondary,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Text(
+                          AppFormatters.formatCompactCurrency(currentBalance),
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
               const SizedBox(height: 16),
 

@@ -78,7 +78,7 @@ class StepperHeader extends StatelessWidget {
                 if (index < steps.length - 1)
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
-                    width: 24,
+                    width: 14,
                     height: 2,
                     color: index < currentStep ? AppColors.secondary : AppColors.border,
                   ),

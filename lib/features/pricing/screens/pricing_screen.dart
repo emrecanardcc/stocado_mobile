@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -22,6 +23,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
   late final TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   late final ScrollController _productsScrollController;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     _searchController.dispose();
@@ -277,8 +280,15 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
                       contentPadding: EdgeInsets.symmetric(vertical: 10),
                     ),
                     onChanged: (val) {
-                      productsNotifier.setSearch(val.trim());
+                      _debounceTimer?.cancel();
+                      _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+                        productsNotifier.setSearch(val.trim());
+                      });
                       setState(() {});
+                    },
+                    onSubmitted: (val) {
+                      _debounceTimer?.cancel();
+                      productsNotifier.setSearch(val.trim());
                     },
                   ),
                 ),
@@ -288,6 +298,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () {
+                      _debounceTimer?.cancel();
                       _searchController.clear();
                       productsNotifier.setSearch('');
                       setState(() {});

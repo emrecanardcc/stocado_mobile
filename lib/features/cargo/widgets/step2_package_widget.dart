@@ -53,9 +53,12 @@ class Step2PackageWidget extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Kayıtlı Ürün Seçimi (Opsiyonel)',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            const Expanded(
+              child: Text(
+                'Kayıtlı Ürün Seçimi (Opsiyonel)',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             if (onAddNewProduct != null)
               TextButton.icon(

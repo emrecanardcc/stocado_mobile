@@ -91,27 +91,38 @@ class PodStatsTabView extends StatelessWidget {
             boxShadow: AppColors.softShadow,
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.reply_all_rounded, size: 16, color: AppColors.error),
-                  const SizedBox(width: 6),
-                  Text(
-                    'İade Sayısı: ${AppFormatters.formatNumber(stats?.podReturnCount)}',
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 13),
-                  ),
-                ],
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.reply_all_rounded, size: 16, color: AppColors.error),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'İade Sayısı: ${AppFormatters.formatNumber(stats?.podReturnCount)}',
+                        style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.error, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              Row(
-                children: [
-                  const Icon(Icons.account_balance_outlined, size: 16, color: AppColors.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Toplam K.Ö Hacmi: ${AppFormatters.formatCurrency(stats?.podTotalVolume)}',
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary, fontSize: 13),
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Icon(Icons.account_balance_outlined, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'K.Ö Hacmi: ${AppFormatters.formatCurrency(stats?.podTotalVolume)}',
+                        style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
