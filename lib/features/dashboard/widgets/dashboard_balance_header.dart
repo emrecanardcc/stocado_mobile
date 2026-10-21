@@ -87,22 +87,16 @@ class DashboardBalanceHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        user != null && user!.firstName.isNotEmpty
-                            ? 'İyi Çalışmalar, ${user!.firstName}'
-                            : 'İyi Çalışmalar',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text('🖐️', style: TextStyle(fontSize: 18)),
-                    ],
+                  Text(
+                    user != null && user!.firstName.isNotEmpty
+                        ? 'İyi Çalışmalar, ${user!.firstName}'
+                        : 'İyi Çalışmalar',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                   if (companyName.isNotEmpty)
                     Padding(
@@ -131,24 +125,15 @@ class DashboardBalanceHeader extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Hero Bakiye & Finans Kartı (Modern Koyu Lacivert Gradyan)
+        // Hero Bakiye & Finans Kartı (Soft Açık Tema & Yüksek Okunabilirlik)
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.primaryDark],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x2A16325B),
-                blurRadius: 18,
-                offset: Offset(0, 8),
-              ),
-            ],
+            border: Border.all(color: AppColors.border, width: 1),
+            boxShadow: AppColors.softShadow,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,18 +147,18 @@ class DashboardBalanceHeader extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 16),
+                        child: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary, size: 16),
                       ),
                       const SizedBox(width: 8),
                       const Text(
                         'Cüzdan Bakiyesi',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: AppColors.textSecondary,
                           fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -181,17 +166,25 @@ class DashboardBalanceHeader extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
+                      color: AppColors.secondaryLight.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.bolt, color: Colors.amberAccent, size: 13),
-                        SizedBox(width: 3),
-                        Text(
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: AppColors.secondary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
                           'Canlı',
-                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: Color(0xFF065F46), fontSize: 10, fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
@@ -208,7 +201,7 @@ class DashboardBalanceHeader extends StatelessWidget {
                   Text(
                     balanceSplit.whole,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5,
@@ -217,7 +210,7 @@ class DashboardBalanceHeader extends StatelessWidget {
                   Text(
                     '${balanceSplit.decimal} ${balanceSplit.symbol}',
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.textSecondary,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -227,13 +220,14 @@ class DashboardBalanceHeader extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: AppColors.surfaceSecondary,
                         borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border),
                       ),
                       child: Text(
                         AppFormatters.formatCompactCurrency(currentBalance),
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                         ),
@@ -248,15 +242,16 @@ class DashboardBalanceHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: AppColors.surfaceSecondary,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderLight),
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Row(
                         children: [
-                          const Icon(Icons.payments_outlined, color: Colors.greenAccent, size: 18),
+                          const Icon(Icons.hourglass_bottom_rounded, color: AppColors.warning, size: 18),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
@@ -264,13 +259,13 @@ class DashboardBalanceHeader extends StatelessWidget {
                               children: [
                                 const Text(
                                   'K.Ö. Alacak',
-                                  style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w500),
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w500),
                                 ),
                                 const SizedBox(height: 1),
                                 Text(
                                   AppFormatters.formatCurrency(podReceivable),
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -283,12 +278,12 @@ class DashboardBalanceHeader extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Container(height: 24, width: 1, color: Colors.white24),
+                    Container(height: 24, width: 1, color: AppColors.border),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle_outline, color: Colors.lightBlueAccent, size: 18),
+                          const Icon(Icons.check_circle_outline_rounded, color: AppColors.secondary, size: 18),
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Column(
@@ -296,12 +291,12 @@ class DashboardBalanceHeader extends StatelessWidget {
                               children: [
                                 Text(
                                   'Hesap Durumu',
-                                  style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w500),
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w500),
                                 ),
                                 SizedBox(height: 1),
                                 Text(
                                   'Aktif / Onaylı',
-                                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../models/dashboard_stats_model.dart';
+import 'delivery_success_donut_card.dart';
 import 'metric_card.dart';
 
 class CargoStatsTabView extends StatelessWidget {
@@ -17,6 +18,10 @@ class CargoStatsTabView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Teslimat Başarı Halkası (Kullanıcının Onayladığı Dairesel Analitik Grafik)
+        DeliverySuccessDonutCard(stats: stats),
+        const SizedBox(height: 18),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

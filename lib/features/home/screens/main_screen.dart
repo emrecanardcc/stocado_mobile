@@ -49,19 +49,18 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         onTap: () {
           ref.read(mainNavigationProvider.notifier).selectTab(index);
         },
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          padding: const EdgeInsets.symmetric(vertical: 6.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   isSelected ? activeIcon : icon,
@@ -69,13 +68,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                   color: isSelected ? AppColors.primary : AppColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected ? AppColors.primary : AppColors.textSecondary,
                 ),
@@ -100,16 +99,22 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         index: currentIndex,
         children: List.generate(4, _buildScreen),
       ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: AppColors.border, width: 1),
+      bottomNavigationBar: SafeArea(
+        bottom: true,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border, width: 1),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x100F172A),
+                blurRadius: 18,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
-          boxShadow: AppColors.softShadow,
-        ),
-        child: SafeArea(
-          top: false,
           child: Row(
             children: [
               _buildNavItem(
@@ -137,7 +142,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 index: 3,
                 icon: Icons.receipt_long_outlined,
                 activeIcon: Icons.receipt_long_rounded,
-                label: 'Tarifeler & Ürünler',
+                label: 'Tarife & Ürün',
                 currentIndex: currentIndex,
               ),
             ],
