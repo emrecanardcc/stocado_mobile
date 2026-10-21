@@ -56,13 +56,26 @@ class PricingPlan {
     final fees = (detail?['fees'] as List<dynamic>?) ?? [];
 
     double getPrice(int desi) {
-      final p = prices.firstWhere(
+      dynamic p = prices.firstWhere(
         (it) =>
             it is Map<String, dynamic> &&
             ((it['desi_threshold'] is num && (it['desi_threshold'] as num).toInt() == desi) ||
              it['desi_threshold']?.toString() == desi.toString()),
         orElse: () => null,
       );
+
+      // 0-2 Desi için esnek eşleşme (bazı tarifelerde threshold 1 veya 2 tanımlıdır)
+      if (p == null && desi == 0) {
+        p = prices.firstWhere(
+          (it) =>
+              it is Map<String, dynamic> &&
+              ((it['desi_threshold'] is num && (it['desi_threshold'] as num).toInt() <= 2) ||
+               it['desi_threshold']?.toString() == '1' ||
+               it['desi_threshold']?.toString() == '2'),
+          orElse: () => null,
+        );
+      }
+
       if (p != null && p is Map<String, dynamic>) {
         final amt = (p['amount'] is num)
             ? (p['amount'] as num).toDouble()

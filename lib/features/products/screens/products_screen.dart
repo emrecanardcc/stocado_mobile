@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -18,6 +19,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   final TextEditingController _searchController = TextEditingController();
   late final ScrollController _scrollController;
   bool _isSearching = false;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -34,6 +36,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -111,7 +114,16 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   contentPadding: EdgeInsets.zero,
                   filled: false,
                 ),
-                onSubmitted: (val) => notifier.setSearch(val.trim()),
+                onChanged: (val) {
+                  _debounceTimer?.cancel();
+                  _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+                    notifier.setSearch(val.trim());
+                  });
+                },
+                onSubmitted: (val) {
+                  _debounceTimer?.cancel();
+                  notifier.setSearch(val.trim());
+                },
               )
             : const Row(
                 children: [
@@ -127,6 +139,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             onPressed: () {
               setState(() {
                 if (_isSearching) {
+                  _debounceTimer?.cancel();
                   _searchController.clear();
                   notifier.setSearch('');
                   _isSearching = false;

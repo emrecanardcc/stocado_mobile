@@ -38,7 +38,9 @@ class DashboardNotifier extends Notifier<DashboardState> {
   @override
   DashboardState build() {
     ref.listen(authProvider, (previous, next) {
-      if (next.isAuthenticated && next.accountId != null && next.accountId != previous?.accountId) {
+      if (!next.isAuthenticated) {
+        state = const DashboardState();
+      } else if (next.accountId != null && next.accountId != previous?.accountId) {
         loadDashboard();
       }
     });

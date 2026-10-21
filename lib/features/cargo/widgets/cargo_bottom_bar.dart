@@ -74,6 +74,20 @@ class CargoBottomBar extends ConsumerWidget {
                             }
                           }
 
+                          // 2. ADIM VALIDASYONU (Paket Bilgileri)
+                          if (state.currentStep == 1) {
+                            if (state.desi <= 0 && state.weight <= 0 && state.width <= 0 && state.length <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Lütfen paket desi, ağırlık veya boyut bilgilerini giriniz.'),
+                                  backgroundColor: AppColors.warning,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+                          }
+
                           // 3. ADIM -> 4. ADIM (Teklif Hesaplama)
                           if (state.currentStep == 2) {
                             if (state.payOnDelivery && state.payOnDeliveryAmount <= 0) {
@@ -92,6 +106,17 @@ class CargoBottomBar extends ConsumerWidget {
                           notifier.setStep(state.currentStep + 1);
                         } else {
                           // GÖNDERİ SUBMIT (Kargo Oluştur veya Taslak Kaydet)
+                          if (!state.isDraft && state.selectedOffer == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Lütfen bir kargo firması teklifi seçiniz veya teklifleri hesaplayınız.'),
+                                backgroundColor: AppColors.warning,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            return;
+                          }
+
                           final success = await notifier.submitCargo();
                           if (!context.mounted) return;
 

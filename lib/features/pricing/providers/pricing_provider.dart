@@ -32,6 +32,13 @@ class PricingNotifier extends Notifier<PricingState> {
 
   @override
   PricingState build() {
+    ref.listen(authProvider, (previous, next) {
+      if (!next.isAuthenticated) {
+        state = const PricingState();
+      } else if (next.accountId != null && next.accountId != previous?.accountId) {
+        loadPricingPlans();
+      }
+    });
     Future.microtask(() => loadPricingPlans());
     return const PricingState(isLoading: true);
   }
@@ -41,7 +48,7 @@ class PricingNotifier extends Notifier<PricingState> {
 
     try {
       final authState = ref.read(authProvider);
-      final accountId = authState.user?.accounts.firstOrNull?.id;
+      final accountId = authState.accountId ?? authState.user?.accounts.firstOrNull?.id;
 
       if (accountId == null || accountId.isEmpty) {
         state = state.copyWith(

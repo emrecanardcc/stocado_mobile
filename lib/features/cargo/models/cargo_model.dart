@@ -116,6 +116,34 @@ class CargoModel {
   bool get isDraft => status == 0;
 
   String get statusText {
+    if (status == 0) return 'Taslak';
+    if (status == 4) return 'İptal Edildi';
+
+    // Transaction tipine göre öncelikli durum çözümleme
+    if (latestTransaction != null && latestTransaction!.type != null) {
+      switch (latestTransaction!.type!) {
+        case 1:
+          return 'Gönderime Hazır';
+        case 2:
+        case 3:
+        case 4:
+        case 9:
+          return 'Yolda / Transfer';
+        case 5:
+          return 'Dağıtımda';
+        case 6:
+          return 'Teslim Edildi';
+        case 7:
+          return 'Teslim Edilemedi';
+        case 10:
+        case 11:
+          return 'İade Edildi';
+        case 13:
+          return 'Sorunlu / İptal';
+      }
+    }
+
+    // Transaction yoksa genel status kodundan çözümle
     switch (status) {
       case 0:
         return 'Taslak';

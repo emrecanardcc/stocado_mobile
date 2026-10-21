@@ -49,7 +49,9 @@ class ProductsNotifier extends Notifier<ProductsState> {
   @override
   ProductsState build() {
     ref.listen(authProvider, (previous, next) {
-      if (next.isAuthenticated && next.accountId != null && next.accountId != previous?.accountId) {
+      if (!next.isAuthenticated) {
+        state = const ProductsState();
+      } else if (next.accountId != null && next.accountId != previous?.accountId) {
         loadProducts(reset: true);
       }
     });

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/address_model.dart';
@@ -427,22 +428,23 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
 
     state = state.copyWith(isCreatingAddress: true);
 
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
     final payload = {
       "type": 4, // Gönderici
       "title": title.isNotEmpty ? title : name,
       "name": name,
-      "phone": phone,
-      "email": email,
+      "phone": cleanPhone,
+      if (email != null && email.trim().isNotEmpty) "email": email.trim(),
       "country_id": "TR",
       "city_id": cityId,
       "district_id": districtId,
       "details": details,
-      "postal_code": postalCode,
-      "corporate_name": corporateName,
-      "vkn": vkn,
-      "responsible_person_name": responsiblePersonName,
-      "responsible_person_lastname": responsiblePersonLastname,
-      "responsible_person_tckn": responsiblePersonTckn,
+      if (postalCode != null && postalCode.trim().isNotEmpty) "postal_code": postalCode.trim(),
+      if (corporateName != null && corporateName.trim().isNotEmpty) "corporate_name": corporateName.trim(),
+      if (vkn != null && vkn.trim().isNotEmpty) "vkn": vkn.trim(),
+      if (responsiblePersonName != null && responsiblePersonName.trim().isNotEmpty) "responsible_person_name": responsiblePersonName.trim(),
+      if (responsiblePersonLastname != null && responsiblePersonLastname.trim().isNotEmpty) "responsible_person_lastname": responsiblePersonLastname.trim(),
+      if (responsiblePersonTckn != null && responsiblePersonTckn.trim().isNotEmpty) "responsible_person_tckn": responsiblePersonTckn.trim(),
     };
 
     final result = await _cargoService.createAddress(accountId, payload);
@@ -479,17 +481,18 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       );
     }
 
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
     final payload = {
       "type": 1, // Alıcı / Müşteri
       "name": name,
       "title": name,
-      "phone": phone,
-      "email": email,
+      "phone": cleanPhone,
+      if (email != null && email.trim().isNotEmpty) "email": email.trim(),
       "country_id": "TR",
       "city_id": cityId,
       "district_id": districtId,
       "details": details,
-      "postal_code": postalCode,
+      if (postalCode != null && postalCode.trim().isNotEmpty) "postal_code": postalCode.trim(),
     };
 
     final result = await _cargoService.createAddress(accountId, payload);
@@ -787,16 +790,29 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
 
     // 3. Payload hazırla (Backend API gereksinimlerine tam uyumlu)
     final isSend = state.direction == 'send';
+    final effectiveDesi = state.desi > 0 ? state.desi : 1.0;
+    double effectiveLength = state.length;
+    double effectiveWidth = state.width;
+    double effectiveHeight = state.height;
+
+    // Eğer manuel ölçü girilmemişse, desi ile tam uyumlu kübik boyut ata (kargo firması API'sinin desiyi düşürmesini engeller)
+    if (effectiveLength <= 0 || effectiveWidth <= 0 || effectiveHeight <= 0) {
+      final side = math.pow(effectiveDesi * 3000, 1 / 3).toDouble();
+      effectiveLength = double.parse(side.toStringAsFixed(2));
+      effectiveWidth = double.parse(side.toStringAsFixed(2));
+      effectiveHeight = double.parse(side.toStringAsFixed(2));
+    }
+
     final payload = {
       "account_id": accountId,
       "cargo_company_id": cargoCompanyId,
       "local_id": state.selectedSenderAddress!.id,
       "foreign_id": foreignId,
       "package": {
-        "desi": double.parse((state.desi > 0 ? state.desi : 1.0).toStringAsFixed(2)),
-        "length": state.length > 0 ? double.parse(state.length.toStringAsFixed(2)) : 10,
-        "width": state.width > 0 ? double.parse(state.width.toStringAsFixed(2)) : 10,
-        "height": state.height > 0 ? double.parse(state.height.toStringAsFixed(2)) : 10,
+        "desi": double.parse(effectiveDesi.toStringAsFixed(2)),
+        "length": effectiveLength,
+        "width": effectiveWidth,
+        "height": effectiveHeight,
         "weight": state.weight > 0 ? double.parse((state.weight / 1000).toStringAsFixed(3)) : 1.0,
       },
       "direction": isSend ? 1 : 2, // 1: Send, 2: Receive

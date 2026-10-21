@@ -55,7 +55,10 @@ class CargoListNotifier extends Notifier<CargoListState> {
   @override
   CargoListState build() {
     ref.listen(authProvider, (previous, next) {
-      if (next.isAuthenticated && next.accountId != null && next.accountId != previous?.accountId) {
+      if (!next.isAuthenticated) {
+        _addressMap.clear();
+        state = const CargoListState();
+      } else if (next.accountId != null && next.accountId != previous?.accountId) {
         loadCargos(reset: true);
       }
     });

@@ -294,8 +294,13 @@ class CargoService {
                 .toList();
 
             final rawTotal = decoded['total'];
-            final total = (rawTotal is int && rawTotal >= 0) ? rawTotal : list.length;
-            final lastPage = (total / perPage).ceil();
+            int total = list.length;
+            if (rawTotal is num) {
+              total = rawTotal.toInt();
+            } else if (rawTotal != null) {
+              total = int.tryParse(rawTotal.toString()) ?? list.length;
+            }
+            final lastPage = (total <= 0) ? 1 : (total / perPage).ceil();
 
             final meta = PaginationMeta(
               currentPage: page,
