@@ -11,7 +11,7 @@ class DashboardService {
   /// Hesaba ait canlı istatistikleri doğrudan veritabanından çeker:
   /// 1. GET /accounts/{accountId} -> Finansal bakiye ve muhasebe verileri
   /// 2. POST /accounts/{accountId}/cargos/query -> Canlı paket durum sayıları (Bekleyen, Yolda, Teslim Edilen vb.)
-  Future<DashboardStats?> getDashboardStats({String? accountId}) async {
+  Future<DashboardStats?> getDashboardStats({String? accountId, int? days}) async {
     try {
       if (accountId == null || accountId.isEmpty) {
         // Fallback: /dashboard/stats dene
@@ -21,7 +21,7 @@ class DashboardService {
       // Tüm bağımsız kaynakları paralel olarak çekiyoruz (5x daha hızlı yükleme)
       final accountFuture = _apiClient.get('/accounts/$accountId').then<dynamic>((r) => r).catchError((e) => null);
       final statsFuture = _apiClient.get('/accounts/$accountId/statistics').then<dynamic>((r) => r).catchError((e) => null);
-      final cardStatsFuture = _queryDashboardCargoCards(accountId);
+      final cardStatsFuture = _queryDashboardCargoCards(accountId, days: days);
       final podStatsFuture = _queryPodCargoAggregates(accountId);
       final accountingStatsFuture = _queryAccountingAggregates(accountId);
 
@@ -316,8 +316,10 @@ class DashboardService {
   }
 
   /// Web portalındaki gibi kargoları canlı sorgular ve transaction type bazında tam hesaplar
-  Future<Map<String, int>?> _queryDashboardCargoCards(String accountId) async {
+  Future<Map<String, int>?> _queryDashboardCargoCards(String accountId, {int? days}) async {
     try {
+      final DateTime? cutoff = days != null ? DateTime.now().subtract(Duration(days: days)) : null;
+
       final response = await _apiClient.post(
         '/accounts/$accountId/cargos/query',
         body: {
@@ -334,7 +336,18 @@ class DashboardService {
                 }
               ]
             },
-            {"name": "created_at", "format": "day", "group": true}
+            {
+              "name": "created_at",
+              if (cutoff != null)
+                "filters": [
+                  {
+                    "operator": "greaterThanOrEqual",
+                    "value": cutoff.toIso8601String().substring(0, 10),
+                  }
+                ],
+              "format": "day",
+              "group": true
+            }
           ],
           "paginate": {"count": 10000},
           "skipTotal": true
@@ -351,10 +364,17 @@ class DashboardService {
           int delivered = 0; // type == 6 (Teslim edilen kargolar)
           int problematic = 0; // type in [7, 13] (Teslim edilemeyen ya da yönetici iptal)
           int returned = 0; // type in [10, 11] (Geri dönen kargolar)
-          int totalSum = 0; // Tümü (288)
+          int totalSum = 0; // Tümü
 
           for (final it in items) {
             if (it is Map<String, dynamic>) {
+              if (cutoff != null && it['created_at'] != null) {
+                final dt = DateTime.tryParse(it['created_at'].toString());
+                if (dt != null && dt.isBefore(cutoff)) {
+                  continue;
+                }
+              }
+
               final count = (it['id'] is num) ? (it['id'] as num).toInt() : int.tryParse(it['id']?.toString() ?? '') ?? 0;
               final trans = it['latest_transaction'];
               final type = (trans is Map<String, dynamic>) ? (trans['type'] as int?) : null;

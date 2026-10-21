@@ -212,6 +212,7 @@ class AddSenderAddressModal {
                                     child: DropdownButton<City>(
                                       isExpanded: true,
                                       isDense: true,
+                                      menuMaxHeight: 220,
                                       value: cities.contains(modalCity) ? modalCity : null,
                                       items: cities.map((city) {
                                         return DropdownMenuItem<City>(
@@ -262,6 +263,7 @@ class AddSenderAddressModal {
                                     child: DropdownButton<District>(
                                       isExpanded: true,
                                       isDense: true,
+                                      menuMaxHeight: 220,
                                       value: modalDistricts.contains(modalDistrict) ? modalDistrict : null,
                                       items: modalDistricts.map((district) {
                                         return DropdownMenuItem<District>(

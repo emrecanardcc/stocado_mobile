@@ -10,12 +10,14 @@ class DashboardState {
   final DashboardStats? stats;
   final BalanceModel? balance;
   final String? errorMessage;
+  final int? selectedDays; // null = Tüm Zamanlar, 7 = Son 7 Gün, 30 = Son 30 Gün, 90 = Son 90 Gün
 
   const DashboardState({
     this.isLoading = false,
     this.stats,
     this.balance,
     this.errorMessage,
+    this.selectedDays,
   });
 
   DashboardState copyWith({
@@ -23,12 +25,15 @@ class DashboardState {
     DashboardStats? stats,
     BalanceModel? balance,
     String? errorMessage,
+    int? selectedDays,
+    bool clearDays = false,
   }) {
     return DashboardState(
       isLoading: isLoading ?? this.isLoading,
       stats: stats ?? this.stats,
       balance: balance ?? this.balance,
       errorMessage: errorMessage,
+      selectedDays: clearDays ? null : (selectedDays ?? this.selectedDays),
     );
   }
 }
@@ -57,7 +62,7 @@ class DashboardNotifier extends Notifier<DashboardState> {
       final accountId = authState.accountId ?? authState.user?.accounts.firstOrNull?.id;
 
       final results = await Future.wait([
-        _dashboardService.getDashboardStats(accountId: accountId),
+        _dashboardService.getDashboardStats(accountId: accountId, days: state.selectedDays),
         _dashboardService.getBalance(accountId: accountId),
       ]);
 
@@ -75,6 +80,13 @@ class DashboardNotifier extends Notifier<DashboardState> {
         isLoading: false,
         errorMessage: ApiClient.parseError(e, defaultMessage: 'Panel verileri yüklenirken bir sorun oluştu.'),
       );
+    }
+  }
+
+  void setPeriod(int? days) {
+    if (state.selectedDays != days) {
+      state = state.copyWith(selectedDays: days, clearDays: days == null);
+      loadDashboard();
     }
   }
 

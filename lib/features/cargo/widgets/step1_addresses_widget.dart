@@ -191,6 +191,7 @@ class Step1AddressesWidget extends StatelessWidget {
                 DropdownButtonFormField<AddressModel>(
                   key: ValueKey(state.selectedSenderAddress?.id),
                   isExpanded: true,
+                  menuMaxHeight: 220,
                   decoration: InputDecoration(
                     labelText: isReverse ? 'Varış Deponuzu Seçin' : 'Kayıtlı Gönderici Adresini Seçin *',
                     prefixIcon: const Icon(Icons.warehouse_outlined, size: 20),
@@ -318,6 +319,7 @@ class Step1AddressesWidget extends StatelessWidget {
                   DropdownButtonFormField<AddressModel>(
                     key: ValueKey(state.selectedRecipientAddress?.id),
                     isExpanded: true,
+                    menuMaxHeight: 220,
                     decoration: const InputDecoration(
                       labelText: 'Kayıtlı Alıcı Seçin',
                       prefixIcon: Icon(Icons.person_search_outlined, size: 20),
@@ -388,6 +390,7 @@ class Step1AddressesWidget extends StatelessWidget {
                   Expanded(
                     child: DropdownButtonFormField<City>(
                       key: ValueKey('city_${state.selectedCity?.id}'),
+                      menuMaxHeight: 220,
                       decoration: const InputDecoration(
                         labelText: 'İl *',
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -410,6 +413,7 @@ class Step1AddressesWidget extends StatelessWidget {
                   Expanded(
                     child: DropdownButtonFormField<District>(
                       key: ValueKey('district_${state.selectedCity?.id}_${state.selectedDistrict?.id}'),
+                      menuMaxHeight: 220,
                       decoration: InputDecoration(
                         labelText: state.isLoadingDistricts ? 'İlçe yükleniyor...' : 'İlçe *',
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

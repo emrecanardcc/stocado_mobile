@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../models/dashboard_stats_model.dart';
+import '../providers/dashboard_provider.dart';
 import 'delivery_success_donut_card.dart';
 import 'metric_card.dart';
 
-class CargoStatsTabView extends StatelessWidget {
+class CargoStatsTabView extends ConsumerWidget {
   final DashboardStats? stats;
 
   const CargoStatsTabView({
@@ -14,7 +16,9 @@ class CargoStatsTabView extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedDays = ref.watch(dashboardProvider.select((s) => s.selectedDays));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -33,23 +37,82 @@ class CargoStatsTabView extends StatelessWidget {
                 color: AppColors.textPrimary,
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceSecondary,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textSecondary),
-                  SizedBox(width: 4),
-                  Text(
-                    'Tüm Zamanlar',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+            PopupMenuButton<int?>(
+              initialValue: selectedDays,
+              tooltip: 'Dönem Filtrele',
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              onSelected: (days) {
+                ref.read(dashboardProvider.notifier).setPeriod(days);
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: null,
+                  child: Row(
+                    children: [
+                      Icon(Icons.all_inclusive_rounded, size: 16, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text('Tüm Zamanlar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ],
                   ),
-                ],
+                ),
+                const PopupMenuItem(
+                  value: 7,
+                  child: Row(
+                    children: [
+                      Icon(Icons.date_range_rounded, size: 16, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text('Son 7 Gün', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 30,
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text('Son 30 Gün', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 90,
+                  child: Row(
+                    children: [
+                      Icon(Icons.event_note_rounded, size: 16, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text('Son 90 Gün', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppColors.softShadow,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.calendar_today_outlined, size: 13, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      selectedDays == 7
+                          ? 'Son 7 Gün'
+                          : selectedDays == 30
+                              ? 'Son 30 Gün'
+                              : selectedDays == 90
+                                  ? 'Son 90 Gün'
+                                  : 'Tüm Zamanlar',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                  ],
+                ),
               ),
             ),
           ],
@@ -106,76 +169,6 @@ class CargoStatsTabView extends StatelessWidget {
               icon: Icons.format_list_bulleted_rounded,
               color: AppColors.primary,
               backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-
-        // Şehir Analiz Kartları
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: AppColors.softShadow,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.trending_up, size: 14, color: AppColors.secondary),
-                        SizedBox(width: 4),
-                        Text(
-                          'EN ÇOK KARGO ALAN',
-                          style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      stats?.topCity ?? '-',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: AppColors.softShadow,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
-                        SizedBox(width: 4),
-                        Text(
-                          'EN AZ KARGO ALAN',
-                          style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      stats?.leastCity ?? '-',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),

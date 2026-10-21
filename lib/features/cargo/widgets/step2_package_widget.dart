@@ -92,6 +92,7 @@ class Step2PackageWidget extends StatelessWidget {
               Expanded(
                 child: DropdownButton<ProductModel?>(
                   isExpanded: true,
+                  menuMaxHeight: 220,
                   underline: const SizedBox(),
                   hint: Text(
                     products.isEmpty

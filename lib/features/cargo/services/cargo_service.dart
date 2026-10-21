@@ -235,11 +235,13 @@ class CargoService {
   Future<PaginatedCargosResponse> getCargos({
     String? accountId,
     int page = 1,
-    int perPage = 6,
+    int perPage = 15,
     String? filter, // pod, drafts
     bool? payOnDelivery,
     int? status,
     String? search,
+    String? cargoCompanyId,
+    String? statusFilter,
   }) async {
     try {
       if (accountId != null && accountId.isNotEmpty) {
@@ -248,8 +250,16 @@ class CargoService {
           {"name": "process_number"},
           {"name": "out_tracking_code"},
           {"name": "order_number"},
-          {"name": "cargo_company_id"},
-          if (status != null || filter == 'drafts')
+          if (cargoCompanyId != null && cargoCompanyId.isNotEmpty)
+            {
+              "name": "cargo_company_id",
+              "filters": [
+                {"operator": "equals", "value": cargoCompanyId}
+              ]
+            }
+          else
+            {"name": "cargo_company_id"},
+          if (status != null || filter == 'drafts' || statusFilter == 'drafts')
             {
               "name": "status",
               "filters": [
@@ -285,6 +295,9 @@ class CargoService {
         final Map<String, dynamic> body = {
           "fields": fields,
           "paginate": {"page": page, "count": perPage},
+          "sort": [
+            {"name": "id", "direction": "desc"}
+          ],
         };
 
         if (search != null && search.isNotEmpty) {
@@ -302,9 +315,51 @@ class CargoService {
         if (response.statusCode == 200) {
           final decoded = ApiClient.decodeResponse(response);
           if (decoded is Map<String, dynamic> && decoded['items'] is List) {
-            final list = (decoded['items'] as List)
+            var list = (decoded['items'] as List)
                 .map((item) => CargoModel.fromJson(item as Map<String, dynamic>))
                 .toList();
+
+            // Kargo Firması Filtresi (istemci kontrolü)
+            if (cargoCompanyId != null && cargoCompanyId.isNotEmpty) {
+              final q = cargoCompanyId.toLowerCase();
+              list = list.where((c) {
+                final idStr = c.cargoCompanyId?.toLowerCase() ?? '';
+                final titleStr = c.cargoCompany?.title.toLowerCase() ?? '';
+                return idStr.contains(q) || titleStr.contains(q);
+              }).toList();
+            }
+
+            // Kargo Durumu Filtresi (istemci kontrolü)
+            if (statusFilter != null && statusFilter.isNotEmpty && statusFilter != 'all') {
+              list = list.where((c) {
+                final type = c.latestTransaction?.type;
+                final st = c.status;
+                switch (statusFilter) {
+                  case 'drafts':
+                    return st == 0 || type == 1 || type == null;
+                  case 'in_transit':
+                    return [2, 3, 4, 5, 9].contains(type);
+                  case 'delivered':
+                    return type == 6;
+                  case 'problematic':
+                    return [7, 13].contains(type);
+                  case 'returned':
+                    return [10, 11].contains(type);
+                  default:
+                    return true;
+                }
+              }).toList();
+            }
+
+            // Yeniden Eskiye Sıralama (Created At / ID Descending)
+            list.sort((a, b) {
+              if (a.createdAt != null && b.createdAt != null) {
+                return b.createdAt!.compareTo(a.createdAt!);
+              }
+              final aId = int.tryParse(a.id.toString()) ?? 0;
+              final bId = int.tryParse(b.id.toString()) ?? 0;
+              return bId.compareTo(aId);
+            });
 
             final rawTotal = decoded['total'];
             int total = list.length;
@@ -338,6 +393,7 @@ class CargoService {
         'pay_on_delivery': ?payOnDelivery,
         'status': ?status,
         if (search != null && search.isNotEmpty) 'search': search,
+        if (cargoCompanyId != null && cargoCompanyId.isNotEmpty) 'cargo_company_id': cargoCompanyId,
       };
 
       final response = await _apiClient.get('/cargos', queryParameters: query);
@@ -345,10 +401,53 @@ class CargoService {
       if (response.statusCode == 200) {
         final decoded = ApiClient.decodeResponse(response);
         if (decoded is Map<String, dynamic>) {
-          final list = (decoded['data'] as List<dynamic>?)
+          var list = (decoded['data'] as List<dynamic>?)
                   ?.map((item) => CargoModel.fromJson(item as Map<String, dynamic>))
                   .toList() ??
               [];
+
+          // Kargo Firması Filtresi (istemci kontrolü)
+          if (cargoCompanyId != null && cargoCompanyId.isNotEmpty) {
+            final q = cargoCompanyId.toLowerCase();
+            list = list.where((c) {
+              final idStr = c.cargoCompanyId?.toLowerCase() ?? '';
+              final titleStr = c.cargoCompany?.title.toLowerCase() ?? '';
+              return idStr.contains(q) || titleStr.contains(q);
+            }).toList();
+          }
+
+          // Kargo Durumu Filtresi (istemci kontrolü)
+          if (statusFilter != null && statusFilter.isNotEmpty && statusFilter != 'all') {
+            list = list.where((c) {
+              final type = c.latestTransaction?.type;
+              final st = c.status;
+              switch (statusFilter) {
+                case 'drafts':
+                  return st == 0 || type == 1 || type == null;
+                case 'in_transit':
+                  return [2, 3, 4, 5, 9].contains(type);
+                case 'delivered':
+                  return type == 6;
+                case 'problematic':
+                  return [7, 13].contains(type);
+                case 'returned':
+                  return [10, 11].contains(type);
+                default:
+                  return true;
+              }
+            }).toList();
+          }
+
+          // Yeniden Eskiye Sıralama
+          list.sort((a, b) {
+            if (a.createdAt != null && b.createdAt != null) {
+              return b.createdAt!.compareTo(a.createdAt!);
+            }
+            final aId = int.tryParse(a.id.toString()) ?? 0;
+            final bId = int.tryParse(b.id.toString()) ?? 0;
+            return bId.compareTo(aId);
+          });
+
           final meta = decoded['meta'] is Map<String, dynamic>
               ? PaginationMeta.fromJson(decoded['meta'] as Map<String, dynamic>)
               : null;

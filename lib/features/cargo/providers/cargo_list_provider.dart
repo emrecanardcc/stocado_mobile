@@ -13,6 +13,8 @@ class CargoListState {
   final String activeTab; // 'all', 'pod', 'drafts'
   final String searchQuery;
   final String? errorMessage;
+  final String? selectedCargoCompany; // 'ptt', 'surat', 'yurtici', 'hepsijet', 'ups' or null
+  final String? selectedStatus; // 'all', 'drafts', 'in_transit', 'delivered', 'problematic', 'returned'
 
   const CargoListState({
     this.isLoading = false,
@@ -22,10 +24,15 @@ class CargoListState {
     this.activeTab = 'all',
     this.searchQuery = '',
     this.errorMessage,
+    this.selectedCargoCompany,
+    this.selectedStatus,
   });
 
   bool get hasMore => meta?.hasMore ?? false;
   int get currentPage => meta?.currentPage ?? 1;
+  bool get hasActiveFilters =>
+      (selectedCargoCompany != null && selectedCargoCompany!.isNotEmpty) ||
+      (selectedStatus != null && selectedStatus!.isNotEmpty && selectedStatus != 'all');
 
   CargoListState copyWith({
     bool? isLoading,
@@ -35,6 +42,10 @@ class CargoListState {
     String? activeTab,
     String? searchQuery,
     String? errorMessage,
+    String? selectedCargoCompany,
+    String? selectedStatus,
+    bool clearCompany = false,
+    bool clearStatus = false,
   }) {
     return CargoListState(
       isLoading: isLoading ?? this.isLoading,
@@ -44,6 +55,8 @@ class CargoListState {
       activeTab: activeTab ?? this.activeTab,
       searchQuery: searchQuery ?? this.searchQuery,
       errorMessage: errorMessage,
+      selectedCargoCompany: clearCompany ? null : (selectedCargoCompany ?? this.selectedCargoCompany),
+      selectedStatus: clearStatus ? null : (selectedStatus ?? this.selectedStatus),
     );
   }
 }
@@ -138,6 +151,8 @@ class CargoListNotifier extends Notifier<CargoListState> {
       perPage: 15,
       filter: filter,
       search: state.searchQuery.isNotEmpty ? state.searchQuery : null,
+      cargoCompanyId: state.selectedCargoCompany,
+      statusFilter: state.selectedStatus,
     );
 
     final resolved = await _resolveCargoParties(accountId, response.data);
@@ -171,6 +186,8 @@ class CargoListNotifier extends Notifier<CargoListState> {
       perPage: 15,
       filter: filter,
       search: state.searchQuery.isNotEmpty ? state.searchQuery : null,
+      cargoCompanyId: state.selectedCargoCompany,
+      statusFilter: state.selectedStatus,
     );
 
     final resolved = await _resolveCargoParties(accountId, response.data);
@@ -187,6 +204,54 @@ class CargoListNotifier extends Notifier<CargoListState> {
   void setTab(String tab) {
     if (state.activeTab != tab) {
       state = state.copyWith(activeTab: tab);
+      loadCargos(reset: true);
+    }
+  }
+
+  /// Kargo Şirketi ve Durum Filtrelerini Birlikte Güncelle
+  void applyFilters({String? company, String? status}) {
+    final companyChanged = state.selectedCargoCompany != company;
+    final statusChanged = state.selectedStatus != status;
+    if (companyChanged || statusChanged) {
+      state = state.copyWith(
+        selectedCargoCompany: company,
+        clearCompany: company == null,
+        selectedStatus: status,
+        clearStatus: status == null,
+      );
+      loadCargos(reset: true);
+    }
+  }
+
+  /// Kargo Şirketi Filtresi
+  void setCargoCompany(String? company) {
+    if (state.selectedCargoCompany != company) {
+      state = state.copyWith(
+        selectedCargoCompany: company,
+        clearCompany: company == null,
+      );
+      loadCargos(reset: true);
+    }
+  }
+
+  /// Kargo Durumu Filtresi
+  void setStatusFilter(String? status) {
+    if (state.selectedStatus != status) {
+      state = state.copyWith(
+        selectedStatus: status,
+        clearStatus: status == null,
+      );
+      loadCargos(reset: true);
+    }
+  }
+
+  /// Tüm filtreleri sıfırla
+  void clearFilters() {
+    if (state.hasActiveFilters) {
+      state = state.copyWith(
+        clearCompany: true,
+        clearStatus: true,
+      );
       loadCargos(reset: true);
     }
   }
