@@ -387,6 +387,7 @@ class Step1AddressesWidget extends StatelessWidget {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<City>(
+                      key: ValueKey('city_${state.selectedCity?.id}'),
                       decoration: const InputDecoration(
                         labelText: 'İl *',
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -408,6 +409,7 @@ class Step1AddressesWidget extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<District>(
+                      key: ValueKey('district_${state.selectedCity?.id}_${state.selectedDistrict?.id}'),
                       decoration: InputDecoration(
                         labelText: state.isLoadingDistricts ? 'İlçe yükleniyor...' : 'İlçe *',
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

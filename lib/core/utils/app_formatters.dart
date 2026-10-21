@@ -116,4 +116,21 @@ class AppFormatters {
     if (desi == null) return '0 Desi';
     return '${desi.toStringAsFixed(2).replaceAll('.', ',')} Desi';
   }
+
+  /// Hem virgül hem nokta ile girilen ondalıklı sayıları güvenle parse eder.
+  /// Örnek: "12,50" -> 12.5, "12.50" -> 12.5
+  static double parseDouble(dynamic val, [double fallback = 0.0]) {
+    if (val == null) return fallback;
+    if (val is num) return val.toDouble();
+    final str = val.toString().replaceAll(',', '.').trim();
+    return double.tryParse(str) ?? fallback;
+  }
+
+  /// Güvenli ondalıklı sayı çözümleyici (geçersizse null döner)
+  static double? tryParseDouble(dynamic val) {
+    if (val == null) return null;
+    if (val is num) return val.toDouble();
+    final str = val.toString().replaceAll(',', '.').trim();
+    return double.tryParse(str);
+  }
 }

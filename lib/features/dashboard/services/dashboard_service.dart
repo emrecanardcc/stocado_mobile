@@ -361,15 +361,15 @@ class DashboardService {
 
               totalSum += count;
 
-              if (type == 1) {
+              if (type == 1 || type == null) {
                 pending += count;
-              } else if (type != null && [2, 3, 4, 5, 9].contains(type)) {
+              } else if ([2, 3, 4, 5, 9].contains(type)) {
                 active += count;
               } else if (type == 6) {
                 delivered += count;
-              } else if (type != null && [10, 11].contains(type)) {
+              } else if ([10, 11].contains(type)) {
                 returned += count;
-              } else if (type != null && [7, 13].contains(type)) {
+              } else if ([7, 13].contains(type)) {
                 problematic += count;
               }
             }

@@ -39,7 +39,9 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
   void _handleTabChange() {
     if (mounted) {
       setState(() {});
-      ref.read(mainNavigationProvider.notifier).selectHubSubIndex(_tabController.index);
+      if (!_tabController.indexIsChanging && ref.read(mainNavigationProvider).hubSubIndex != _tabController.index) {
+        ref.read(mainNavigationProvider.notifier).selectHubSubIndex(_tabController.index);
+      }
     }
   }
 

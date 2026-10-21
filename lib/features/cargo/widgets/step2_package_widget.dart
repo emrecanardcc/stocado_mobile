@@ -204,7 +204,7 @@ class Step2PackageWidget extends StatelessWidget {
                       decoration: const InputDecoration(
                         labelText: 'En (cm)',
                       ),
-                      onChanged: (val) => notifier.updatePackageDimensions(width: double.tryParse(val) ?? 0),
+                      onChanged: (val) => notifier.updatePackageDimensions(width: AppFormatters.parseDouble(val)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -215,7 +215,7 @@ class Step2PackageWidget extends StatelessWidget {
                       decoration: const InputDecoration(
                         labelText: 'Boy (cm)',
                       ),
-                      onChanged: (val) => notifier.updatePackageDimensions(length: double.tryParse(val) ?? 0),
+                      onChanged: (val) => notifier.updatePackageDimensions(length: AppFormatters.parseDouble(val)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -226,7 +226,7 @@ class Step2PackageWidget extends StatelessWidget {
                       decoration: const InputDecoration(
                         labelText: 'Yükseklik',
                       ),
-                      onChanged: (val) => notifier.updatePackageDimensions(height: double.tryParse(val) ?? 0),
+                      onChanged: (val) => notifier.updatePackageDimensions(height: AppFormatters.parseDouble(val)),
                     ),
                   ),
                 ],
@@ -243,7 +243,7 @@ class Step2PackageWidget extends StatelessWidget {
                         hintText: 'Örn: 1500',
                         prefixIcon: Icon(Icons.scale_outlined, size: 20),
                       ),
-                      onChanged: (val) => notifier.updatePackageDimensions(weight: double.tryParse(val) ?? 0),
+                      onChanged: (val) => notifier.updatePackageDimensions(weight: AppFormatters.parseDouble(val)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -256,7 +256,7 @@ class Step2PackageWidget extends StatelessWidget {
                         prefixIcon: Icon(Icons.straighten_rounded, size: 20),
                       ),
                       onChanged: (val) {
-                        final d = double.tryParse(val);
+                        final d = AppFormatters.tryParseDouble(val);
                         if (d != null) {
                           notifier.updatePackageDimensions(directDesi: d);
                         }

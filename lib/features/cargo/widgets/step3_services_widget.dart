@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../providers/create_cargo_provider.dart';
 
 class Step3ServicesWidget extends StatelessWidget {
@@ -96,9 +97,8 @@ class Step3ServicesWidget extends StatelessWidget {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onChanged: (val) {
-                    final cleanVal = val.replaceAll(',', '.').trim();
                     notifier.updateAdditionalServices(
-                      payOnDeliveryAmount: double.tryParse(cleanVal) ?? 0,
+                      payOnDeliveryAmount: AppFormatters.parseDouble(val),
                     );
                   },
                 ),

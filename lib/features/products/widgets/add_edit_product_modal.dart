@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../models/product_model.dart';
 import '../providers/products_provider.dart';
 
@@ -32,9 +33,9 @@ class AddEditProductModal {
         return StatefulBuilder(
           builder: (modalCtx, setModalState) {
             void updateDesi() {
-              final w = double.tryParse(widthController.text) ?? 0;
-              final l = double.tryParse(lengthController.text) ?? 0;
-              final h = double.tryParse(heightController.text) ?? 0;
+              final w = AppFormatters.parseDouble(widthController.text);
+              final l = AppFormatters.parseDouble(lengthController.text);
+              final h = AppFormatters.parseDouble(heightController.text);
               setModalState(() {
                 if (w > 0 && l > 0 && h > 0) {
                   calculatedDesi = (w * l * h) / 3000;
@@ -166,8 +167,8 @@ class AddEditProductModal {
                     ElevatedButton(
                       onPressed: () async {
                         final name = nameController.text.trim();
-                        final price = double.tryParse(priceController.text.trim()) ?? 0.0;
-                        final manualDesi = double.tryParse(desiController.text.trim());
+                        final price = AppFormatters.parseDouble(priceController.text);
+                        final manualDesi = AppFormatters.tryParseDouble(desiController.text);
                         final finalDesi = (manualDesi != null && manualDesi > 0)
                             ? manualDesi
                             : (calculatedDesi > 0 ? calculatedDesi : (product?.desi ?? 0.0));
@@ -186,10 +187,10 @@ class AddEditProductModal {
                           barcode: barcodeController.text.trim().isNotEmpty ? barcodeController.text.trim() : null,
                           price: price,
                           desi: finalDesi,
-                          width: double.tryParse(widthController.text.trim()),
-                          length: double.tryParse(lengthController.text.trim()),
-                          height: double.tryParse(heightController.text.trim()),
-                          weight: double.tryParse(weightController.text.trim()),
+                          width: AppFormatters.tryParseDouble(widthController.text),
+                          length: AppFormatters.tryParseDouble(lengthController.text),
+                          height: AppFormatters.tryParseDouble(heightController.text),
+                          weight: AppFormatters.tryParseDouble(weightController.text),
                         );
 
                         final messenger = ScaffoldMessenger.of(context);

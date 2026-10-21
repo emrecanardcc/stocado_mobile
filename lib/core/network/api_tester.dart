@@ -7,10 +7,10 @@ class ApiTester {
   String? _token;
 
   Future<void> runAllTests(String email, String password) async {
-    print("--- API TESTLERİ BAŞLIYOR ---");
+    print("--- API TESTLERI BASLIYOR ---");
 
-    // 1. Giriş Yap ve Token Al
-    print("\n1. POST /auth/login testi yapılıyor...");
+    // 1. Giris Yap ve Token Al
+    print("\n1. POST /auth/login testi yapiliyor...");
     try {
       final loginRes = await http.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -21,33 +21,33 @@ class ApiTester {
       if (loginRes.statusCode == 200) {
         final data = jsonDecode(loginRes.body);
         _token = data['token'];
-        print("✅ Başarılı! Token alındı.");
+        print("[SUCCESS] Basarili! Token alindi.");
       } else {
-        print("❌ Login Başarısız: ${loginRes.statusCode} - ${loginRes.body}");
-        return; // Token yoksa diğer testlere geçemeyiz
+        print("[FAIL] Login Basarisiz: ${loginRes.statusCode} - ${loginRes.body}");
+        return;
       }
 
-      // 2. Ülkeleri Listele
-      print("\n2. GET /locations/countries testi yapılıyor...");
+      // 2. Ulkeleri Listele
+      print("\n2. GET /locations/countries testi yapiliyor...");
       final countryRes = await http.get(
         Uri.parse('$baseUrl/locations/countries'),
         headers: {'Authorization': 'Bearer $_token'},
       );
       print("Durum: ${countryRes.statusCode}");
-      print("Dönen JSON: ${countryRes.body}");
+      print("Donen JSON: ${countryRes.body}");
 
       // 3. Para Birimlerini Listele
-      print("\n3. GET /currencies testi yapılıyor...");
+      print("\n3. GET /currencies testi yapiliyor...");
       final currencyRes = await http.get(
         Uri.parse('$baseUrl/currencies'),
         headers: {'Authorization': 'Bearer $_token'},
       );
       print("Durum: ${currencyRes.statusCode}");
-      print("Dönen JSON: ${currencyRes.body}");
+      print("Donen JSON: ${currencyRes.body}");
 
-      print("\n--- API TESTLERİ TAMAMLANDI ---");
+      print("\n--- API TESTLERI TAMAMLANDI ---");
     } catch (e) {
-      print("Ağ Hatası: $e");
+      print("Ag Hatasi: $e");
     }
   }
 }
