@@ -195,6 +195,7 @@ class CargoListNotifier extends Notifier<CargoListState> {
   }
 
   Future<void> refresh() async {
+    _addressMap.clear();
     await loadCargos(reset: true);
   }
 }

@@ -284,7 +284,19 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
   }
 
   void setDirection(String direction) {
-    state = state.copyWith(direction: direction);
+    if (direction == 'receive') {
+      // Tersine lojistikte (Kargo Bana Gelsin) kapıda ödeme ve alıcı ödemeli hizmetler kapatılır
+      state = state.copyWith(
+        direction: direction,
+        payOnDelivery: false,
+        payOnDeliveryAmount: 0.0,
+        canOffsetCargoFee: false,
+        receiverPays: false,
+        controlledDelivery: false,
+      );
+    } else {
+      state = state.copyWith(direction: direction);
+    }
   }
 
   void toggleManualRecipient(bool isManual) {
@@ -646,7 +658,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
         width: state.width > 0 ? double.parse(state.width.toStringAsFixed(2)) : null,
         length: state.length > 0 ? double.parse(state.length.toStringAsFixed(2)) : null,
         height: state.height > 0 ? double.parse(state.height.toStringAsFixed(2)) : null,
-        weight: state.weight > 0 ? double.parse((state.weight > 100 ? state.weight / 1000 : state.weight).toStringAsFixed(2)) : null,
+        weight: state.weight > 0 ? double.parse((state.weight / 1000).toStringAsFixed(3)) : null,
       ),
       payOnDelivery: state.payOnDelivery,
       payOnDeliveryAmount: state.payOnDelivery ? state.payOnDeliveryAmount : 0,
@@ -778,14 +790,14 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     final payload = {
       "account_id": accountId,
       "cargo_company_id": cargoCompanyId,
-      "local_id": isSend ? state.selectedSenderAddress!.id : foreignId,
-      "foreign_id": isSend ? foreignId : state.selectedSenderAddress!.id,
+      "local_id": state.selectedSenderAddress!.id,
+      "foreign_id": foreignId,
       "package": {
         "desi": double.parse((state.desi > 0 ? state.desi : 1.0).toStringAsFixed(2)),
         "length": state.length > 0 ? double.parse(state.length.toStringAsFixed(2)) : 10,
         "width": state.width > 0 ? double.parse(state.width.toStringAsFixed(2)) : 10,
         "height": state.height > 0 ? double.parse(state.height.toStringAsFixed(2)) : 10,
-        "weight": state.weight > 0 ? double.parse((state.weight > 100 ? state.weight / 1000 : state.weight).toStringAsFixed(2)) : 1,
+        "weight": state.weight > 0 ? double.parse((state.weight / 1000).toStringAsFixed(3)) : 1.0,
       },
       "direction": isSend ? 1 : 2, // 1: Send, 2: Receive
       "pay_on_delivery": state.payOnDelivery,

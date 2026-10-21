@@ -265,6 +265,8 @@ class CargoService {
           {"name": "user_desi"},
           {"name": "valid_desi"},
           {"name": "description"},
+          {"name": "cargo_company"},
+          {"name": "latest_transaction"},
         ];
 
         final Map<String, dynamic> body = {

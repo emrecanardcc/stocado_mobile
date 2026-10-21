@@ -57,11 +57,16 @@ class PricingPlan {
 
     double getPrice(int desi) {
       final p = prices.firstWhere(
-        (it) => it is Map<String, dynamic> && it['desi_threshold'] == desi,
+        (it) =>
+            it is Map<String, dynamic> &&
+            ((it['desi_threshold'] is num && (it['desi_threshold'] as num).toInt() == desi) ||
+             it['desi_threshold']?.toString() == desi.toString()),
         orElse: () => null,
       );
       if (p != null && p is Map<String, dynamic>) {
-        final amt = (p['amount'] as num?)?.toDouble() ?? 0.0;
+        final amt = (p['amount'] is num)
+            ? (p['amount'] as num).toDouble()
+            : double.tryParse(p['amount']?.toString() ?? '') ?? 0.0;
         return amt * 1.20; // %20 KDV dahil
       }
       return 0.0;
@@ -72,7 +77,10 @@ class PricingPlan {
     for (final f in fees) {
       if (f is Map<String, dynamic>) {
         if (f['type'] == 201) {
-          additionalDesi = (f['value'] as num?)?.toDouble() ?? 0.0;
+          final rawAdd = (f['value'] is num)
+              ? (f['value'] as num).toDouble()
+              : double.tryParse(f['value']?.toString() ?? '') ?? 0.0;
+          additionalDesi = rawAdd * 1.20; // %20 KDV dahil
         } else if (f['type'] == 202) {
           returnRate = '%${f['value']}';
         }
