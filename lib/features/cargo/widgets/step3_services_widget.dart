@@ -71,17 +71,24 @@ class Step3ServicesWidget extends StatelessWidget {
                   'Kapıda Ödeme',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.textPrimary),
                 ),
-                subtitle: const Text(
-                  'Teslimatta alıcıdan tahsil edilecek tutar',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                ),
+                subtitle: state.direction == 'receive'
+                    ? const Text(
+                        'Tersine lojistikte (Kargo Bana Gelsin) kapıda tahsilat yapılamaz',
+                        style: TextStyle(fontSize: 11, color: AppColors.warning),
+                      )
+                    : const Text(
+                        'Teslimatta alıcıdan tahsil edilecek tutar',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
                 value: state.payOnDelivery,
-                onChanged: (val) {
-                  if (!val) {
-                    podAmountController.clear();
-                  }
-                  notifier.updateAdditionalServices(payOnDelivery: val);
-                },
+                onChanged: state.direction == 'receive'
+                    ? null
+                    : (val) {
+                        if (!val) {
+                          podAmountController.clear();
+                        }
+                        notifier.updateAdditionalServices(payOnDelivery: val);
+                      },
               ),
               if (state.payOnDelivery) ...[
                 const SizedBox(height: 8),
@@ -200,12 +207,19 @@ class Step3ServicesWidget extends StatelessWidget {
                   'Kapıda Alıcı Ödemeli',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.textPrimary),
                 ),
-                subtitle: const Text(
-                  'Kargo gönderim bedelini alıcı öder',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                ),
+                subtitle: state.direction == 'receive'
+                    ? const Text(
+                        'Tersine lojistikte gönderim bedeli alıcı ödemeli yapılamaz',
+                        style: TextStyle(fontSize: 11, color: AppColors.warning),
+                      )
+                    : const Text(
+                        'Kargo gönderim bedelini alıcı öder',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
                 value: state.receiverPays,
-                onChanged: (val) => notifier.updateAdditionalServices(receiverPays: val),
+                onChanged: state.direction == 'receive'
+                    ? null
+                    : (val) => notifier.updateAdditionalServices(receiverPays: val),
               ),
               if (state.receiverPays) ...[
                 const SizedBox(height: 6),

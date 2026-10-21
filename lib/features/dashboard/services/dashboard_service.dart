@@ -208,13 +208,13 @@ class DashboardService {
                 willPay += amount;
               }
 
-              // İADE SAYISI: transType == 11
-              if (transType == 11) {
+              // İADE SAYISI: transType 10 veya 11
+              if (transType == 10 || transType == 11) {
                 returnCount += count;
               }
 
-              // TOPLAM: transType != 11 (İade olanlar hariç kapıda ödeme hacmi)
-              if (transType != 11) {
+              // TOPLAM: transType 10 ve 11 hariç (İade olanlar hariç kapıda ödeme hacmi)
+              if (transType != 10 && transType != 11) {
                 totalVolume += amount;
               }
             }
@@ -268,7 +268,7 @@ class DashboardService {
               totalPaid += amount;
             } else if (amount < 0 && type != 2 && type != 19) {
               // Bakiye çekme veya banka transferi hariç masraflar (kargo masrafları vs.)
-              totalExpenses += amount;
+              totalExpenses += amount.abs();
             }
             // Type 19: Kapıda Ödeme Banka Transferi (Kullanıcıya ödenen)
             if (type == 19) {

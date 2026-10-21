@@ -356,10 +356,14 @@ class CargoService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         String msg = 'Kargo başarıyla oluşturuldu.';
-        if (decoded is Map<String, dynamic> && decoded['messages'] is List) {
-          final msgs = decoded['messages'] as List;
-          if (msgs.isNotEmpty && msgs.first['text'] != null) {
-            msg = msgs.first['text'].toString();
+        if (decoded is Map<String, dynamic>) {
+          if (decoded['message'] != null && decoded['message'].toString().trim().isNotEmpty) {
+            msg = decoded['message'].toString();
+          } else if (decoded['messages'] is List) {
+            final msgs = decoded['messages'] as List;
+            if (msgs.isNotEmpty && msgs.first is Map && msgs.first['text'] != null) {
+              msg = msgs.first['text'].toString();
+            }
           }
         }
         return CargoCreationResult(
