@@ -132,7 +132,7 @@ class CargoListNotifier extends Notifier<CargoListState> {
     final response = await _cargoService.getCargos(
       accountId: accountId,
       page: page,
-      perPage: 6,
+      perPage: 15,
       filter: filter,
       search: state.searchQuery.isNotEmpty ? state.searchQuery : null,
     );
@@ -164,7 +164,7 @@ class CargoListNotifier extends Notifier<CargoListState> {
     final response = await _cargoService.getCargos(
       accountId: accountId,
       page: nextPage,
-      perPage: 6,
+      perPage: 15,
       filter: filter,
       search: state.searchQuery.isNotEmpty ? state.searchQuery : null,
     );

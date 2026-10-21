@@ -138,11 +138,20 @@ class Step3ServicesWidget extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  state.payOnDeliveryType == 'credit_card'
-                      ? 'ℹ️ Kapıda kredi kartı tahsilatını UPS ve Sürat Kargo desteklemektedir.'
-                      : 'ℹ️ Nakit tahsilat tüm kapıda ödeme firmalarında geçerlidir.',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        state.payOnDeliveryType == 'credit_card'
+                            ? 'Kapıda kredi kartı tahsilatını UPS ve Sürat Kargo desteklemektedir.'
+                            : 'Nakit tahsilat tüm kapıda ödeme firmalarında geçerlidir.',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 CheckboxListTile(
@@ -208,9 +217,18 @@ class Step3ServicesWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
                   ),
-                  child: const Text(
-                    '✓ Kargo taşıma ücreti teslimat esnasında alıcıdan tahsil edilecektir.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), fontWeight: FontWeight.w500),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 15, color: Color(0xFF1E40AF)),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Kargo taşıma ücreti teslimat esnasında alıcıdan tahsil edilecektir.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -258,9 +276,18 @@ class Step3ServicesWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.purple.withValues(alpha: 0.3)),
                   ),
-                  child: const Text(
-                    '✓ Kontrollü teslimat hizmeti yalnızca PTT Kargo ile sunulmaktadır. Teklif adımında PTT Kargo filtrelenecektir.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF6B21A8), fontWeight: FontWeight.w500),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 15, color: Color(0xFF6B21A8)),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Kontrollü teslimat hizmeti yalnızca PTT Kargo ile sunulmaktadır. Teklif adımında PTT Kargo filtrelenecektir.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF6B21A8), fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -308,9 +335,18 @@ class Step3ServicesWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: const Text(
-                    '✓ Kargo "Taslak" statüsünde kaydedilecek, kargo firması entegrasyonuna gönderilmeyecektir. Kargolarım sekmesinden istediğiniz zaman işleme alabilirsiniz.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded, size: 15, color: AppColors.textSecondary),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Kargo "Taslak" statüsünde kaydedilecek, kargo firması entegrasyonuna gönderilmeyecektir. Kargolarım sekmesinden istediğiniz zaman işleme alabilirsiniz.',
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

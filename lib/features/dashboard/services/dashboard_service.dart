@@ -19,10 +19,9 @@ class DashboardService {
       }
 
       // 1. Hesap & Muhasebe Bilgileri (GET /accounts/{accountId})
-      // Web portalında Bakiye: 847,16 ₺ (Muhasebe bakiyesinden açık provizyonlar düşülmüş net kullanılabilir bakiye)
-      // K.Ö Alacak: 0,00 ₺
-      double currentBalance = 847.16;
-      double availableBalance = 847.16;
+      // Kullanılabilir net bakiye: Muhasebe bakiyesinden provizyondaki tutar düşülür
+      double currentBalance = 0.0;
+      double availableBalance = 0.0;
       double offsetBalance = 0.0;
       double podWillPay = 0.0;
 
@@ -33,10 +32,11 @@ class DashboardService {
           if (accData is Map<String, dynamic> && accData['accounting'] is Map<String, dynamic>) {
             final accounting = accData['accounting'] as Map<String, dynamic>;
             final rawBalance = (accounting['balance'] as num?)?.toDouble() ?? 0.0;
-            // Web portalında açık kargo taahhütleri (190.38 TL) provizyonda tutulduğu için net bakiye 847.16 TL gösterilir
-            currentBalance = rawBalance > 900 ? 847.16 : rawBalance;
-            availableBalance = currentBalance;
             offsetBalance = (accounting['offset_balance'] as num?)?.toDouble() ?? 0.0;
+            final calcAvailable = (accounting['available_balance'] as num?)?.toDouble() ??
+                (rawBalance - offsetBalance);
+            currentBalance = calcAvailable;
+            availableBalance = calcAvailable;
             podWillPay = (accounting['pod_will_pay'] as num?)?.toDouble() ?? 0.0;
           }
         }
@@ -45,8 +45,8 @@ class DashboardService {
       }
 
       // 2. Canlı İstatistikler (GET /accounts/{accountId}/statistics)
-      String topCity = 'Eskişehir / 1182';
-      String leastCity = 'Tokat / 1';
+      String topCity = '-';
+      String leastCity = '-';
 
       try {
         final statsRes = await _apiClient.get('/accounts/$accountId/statistics');
@@ -66,22 +66,22 @@ class DashboardService {
         debugPrint('İstatistik servisi hatası: $e');
       }
 
-      // 3. Kargo Durum Sayaçları (Web ile %100 birebir uyumlu canlı transaction bazlı sorgu)
-      int totalCargos = 288;
-      int pendingCargos = 14;
-      int activeCargos = 1;
-      int deliveredToday = 206;
-      int problematicCargos = 13;
-      int returnedCargos = 10;
+      // 3. Kargo Durum Sayaçları (Canlı transaction bazlı sorgu)
+      int totalCargos = 0;
+      int pendingCargos = 0;
+      int activeCargos = 0;
+      int deliveredToday = 0;
+      int problematicCargos = 0;
+      int returnedCargos = 0;
 
       final cardStats = await _queryDashboardCargoCards(accountId);
       if (cardStats != null) {
-        pendingCargos = cardStats['pending'] ?? pendingCargos;
-        activeCargos = cardStats['active'] ?? activeCargos;
-        deliveredToday = cardStats['delivered'] ?? deliveredToday;
-        problematicCargos = cardStats['problematic'] ?? problematicCargos;
-        returnedCargos = cardStats['returned'] ?? returnedCargos;
-        totalCargos = cardStats['total'] ?? totalCargos;
+        pendingCargos = cardStats['pending'] ?? 0;
+        activeCargos = cardStats['active'] ?? 0;
+        deliveredToday = cardStats['delivered'] ?? 0;
+        problematicCargos = cardStats['problematic'] ?? 0;
+        returnedCargos = cardStats['returned'] ?? 0;
+        totalCargos = cardStats['total'] ?? 0;
       }
 
       final deliveryRate = totalCargos > 0 ? (deliveredToday / totalCargos) * 100 : 0.0;
@@ -105,16 +105,16 @@ class DashboardService {
         offsetBalance: offsetBalance,
         topCity: topCity,
         leastCity: leastCity,
-        podCargoCount: podStats?['podCargoCount'] ?? 48,
-        podPending: (podStats?['podPending'] as num?)?.toDouble() ?? 8550.00,
+        podCargoCount: (podStats?['podCargoCount'] as num?)?.toInt() ?? 0,
+        podPending: (podStats?['podPending'] as num?)?.toDouble() ?? 0.00,
         podCollected: (podStats?['podCollected'] as num?)?.toDouble() ?? 0.00,
-        podDeduction: accountingStats['podDeduction'] ?? 2543.32,
+        podDeduction: accountingStats['podDeduction'] ?? 0.00,
         podWillPay: (podStats?['podWillPay'] as num?)?.toDouble() ?? podWillPay,
-        podPaid: accountingStats['podPaid'] ?? 26562.00,
-        podReturnCount: podStats?['podReturnCount'] ?? 2,
-        podTotalVolume: (podStats?['podTotalVolume'] as num?)?.toDouble() ?? 34821.50,
-        totalPaid: accountingStats['totalPaid'] ?? 7592930.12,
-        totalExpenses: accountingStats['totalExpenses'] ?? -58931.28,
+        podPaid: accountingStats['podPaid'] ?? 0.00,
+        podReturnCount: (podStats?['podReturnCount'] as num?)?.toInt() ?? 0,
+        podTotalVolume: (podStats?['podTotalVolume'] as num?)?.toDouble() ?? 0.00,
+        totalPaid: accountingStats['totalPaid'] ?? 0.00,
+        totalExpenses: accountingStats['totalExpenses'] ?? 0.00,
         recentCargos: [],
         weeklyTrend: [],
       );
@@ -275,10 +275,10 @@ class DashboardService {
           }
 
           return {
-            'totalPaid': totalPaid > 0 ? totalPaid : 7592930.12,
-            'totalExpenses': totalExpenses != 0 ? totalExpenses : -58931.28,
-            'podPaid': podPaid > 0 ? podPaid : 26562.00,
-            'podDeduction': podDeduction > 0 ? podDeduction : 2543.32,
+            'totalPaid': totalPaid,
+            'totalExpenses': totalExpenses,
+            'podPaid': podPaid,
+            'podDeduction': podDeduction,
           };
         }
       }
@@ -286,10 +286,10 @@ class DashboardService {
       debugPrint('Muhasebe hareketleri sorgulanırken hata: $e');
     }
     return {
-      'totalPaid': 7592930.12,
-      'totalExpenses': -58931.28,
-      'podPaid': 26562.00,
-      'podDeduction': 2543.32,
+      'totalPaid': 0.0,
+      'totalExpenses': 0.0,
+      'podPaid': 0.0,
+      'podDeduction': 0.0,
     };
   }
 
@@ -396,11 +396,13 @@ class DashboardService {
           if (accData is Map<String, dynamic> && accData['accounting'] is Map<String, dynamic>) {
             final accounting = accData['accounting'] as Map<String, dynamic>;
             final rawBalance = (accounting['balance'] as num?)?.toDouble() ?? 0.0;
-            final availableBal = rawBalance > 900 ? 847.16 : rawBalance;
+            final offsetBal = (accounting['offset_balance'] as num?)?.toDouble() ?? 0.0;
+            final calcAvailable = (accounting['available_balance'] as num?)?.toDouble() ??
+                (rawBalance - offsetBal);
             return BalanceModel(
-              balance: availableBal,
-              availableBalance: availableBal,
-              offsetBalance: (accounting['offset_balance'] as num?)?.toDouble() ?? 0.0,
+              balance: calcAvailable,
+              availableBalance: calcAvailable,
+              offsetBalance: offsetBal,
               currency: '₺',
             );
           }

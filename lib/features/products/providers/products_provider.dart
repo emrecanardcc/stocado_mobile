@@ -69,7 +69,7 @@ class ProductsNotifier extends Notifier<ProductsState> {
     final response = await _productsService.getProducts(
       accountId: accountId,
       page: page,
-      perPage: 6,
+      perPage: 15,
       search: state.searchQuery.isNotEmpty ? state.searchQuery : null,
     );
 
@@ -91,7 +91,7 @@ class ProductsNotifier extends Notifier<ProductsState> {
     final response = await _productsService.getProducts(
       accountId: accountId,
       page: nextPage,
-      perPage: 6,
+      perPage: 15,
       search: state.searchQuery.isNotEmpty ? state.searchQuery : null,
     );
 

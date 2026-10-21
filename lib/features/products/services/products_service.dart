@@ -36,9 +36,17 @@ class ProductsService {
             {"name": "height"},
             {"name": "length"},
             {"name": "weight"},
+            {"name": "status"},
           ],
           "paginate": {"page": page, "count": perPage}
         };
+
+        if (search != null && search.isNotEmpty) {
+          body["search"] = {
+            "fields": ["name", "code", "barcode"],
+            "text": search,
+          };
+        }
 
         final response = await _apiClient.post(
           '/accounts/$accountId/products/query',
