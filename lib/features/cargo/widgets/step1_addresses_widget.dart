@@ -376,9 +376,11 @@ class Step1AddressesWidget extends StatelessWidget {
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'E-Posta Adresi (Opsiyonel)',
-                  prefixIcon: Icon(Icons.email_outlined, size: 20),
+                decoration: InputDecoration(
+                  labelText: isReverse ? 'Gönderici E-Posta Adresi *' : 'Alıcı E-Posta Adresi *',
+                  helperText: 'Kargo takip bildirimleri için gereklidir',
+                  helperStyle: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  prefixIcon: const Icon(Icons.email_outlined, size: 20),
                 ),
                 onChanged: (val) => notifier.updateRecipientInfo(email: val),
               ),

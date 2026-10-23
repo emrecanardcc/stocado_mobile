@@ -615,6 +615,10 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     );
   }
 
+  void toggleDraft(bool isDraft) {
+    state = state.copyWith(isDraft: isDraft);
+  }
+
   void selectOffer(CargoOffer offer) {
     state = state.copyWith(selectedOffer: offer);
   }
