@@ -846,7 +846,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       "receiver_pays": state.payOnDelivery ? false : state.receiverPays,
       "controlled_delivery": state.controlledDelivery,
       "status": state.isDraft ? 0 : 1, // 0 = Taslak, 1 = Aktif
-      "order_number": state.orderNumber.isNotEmpty ? state.orderNumber : null,
+      if (state.orderNumber.trim().isNotEmpty) "order_number": state.orderNumber.trim(),
       "description": state.description.isNotEmpty ? state.description : 'Mobil Gönderi',
       "create_failed": true,
       "source": "app",

@@ -47,8 +47,8 @@ class ProductModel {
     return {
       if (id.isNotEmpty) 'id': id,
       'name': name,
-      if (code != null) 'code': code,
-      if (barcode != null) 'barcode': barcode,
+      if (code != null && code!.trim().isNotEmpty) 'code': code!.trim(),
+      if (barcode != null && barcode!.trim().isNotEmpty) 'barcode': barcode!.trim(),
       'price': price,
       'desi': desi,
       if (width != null) 'width': width,
