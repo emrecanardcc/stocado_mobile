@@ -1,4 +1,4 @@
-package com.example.stocado_mobile
+package com.stocado.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 

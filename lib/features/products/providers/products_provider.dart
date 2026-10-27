@@ -55,8 +55,14 @@ class ProductsNotifier extends Notifier<ProductsState> {
         loadProducts(reset: true);
       }
     });
-    Future.microtask(() => loadProducts(reset: true));
-    return const ProductsState(isLoading: true);
+
+    final currentAuth = ref.read(authProvider);
+    if (currentAuth.isAuthenticated && currentAuth.accountId != null) {
+      Future.microtask(() => loadProducts(reset: true));
+      return const ProductsState(isLoading: true);
+    }
+
+    return const ProductsState(isLoading: false);
   }
 
   Future<void> loadProducts({bool reset = false}) async {

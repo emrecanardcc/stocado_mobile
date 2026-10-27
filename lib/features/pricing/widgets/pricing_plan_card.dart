@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_formatters.dart';
+import '../../cargo/widgets/cargo_company_logo.dart';
 import '../models/pricing_plan_model.dart';
 
 class PricingPlanCard extends StatelessWidget {
@@ -89,14 +90,11 @@ class PricingPlanCard extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.local_shipping_rounded, color: AppColors.primary, size: 20),
+                      CargoCompanyLogo(
+                        companyId: plan.code,
+                        companyName: plan.companyName,
+                        size: 40,
+                        borderRadius: 10,
                       ),
                       const SizedBox(width: 10),
                       Expanded(

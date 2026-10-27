@@ -146,17 +146,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> with SingleTi
         ),
         actions: [
           IconButton(
-            icon: dashboardState.isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh_rounded),
-            tooltip: 'Yenile',
-            onPressed: dashboardState.isLoading ? null : () => ref.read(dashboardProvider.notifier).refresh(),
-          ),
-          IconButton(
             icon: const Icon(Icons.logout_rounded),
             tooltip: 'Çıkış Yap',
             onPressed: _showLogoutDialog,

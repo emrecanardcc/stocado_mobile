@@ -117,6 +117,53 @@ class AppFormatters {
     return '${desi.toStringAsFixed(2).replaceAll('.', ',')} Desi';
   }
 
+  /// UTC zaman damgasını yerel saate (Turkey UTC+3) dönüştürerek parse eder.
+  /// Backend veritabanından gelebilecek formatlar:
+  /// - '2026-10-27T09:24:00.000000Z' (Standart ISO UTC)
+  /// - '2026-10-27 09:24:00' (MySQL raw UTC, Z veya offset içermez)
+  /// - '2026-10-27T09:24:00' (ISO UTC, Z içermez)
+  /// - '2026-10-27T12:24:00+03:00' (Offset içeren ISO)
+  static DateTime? parseUtcDateTime(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) {
+      return raw.isUtc ? raw.toLocal() : raw;
+    }
+    final str = raw.toString().trim();
+    if (str.isEmpty) return null;
+
+    try {
+      // 1. Eğer ISO string 'Z' ile bitiyorsa veya timezone offset (+03:00) içeriyorsa:
+      if (str.endsWith('Z') || str.endsWith('z') || RegExp(r'[+-]\d{2}(:\d{2})?$').hasMatch(str)) {
+        return DateTime.tryParse(str)?.toLocal();
+      }
+
+      // 2. Zaman dilimi belirtilmemişse (MySQL '2026-10-27 09:24:00' veya ISO '2026-10-27T09:24:00'):
+      // Backend UTC sakladığı için 'Z' ekleyerek UTC parse edip yerel saate çeviriyoruz:
+      final normalized = str.contains('T') ? '${str}Z' : '${str.replaceFirst(' ', 'T')}Z';
+      final parsedUtc = DateTime.tryParse(normalized);
+      if (parsedUtc != null) {
+        return parsedUtc.toLocal();
+      }
+
+      return DateTime.tryParse(str)?.toLocal();
+    } catch (_) {
+      return DateTime.tryParse(str)?.toLocal();
+    }
+  }
+
+  /// Tarih ve saat formatlayıcı
+  /// Örnek: DateTime(2026, 10, 24, 14, 30) -> "24.10.2026 14:30"
+  static String formatDateTime(DateTime? dt) {
+    if (dt == null) return '';
+    final local = dt.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final year = local.year.toString();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$day.$month.$year $hour:$minute';
+  }
+
   /// Hem virgül hem nokta ile girilen ondalıklı sayıları güvenle parse eder.
   /// Örnek: "12,50" -> 12.5, "12.50" -> 12.5
   static double parseDouble(dynamic val, [double fallback = 0.0]) {

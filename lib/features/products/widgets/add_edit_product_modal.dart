@@ -11,233 +11,283 @@ class AddEditProductModal {
     WidgetRef ref, {
     ProductModel? product,
   }) {
-    final isEditing = product != null;
-    final nameController = TextEditingController(text: product?.name ?? '');
-    final codeController = TextEditingController(text: product?.code ?? '');
-    final barcodeController = TextEditingController(text: product?.barcode ?? '');
-    final priceController = TextEditingController(text: product != null ? product.price.toString() : '');
-    final widthController = TextEditingController(text: product?.width != null ? product!.width.toString() : '');
-    final lengthController = TextEditingController(text: product?.length != null ? product!.length.toString() : '');
-    final heightController = TextEditingController(text: product?.height != null ? product!.height.toString() : '');
-    final weightController = TextEditingController(text: product?.weight != null ? product!.weight.toString() : '');
-    final desiController = TextEditingController(text: product != null && product.desi > 0 ? product.desi.toString() : '');
-    double calculatedDesi = product?.desi ?? 0.0;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (modalCtx, setModalState) {
-            void updateDesi() {
-              final w = AppFormatters.parseDouble(widthController.text);
-              final l = AppFormatters.parseDouble(lengthController.text);
-              final h = AppFormatters.parseDouble(heightController.text);
-              setModalState(() {
-                if (w > 0 && l > 0 && h > 0) {
-                  calculatedDesi = (w * l * h) / 3000;
-                  desiController.text = calculatedDesi.toStringAsFixed(2);
-                }
-              });
-            }
+      builder: (ctx) => _AddEditProductSheetContent(product: product, ref: ref),
+    );
+  }
+}
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 20,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isEditing ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Ürün Adı *'),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: codeController,
-                            decoration: const InputDecoration(labelText: 'Stok Kodu (SKU)'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: barcodeController,
-                            decoration: const InputDecoration(labelText: 'Barkod'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: priceController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Fiyat (₺) *', prefixIcon: Icon(Icons.currency_lira)),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Paket ve Desi Ölçüleri', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: widthController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'En (cm)'),
-                            onChanged: (_) => updateDesi(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: lengthController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Boy (cm)'),
-                            onChanged: (_) => updateDesi(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: heightController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Yükseklik (cm)'),
-                            onChanged: (_) => updateDesi(),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: weightController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Ağırlık (kg)'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: desiController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: InputDecoration(
-                              labelText: 'Desi *',
-                              suffixText: 'desi',
-                              helperText: calculatedDesi > 0 ? 'Ölçü Desisi: ${calculatedDesi.toStringAsFixed(2)}' : null,
-                            ),
-                            onChanged: (val) {
-                              final d = double.tryParse(val);
-                              if (d != null) {
-                                setModalState(() {
-                                  calculatedDesi = d;
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final name = nameController.text.trim();
-                        final price = AppFormatters.parseDouble(priceController.text);
-                        final manualDesi = AppFormatters.tryParseDouble(desiController.text);
-                        final finalDesi = (manualDesi != null && manualDesi > 0)
-                            ? manualDesi
-                            : (calculatedDesi > 0 ? calculatedDesi : (product?.desi ?? 0.0));
+class _AddEditProductSheetContent extends StatefulWidget {
+  final ProductModel? product;
+  final WidgetRef ref;
 
-                        if (name.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Lütfen ürün adını giriniz.'),
-                              backgroundColor: AppColors.warning,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          return;
-                        }
+  const _AddEditProductSheetContent({
+    required this.product,
+    required this.ref,
+  });
 
-                        if (finalDesi <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Lütfen geçerli bir ürün desisi veya boyutlarını (en, boy, yükseklik) giriniz.'),
-                              backgroundColor: AppColors.warning,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          return;
-                        }
+  @override
+  State<_AddEditProductSheetContent> createState() => _AddEditProductSheetContentState();
+}
 
-                        final newProduct = ProductModel(
-                          id: product?.id ?? '',
-                          name: name,
-                          code: codeController.text.trim().isNotEmpty ? codeController.text.trim() : null,
-                          barcode: barcodeController.text.trim().isNotEmpty ? barcodeController.text.trim() : null,
-                          price: price,
-                          desi: finalDesi,
-                          width: AppFormatters.tryParseDouble(widthController.text),
-                          length: AppFormatters.tryParseDouble(lengthController.text),
-                          height: AppFormatters.tryParseDouble(heightController.text),
-                          weight: AppFormatters.tryParseDouble(weightController.text),
-                        );
+class _AddEditProductSheetContentState extends State<_AddEditProductSheetContent> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _codeController;
+  late final TextEditingController _barcodeController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _widthController;
+  late final TextEditingController _lengthController;
+  late final TextEditingController _heightController;
+  late final TextEditingController _weightController;
+  late final TextEditingController _desiController;
+  late double _calculatedDesi;
 
-                        final messenger = ScaffoldMessenger.of(context);
-                        Navigator.pop(ctx);
+  bool get _isEditing => widget.product != null;
 
-                        final result = isEditing
-                            ? await ref.read(productsProvider.notifier).updateProduct(product.id, newProduct)
-                            : await ref.read(productsProvider.notifier).createProduct(newProduct);
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.product;
+    _nameController = TextEditingController(text: p?.name ?? '');
+    _codeController = TextEditingController(text: p?.code ?? '');
+    _barcodeController = TextEditingController(text: p?.barcode ?? '');
+    _priceController = TextEditingController(text: p != null ? p.price.toString() : '');
+    _widthController = TextEditingController(text: p?.width != null ? p!.width.toString() : '');
+    _lengthController = TextEditingController(text: p?.length != null ? p!.length.toString() : '');
+    _heightController = TextEditingController(text: p?.height != null ? p!.height.toString() : '');
+    _weightController = TextEditingController(text: p?.weight != null ? p!.weight.toString() : '');
+    _desiController = TextEditingController(text: p != null && p.desi > 0 ? p.desi.toString() : '');
+    _calculatedDesi = p?.desi ?? 0.0;
+  }
 
-                        if (context.mounted) {
-                          final defaultMsg = result.isSuccess
-                              ? (isEditing ? 'Ürün başarıyla güncellendi.' : 'Ürün başarıyla eklendi.')
-                              : 'İşlem gerçekleştirilemedi.';
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(result.message ?? defaultMsg),
-                              backgroundColor: result.isSuccess ? AppColors.secondary : AppColors.error,
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 4),
-                            ),
-                          );
-                        }
-                      },
-                      child: Text(isEditing ? 'Güncelle' : 'Kaydet'),
-                    ),
-                  ],
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _codeController.dispose();
+    _barcodeController.dispose();
+    _priceController.dispose();
+    _widthController.dispose();
+    _lengthController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
+    _desiController.dispose();
+    super.dispose();
+  }
+
+  void _updateDesi() {
+    final w = AppFormatters.parseDouble(_widthController.text);
+    final l = AppFormatters.parseDouble(_lengthController.text);
+    final h = AppFormatters.parseDouble(_heightController.text);
+    setState(() {
+      if (w > 0 && l > 0 && h > 0) {
+        _calculatedDesi = (w * l * h) / 3000;
+        _desiController.text = _calculatedDesi.toStringAsFixed(2);
+      }
+    });
+  }
+
+  Future<void> _handleSave() async {
+    final name = _nameController.text.trim();
+    final price = AppFormatters.parseDouble(_priceController.text);
+    final manualDesi = AppFormatters.tryParseDouble(_desiController.text);
+    final finalDesi = (manualDesi != null && manualDesi > 0)
+        ? manualDesi
+        : (_calculatedDesi > 0 ? _calculatedDesi : (widget.product?.desi ?? 0.0));
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen ürün adını giriniz.'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (finalDesi <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen geçerli bir ürün desisi veya boyutlarını (en, boy, yükseklik) giriniz.'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final newProduct = ProductModel(
+      id: widget.product?.id ?? '',
+      name: name,
+      code: _codeController.text.trim().isNotEmpty ? _codeController.text.trim() : null,
+      barcode: _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null,
+      price: price,
+      desi: finalDesi,
+      width: AppFormatters.tryParseDouble(_widthController.text),
+      length: AppFormatters.tryParseDouble(_lengthController.text),
+      height: AppFormatters.tryParseDouble(_heightController.text),
+      weight: AppFormatters.tryParseDouble(_weightController.text),
+    );
+
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context);
+
+    final result = _isEditing
+        ? await widget.ref.read(productsProvider.notifier).updateProduct(widget.product!.id, newProduct)
+        : await widget.ref.read(productsProvider.notifier).createProduct(newProduct);
+
+    if (mounted) {
+      final defaultMsg = result.isSuccess
+          ? (_isEditing ? 'Ürün başarıyla güncellendi.' : 'Ürün başarıyla eklendi.')
+          : 'İşlem gerçekleştirilemedi.';
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? defaultMsg),
+          backgroundColor: result.isSuccess ? AppColors.secondary : AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _isEditing ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
-              ),
-            );
-          },
-        );
-      },
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Ürün Adı *'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _codeController,
+                    decoration: const InputDecoration(labelText: 'Ürün Kodu'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _barcodeController,
+                    decoration: const InputDecoration(labelText: 'Barkod'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _priceController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Fiyat (₺)', prefixText: '₺ '),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Paket ve Desi Ölçüleri',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _widthController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'En (cm)'),
+                    onChanged: (_) => _updateDesi(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _lengthController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Boy (cm)'),
+                    onChanged: (_) => _updateDesi(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _heightController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Yükseklik (cm)'),
+                    onChanged: (_) => _updateDesi(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _weightController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Ağırlık (kg)'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _desiController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Desi *',
+                      suffixText: 'desi',
+                      helperText: _calculatedDesi > 0 ? 'Ölçü Desisi: ${_calculatedDesi.toStringAsFixed(2)}' : null,
+                    ),
+                    onChanged: (val) {
+                      final d = double.tryParse(val);
+                      if (d != null) {
+                        setState(() {
+                          _calculatedDesi = d;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _handleSave,
+              child: Text(_isEditing ? 'Güncelle' : 'Kaydet'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

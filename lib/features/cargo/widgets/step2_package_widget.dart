@@ -46,6 +46,19 @@ class Step2PackageWidget extends StatelessWidget {
       );
     }
 
+    void syncDimensionsToDesi() {
+      final w = AppFormatters.parseDouble(widthController.text);
+      final l = AppFormatters.parseDouble(lengthController.text);
+      final h = AppFormatters.parseDouble(heightController.text);
+      if (w > 0 && l > 0 && h > 0) {
+        final calculated = double.parse(((w * l * h) / 3000).toStringAsFixed(2));
+        desiController.text = calculated.toString();
+        notifier.updatePackageDimensions(width: w, length: l, height: h, directDesi: calculated);
+      } else {
+        notifier.updatePackageDimensions(width: w, length: l, height: h);
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -205,7 +218,7 @@ class Step2PackageWidget extends StatelessWidget {
                       decoration: const InputDecoration(
                         labelText: 'En (cm)',
                       ),
-                      onChanged: (val) => notifier.updatePackageDimensions(width: AppFormatters.parseDouble(val)),
+                      onChanged: (_) => syncDimensionsToDesi(),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -216,7 +229,7 @@ class Step2PackageWidget extends StatelessWidget {
                       decoration: const InputDecoration(
                         labelText: 'Boy (cm)',
                       ),
-                      onChanged: (val) => notifier.updatePackageDimensions(length: AppFormatters.parseDouble(val)),
+                      onChanged: (_) => syncDimensionsToDesi(),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -227,7 +240,7 @@ class Step2PackageWidget extends StatelessWidget {
                       decoration: const InputDecoration(
                         labelText: 'Yükseklik',
                       ),
-                      onChanged: (val) => notifier.updatePackageDimensions(height: AppFormatters.parseDouble(val)),
+                      onChanged: (_) => syncDimensionsToDesi(),
                     ),
                   ),
                 ],

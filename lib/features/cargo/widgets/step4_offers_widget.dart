@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../providers/create_cargo_provider.dart';
+import 'cargo_company_logo.dart';
 
 class Step4OffersWidget extends StatelessWidget {
   final CreateCargoState state;
@@ -181,18 +182,11 @@ class Step4OffersWidget extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       child: Row(
                         children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isSelected ? AppColors.primary.withValues(alpha: 0.12) : AppColors.surfaceSecondary,
-                            ),
-                            child: Icon(
-                              Icons.local_shipping_rounded,
-                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                              size: 22,
-                            ),
+                          CargoCompanyLogo(
+                            companyId: offer.cargoCompany.id.toString(),
+                            companyName: offer.cargoCompany.title,
+                            size: 44,
+                            borderRadius: 12,
                           ),
                           const SizedBox(width: 14),
                           Expanded(

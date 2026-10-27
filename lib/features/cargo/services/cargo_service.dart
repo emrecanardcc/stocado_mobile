@@ -242,35 +242,90 @@ class CargoService {
     String? search,
     String? cargoCompanyId,
     String? statusFilter,
+    String sortDirection = 'desc',
   }) async {
     try {
+      int? statusInt = status;
+      if (statusFilter != null && statusFilter.isNotEmpty && statusFilter != 'all') {
+        final parsed = int.tryParse(statusFilter);
+        if (parsed != null) {
+          statusInt = parsed;
+        } else if (statusFilter == 'drafts') {
+          statusInt = 0;
+        } else if (statusFilter == 'active') {
+          statusInt = 1;
+        } else if (statusFilter == 'delivered' || statusFilter == 'completed') {
+          statusInt = 2;
+        } else if (statusFilter == 'cancelled') {
+          statusInt = 3;
+        } else if (statusFilter == 'failed') {
+          statusInt = 4;
+        }
+      }
+
       if (accountId != null && accountId.isNotEmpty) {
+        String? targetCompanyId;
+        if (cargoCompanyId != null && cargoCompanyId.isNotEmpty) {
+          final c = cargoCompanyId.toLowerCase();
+          if (c.contains('ptt')) {
+            targetCompanyId = 'ptt-kargo';
+          } else if (c.contains('surat') || c.contains('sürat')) {
+            targetCompanyId = 'surat-kargo';
+          } else if (c.contains('yurtici') || c.contains('yurtiçi')) {
+            targetCompanyId = 'yurtici-kargo';
+          } else if (c.contains('hepsijet')) {
+            targetCompanyId = 'hepsijet';
+          } else if (c.contains('ups')) {
+            targetCompanyId = 'ups';
+          } else if (c.contains('kolay') || c.contains('gelsin')) {
+            targetCompanyId = 'kolay-gelsin';
+          } else {
+            targetCompanyId = cargoCompanyId;
+          }
+        }
+
         final List<Map<String, dynamic>> fields = [
           {"name": "id"},
           {"name": "process_number"},
           {"name": "out_tracking_code"},
           {"name": "order_number"},
-          if (cargoCompanyId != null && cargoCompanyId.isNotEmpty)
+          if (targetCompanyId != null && targetCompanyId.isNotEmpty)
             {
               "name": "cargo_company_id",
               "filters": [
-                {"operator": "equals", "value": cargoCompanyId}
+                {"operator": "equals", "value": targetCompanyId}
               ]
             }
           else
             {"name": "cargo_company_id"},
-          if (status != null || filter == 'drafts' || statusFilter == 'drafts')
+          if (filter == 'drafts' || statusInt == 0)
             {
               "name": "status",
               "filters": [
-                {"operator": "equals", "value": status ?? 0}
+                {"operator": "equals", "value": 0}
+              ]
+            }
+          else if (statusInt != null)
+            {
+              "name": "status",
+              "filters": [
+                {"operator": "equals", "value": statusInt}
               ]
             }
           else
             {"name": "status"},
-          {"name": "created_at"},
+          {"name": "out_tracking_link"},
+          {"name": "created_at", "sorting": sortDirection},
           {"name": "sender_id"},
           {"name": "receiver_id"},
+          {"name": "receiver.id"},
+          {"name": "receiver.name"},
+          {"name": "receiver.phone"},
+          {"name": "receiver.details"},
+          {"name": "receiver.city_id"},
+          {"name": "receiver.district_id"},
+          {"name": "receiver.city.name"},
+          {"name": "receiver.district.name"},
           if (payOnDelivery == true || filter == 'pod')
             {
               "name": "pay_on_delivery",
@@ -281,6 +336,9 @@ class CargoService {
           else
             {"name": "pay_on_delivery"},
           {"name": "pay_on_delivery_amount"},
+          {"name": "pay_on_delivery_cost"},
+          {"name": "pod_transaction_id"},
+          {"name": "collection_period"},
           {"name": "pay_on_delivery_type"},
           {"name": "pay_on_delivery_status"},
           {"name": "pay_on_delivery_offset_date"},
@@ -289,20 +347,33 @@ class CargoService {
           {"name": "valid_desi"},
           {"name": "description"},
           {"name": "cargo_company"},
-          {"name": "latest_transaction"},
+          {"name": "latest_transaction_type"},
+          {"name": "latest_transaction.id"},
+          {"name": "latest_transaction.type"},
+          {"name": "latest_transaction.description"},
+          {"name": "latest_transaction.location"},
+          {"name": "latest_transaction.created_at"},
         ];
 
         final Map<String, dynamic> body = {
           "fields": fields,
           "paginate": {"page": page, "count": perPage},
           "sort": [
-            {"name": "id", "direction": "desc"}
+            {"name": "created_at", "direction": sortDirection},
+            {"name": "id", "direction": sortDirection}
           ],
         };
 
         if (search != null && search.isNotEmpty) {
           body["search"] = {
-            "fields": ["process_number", "out_tracking_code", "order_number", "description"],
+            "fields": [
+              "process_number",
+              "out_tracking_code",
+              "order_number",
+              "description",
+              "receiver.name",
+              "receiver.phone"
+            ],
             "text": search,
           };
         }
@@ -329,37 +400,13 @@ class CargoService {
               }).toList();
             }
 
-            // Kargo Durumu Filtresi (istemci kontrolü)
-            if (statusFilter != null && statusFilter.isNotEmpty && statusFilter != 'all') {
-              list = list.where((c) {
-                final type = c.latestTransaction?.type;
-                final st = c.status;
-                switch (statusFilter) {
-                  case 'drafts':
-                    return st == 0 || type == 1 || type == null;
-                  case 'in_transit':
-                    return [2, 3, 4, 5, 9].contains(type);
-                  case 'delivered':
-                    return type == 6;
-                  case 'problematic':
-                    return [7, 13].contains(type);
-                  case 'returned':
-                    return [10, 11].contains(type);
-                  default:
-                    return true;
-                }
-              }).toList();
+            // Kargo Durumu Filtresi (istemci kontrolü / güvencesi)
+            if (statusInt != null) {
+              list = list.where((c) => c.status == statusInt).toList();
             }
 
-            // Yeniden Eskiye Sıralama (Created At / ID Descending)
-            list.sort((a, b) {
-              if (a.createdAt != null && b.createdAt != null) {
-                return b.createdAt!.compareTo(a.createdAt!);
-              }
-              final aId = int.tryParse(a.id.toString()) ?? 0;
-              final bId = int.tryParse(b.id.toString()) ?? 0;
-              return bId.compareTo(aId);
-            });
+            // Yeniden Eskiye / Eskiden Yeniye Sıralama
+            list.sort((a, b) => CargoModel.compareCargos(a, b, sortDirection: sortDirection));
 
             final rawTotal = decoded['total'];
             int total = list.length;
@@ -368,13 +415,15 @@ class CargoService {
             } else if (rawTotal != null) {
               total = int.tryParse(rawTotal.toString()) ?? list.length;
             }
-            final lastPage = (total <= 0) ? 1 : (total / perPage).ceil();
+            final lastPage = (total <= 0)
+                ? (list.length >= perPage ? page + 1 : page)
+                : (total / perPage).ceil();
 
             final meta = PaginationMeta(
               currentPage: page,
               lastPage: lastPage > 0 ? lastPage : 1,
               perPage: perPage,
-              total: total,
+              total: total > 0 ? total : list.length,
             );
 
             return PaginatedCargosResponse(data: list, meta: meta);
@@ -394,6 +443,8 @@ class CargoService {
         'status': ?status,
         if (search != null && search.isNotEmpty) 'search': search,
         if (cargoCompanyId != null && cargoCompanyId.isNotEmpty) 'cargo_company_id': cargoCompanyId,
+        'sort_direction': sortDirection,
+        'order_by': 'created_at',
       };
 
       final response = await _apiClient.get('/cargos', queryParameters: query);
@@ -416,37 +467,13 @@ class CargoService {
             }).toList();
           }
 
-          // Kargo Durumu Filtresi (istemci kontrolü)
-          if (statusFilter != null && statusFilter.isNotEmpty && statusFilter != 'all') {
-            list = list.where((c) {
-              final type = c.latestTransaction?.type;
-              final st = c.status;
-              switch (statusFilter) {
-                case 'drafts':
-                  return st == 0 || type == 1 || type == null;
-                case 'in_transit':
-                  return [2, 3, 4, 5, 9].contains(type);
-                case 'delivered':
-                  return type == 6;
-                case 'problematic':
-                  return [7, 13].contains(type);
-                case 'returned':
-                  return [10, 11].contains(type);
-                default:
-                  return true;
-              }
-            }).toList();
+          // Kargo Durumu Filtresi (istemci kontrolü / güvencesi)
+          if (statusInt != null) {
+            list = list.where((c) => c.status == statusInt).toList();
           }
 
-          // Yeniden Eskiye Sıralama
-          list.sort((a, b) {
-            if (a.createdAt != null && b.createdAt != null) {
-              return b.createdAt!.compareTo(a.createdAt!);
-            }
-            final aId = int.tryParse(a.id.toString()) ?? 0;
-            final bId = int.tryParse(b.id.toString()) ?? 0;
-            return bId.compareTo(aId);
-          });
+          // Yeniden Eskiye / Eskiden Yeniye Sıralama
+          list.sort((a, b) => CargoModel.compareCargos(a, b, sortDirection: sortDirection));
 
           final meta = decoded['meta'] is Map<String, dynamic>
               ? PaginationMeta.fromJson(decoded['meta'] as Map<String, dynamic>)
@@ -460,6 +487,40 @@ class CargoService {
       debugPrint('CargoService.getCargos hatası: $e');
       final errorMsg = ApiClient.parseError(e, defaultMessage: 'Ağ bağlantısı kurulamadı.');
       return PaginatedCargosResponse(data: [], errorMessage: errorMsg);
+    }
+  }
+
+  /// Tekil Kargo Detayı ve Canlı Takip Hareketlerini Çeker:
+  /// GET /accounts/{accountId}/cargos/{cargoId} veya GET /cargos/{cargoId}
+  Future<CargoModel?> getCargoDetail(String cargoId, {String? accountId}) async {
+    try {
+      if (accountId != null && accountId.isNotEmpty) {
+        final accResponse = await _apiClient.get('/accounts/$accountId/cargos/$cargoId');
+        if (accResponse.statusCode == 200) {
+          final decoded = ApiClient.decodeResponse(accResponse);
+          if (decoded is Map<String, dynamic>) {
+            final dataMap = decoded['data'] is Map<String, dynamic>
+                ? decoded['data'] as Map<String, dynamic>
+                : decoded;
+            return CargoModel.fromJson(dataMap);
+          }
+        }
+      }
+
+      final response = await _apiClient.get('/cargos/$cargoId');
+      if (response.statusCode == 200) {
+        final decoded = ApiClient.decodeResponse(response);
+        if (decoded is Map<String, dynamic>) {
+          final dataMap = decoded['data'] is Map<String, dynamic>
+              ? decoded['data'] as Map<String, dynamic>
+              : decoded;
+          return CargoModel.fromJson(dataMap);
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('getCargoDetail error: $e');
+      return null;
     }
   }
 

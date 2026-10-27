@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
   static const String baseUrl = "https://api.kargopaneli.com/v1";
   static const String tokenKey = "auth_token";
+  static const Duration defaultTimeout = Duration(seconds: 25);
   
   final FlutterSecureStorage _storage;
   
@@ -48,7 +49,7 @@ class ApiClient {
   Future<http.Response> get(String endpoint, {Map<String, dynamic>? queryParameters}) async {
     final uri = _buildUri(endpoint, queryParameters);
     final headers = await _getHeaders();
-    final response = await http.get(uri, headers: headers);
+    final response = await http.get(uri, headers: headers).timeout(defaultTimeout);
     _handleErrors(response);
     return response;
   }
@@ -61,7 +62,7 @@ class ApiClient {
       uri,
       headers: headers,
       body: body != null ? jsonEncode(body) : null,
-    );
+    ).timeout(defaultTimeout);
     _handleErrors(response);
     return response;
   }
@@ -74,7 +75,7 @@ class ApiClient {
       uri,
       headers: headers,
       body: body != null ? jsonEncode(body) : null,
-    );
+    ).timeout(defaultTimeout);
     _handleErrors(response);
     return response;
   }
@@ -87,7 +88,7 @@ class ApiClient {
       uri,
       headers: headers,
       body: body != null ? jsonEncode(body) : null,
-    );
+    ).timeout(defaultTimeout);
     _handleErrors(response);
     return response;
   }

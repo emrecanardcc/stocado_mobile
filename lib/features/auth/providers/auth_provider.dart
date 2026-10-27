@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -43,6 +44,7 @@ class AuthState {
 }
 
 class AuthNotifier extends Notifier<AuthState> {
+  static const String userCacheKey = "cached_user_profile";
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   late final AuthService _authService;
 
@@ -66,9 +68,33 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final token = await _storage.read(key: ApiClient.tokenKey);
       if (token != null && token.isNotEmpty) {
-        state = state.copyWith(token: token, isLoading: true);
-        final user = await _authService.getMe();
+        UserModel? cachedUser;
+        final cachedUserJson = await _storage.read(key: userCacheKey);
+        if (cachedUserJson != null && cachedUserJson.isNotEmpty) {
+          try {
+            cachedUser = UserModel.fromJson(jsonDecode(cachedUserJson));
+          } catch (_) {}
+        }
+
+        // Önbellekteki oturum bilgisiyle hemen aktif et
+        state = state.copyWith(
+          token: token,
+          user: cachedUser,
+          isLoading: true,
+        );
+
+        final user = await _authService.getMe().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () {
+            debugPrint('Oturum doğrulama zaman aşımı (3s) - Çevrimdışı modda devam ediliyor');
+            return null;
+          },
+        );
         if (user != null) {
+          try {
+            await _storage.write(key: userCacheKey, value: jsonEncode(user.toJson()));
+          } catch (_) {}
+
           state = state.copyWith(
             token: token,
             user: user,
@@ -77,8 +103,16 @@ class AuthNotifier extends Notifier<AuthState> {
           );
           return;
         } else {
-          // Token geçersiz veya süresi dolmuşsa temizle
-          await _storage.delete(key: ApiClient.tokenKey);
+          // Ağ hatası veya sunucu yanıt vermeme durumunda kullanıcının token'ı SİLİNMEZ!
+          // Önbellekteki kullanıcı ile oturum korunur.
+          // Token yalnızca 401 Unauthorized durumunda ApiClient.onUnauthorized ile silinir.
+          state = state.copyWith(
+            token: token,
+            user: cachedUser,
+            isLoading: false,
+            isInitialized: true,
+          );
+          return;
         }
       }
     } catch (e) {
@@ -99,6 +133,11 @@ class AuthNotifier extends Notifier<AuthState> {
 
       // Giriş yapan kullanıcının hesap detaylarını (/auth/me) anında çek
       final user = await _authService.getMe();
+      if (user != null) {
+        try {
+          await _storage.write(key: userCacheKey, value: jsonEncode(user.toJson()));
+        } catch (_) {}
+      }
 
       state = state.copyWith(
         token: result.token,
@@ -121,12 +160,18 @@ class AuthNotifier extends Notifier<AuthState> {
     await _storage.write(key: ApiClient.tokenKey, value: token);
     state = state.copyWith(token: token, isLoading: true);
     final user = await _authService.getMe();
+    if (user != null) {
+      try {
+        await _storage.write(key: userCacheKey, value: jsonEncode(user.toJson()));
+      } catch (_) {}
+    }
     state = state.copyWith(token: token, user: user, isLoading: false, isInitialized: true);
   }
 
   /// Çıkış Yapma İşlemi
   Future<void> logout() async {
     await _storage.delete(key: ApiClient.tokenKey);
+    await _storage.delete(key: userCacheKey);
     state = const AuthState(isInitialized: true);
   }
 }

@@ -38,15 +38,15 @@ class CargoStatsTabView extends ConsumerWidget {
               ),
             ),
             PopupMenuButton<int?>(
-              initialValue: selectedDays,
+              initialValue: selectedDays ?? 0,
               tooltip: 'Dönem Filtrele',
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              onSelected: (days) {
-                ref.read(dashboardProvider.notifier).setPeriod(days);
+              onSelected: (val) {
+                ref.read(dashboardProvider.notifier).setPeriod(val == 0 ? null : val);
               },
               itemBuilder: (ctx) => [
                 const PopupMenuItem(
-                  value: null,
+                  value: 0,
                   child: Row(
                     children: [
                       Icon(Icons.all_inclusive_rounded, size: 16, color: AppColors.primary),

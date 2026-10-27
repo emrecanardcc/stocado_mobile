@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../providers/cargo_list_provider.dart';
 import '../widgets/cargo_card.dart';
+import '../widgets/cargo_company_logo.dart';
 import '../widgets/cargo_empty_state.dart';
 
 class CargosScreen extends ConsumerStatefulWidget {
@@ -65,6 +66,8 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
         return 'HepsiJET';
       case 'ups':
         return 'UPS Kargo';
+      case 'kolay-gelsin':
+        return 'Kolay Gelsin';
       default:
         return 'Tümü';
     }
@@ -72,16 +75,23 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
 
   String _statusLabel(String? status) {
     switch (status) {
+      case '0':
       case 'drafts':
-        return 'Taslak / Hazır';
-      case 'in_transit':
-        return 'Yolda / Dağıtımda';
+        return 'Taslak';
+      case '1':
+      case 'active':
+        return 'Aktif';
+      case '2':
       case 'delivered':
-        return 'Teslim Edildi';
-      case 'returned':
-        return 'İade';
+      case 'completed':
+        return 'Tamamlandı';
+      case '3':
+      case 'cancelled':
+        return 'İptal Edildi';
+      case '4':
+      case 'failed':
       case 'problematic':
-        return 'Sorunlu / İptal';
+        return 'Başarısız';
       default:
         return 'Tümü';
     }
@@ -132,12 +142,13 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
     required String label,
     required bool isSelected,
     required VoidCallback onSelected,
+    Widget? leading,
   }) {
     return GestureDetector(
       onTap: onSelected,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -155,13 +166,22 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                 ]
               : null,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : AppColors.textPrimary,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (leading != null) ...[
+              leading,
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.textPrimary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -204,6 +224,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
     final state = ref.read(cargoListProvider);
     String? tempCompany = state.selectedCargoCompany;
     String? tempStatus = state.selectedStatus;
+    String tempSort = state.sortDirection;
 
     showModalBottomSheet(
       context: context,
@@ -250,12 +271,13 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                             ),
                           ],
                         ),
-                        if (tempCompany != null || tempStatus != null)
+                        if (tempCompany != null || tempStatus != null || tempSort != 'desc')
                           TextButton(
                             onPressed: () {
                               setSheetState(() {
                                 tempCompany = null;
                                 tempStatus = null;
+                                tempSort = 'desc';
                               });
                             },
                             style: TextButton.styleFrom(
@@ -298,27 +320,38 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                         _buildFilterChipItem(
                           label: 'PTT Kargo',
                           isSelected: tempCompany == 'ptt',
+                          leading: const CargoCompanyLogo(companyId: 'ptt', size: 18, borderRadius: 4, showBorder: false),
                           onSelected: () => setSheetState(() => tempCompany = 'ptt'),
                         ),
                         _buildFilterChipItem(
                           label: 'Sürat Kargo',
                           isSelected: tempCompany == 'surat',
+                          leading: const CargoCompanyLogo(companyId: 'surat', size: 18, borderRadius: 4, showBorder: false),
                           onSelected: () => setSheetState(() => tempCompany = 'surat'),
                         ),
                         _buildFilterChipItem(
                           label: 'Yurtiçi Kargo',
                           isSelected: tempCompany == 'yurtici',
+                          leading: const CargoCompanyLogo(companyId: 'yurtici', size: 18, borderRadius: 4, showBorder: false),
                           onSelected: () => setSheetState(() => tempCompany = 'yurtici'),
                         ),
                         _buildFilterChipItem(
                           label: 'HepsiJET',
                           isSelected: tempCompany == 'hepsijet',
+                          leading: const CargoCompanyLogo(companyId: 'hepsijet', size: 18, borderRadius: 4, showBorder: false),
                           onSelected: () => setSheetState(() => tempCompany = 'hepsijet'),
                         ),
                         _buildFilterChipItem(
                           label: 'UPS Kargo',
                           isSelected: tempCompany == 'ups',
+                          leading: const CargoCompanyLogo(companyId: 'ups', size: 18, borderRadius: 4, showBorder: false),
                           onSelected: () => setSheetState(() => tempCompany = 'ups'),
+                        ),
+                        _buildFilterChipItem(
+                          label: 'Kolay Gelsin',
+                          isSelected: tempCompany == 'kolay-gelsin',
+                          leading: const CargoCompanyLogo(companyId: 'kolay-gelsin', size: 18, borderRadius: 4, showBorder: false),
+                          onSelected: () => setSheetState(() => tempCompany = 'kolay-gelsin'),
                         ),
                       ],
                     ),
@@ -342,63 +375,78 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                           onSelected: () => setSheetState(() => tempStatus = null),
                         ),
                         _buildFilterChipItem(
-                          label: 'Taslak / Hazır',
-                          isSelected: tempStatus == 'drafts',
-                          onSelected: () => setSheetState(() => tempStatus = 'drafts'),
+                          label: 'Taslak',
+                          isSelected: tempStatus == '0' || tempStatus == 'drafts',
+                          onSelected: () => setSheetState(() => tempStatus = '0'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Yolda / Dağıtımda',
-                          isSelected: tempStatus == 'in_transit',
-                          onSelected: () => setSheetState(() => tempStatus = 'in_transit'),
+                          label: 'Aktif',
+                          isSelected: tempStatus == '1' || tempStatus == 'active',
+                          onSelected: () => setSheetState(() => tempStatus = '1'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Teslim Edildi',
-                          isSelected: tempStatus == 'delivered',
-                          onSelected: () => setSheetState(() => tempStatus = 'delivered'),
+                          label: 'Tamamlandı',
+                          isSelected: tempStatus == '2' || tempStatus == 'delivered' || tempStatus == 'completed',
+                          onSelected: () => setSheetState(() => tempStatus = '2'),
                         ),
                         _buildFilterChipItem(
-                          label: 'İade',
-                          isSelected: tempStatus == 'returned',
-                          onSelected: () => setSheetState(() => tempStatus = 'returned'),
+                          label: 'İptal Edildi',
+                          isSelected: tempStatus == '3' || tempStatus == 'cancelled',
+                          onSelected: () => setSheetState(() => tempStatus = '3'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Sorunlu / İptal',
-                          isSelected: tempStatus == 'problematic',
-                          onSelected: () => setSheetState(() => tempStatus = 'problematic'),
+                          label: 'Başarısız',
+                          isSelected: tempStatus == '4' || tempStatus == 'failed' || tempStatus == 'problematic',
+                          onSelected: () => setSheetState(() => tempStatus = '4'),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.swap_vert_rounded, size: 16, color: AppColors.primary),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Sıralama: Yeniden Eskiye (En Yeni Önce)',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Sıralama Şekli',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildFilterChipItem(
+                            label: 'Yeniden Eskiye',
+                            isSelected: tempSort == 'desc',
+                            leading: Icon(
+                              Icons.arrow_downward_rounded,
+                              size: 15,
+                              color: tempSort == 'desc' ? Colors.white : AppColors.primary,
+                            ),
+                            onSelected: () => setSheetState(() => tempSort = 'desc'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildFilterChipItem(
+                            label: 'Eskiden Yeniye',
+                            isSelected: tempSort == 'asc',
+                            leading: Icon(
+                              Icons.arrow_upward_rounded,
+                              size: 15,
+                              color: tempSort == 'asc' ? Colors.white : AppColors.primary,
+                            ),
+                            onSelected: () => setSheetState(() => tempSort = 'asc'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () {
                         ref.read(cargoListProvider.notifier).applyFilters(
                               company: tempCompany,
                               status: tempStatus,
+                              sortDirection: tempSort,
                             );
                         Navigator.pop(ctx);
                       },
@@ -431,9 +479,21 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
     final state = ref.watch(cargoListProvider);
     final notifier = ref.read(cargoListProvider.notifier);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return PopScope(
+      canPop: !_isSearching,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isSearching) {
+          setState(() {
+            _debounceTimer?.cancel();
+            _searchController.clear();
+            notifier.setSearch('');
+            _isSearching = false;
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
         title: _isSearching
             ? TextField(
                 controller: _searchController,
@@ -494,17 +554,6 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
             tooltip: 'Filtrele',
             onPressed: () => _showFilterSheet(context),
           ),
-          IconButton(
-            icon: state.isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh_rounded),
-            tooltip: 'Yenile',
-            onPressed: state.isLoading ? null : () => notifier.refresh(),
-          ),
           const SizedBox(width: 4),
         ],
       ),
@@ -553,6 +602,13 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                       _buildActiveFilterTag(
                         label: 'Durum: ${_statusLabel(state.selectedStatus)}',
                         onDeleted: () => notifier.setStatusFilter(null),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (state.sortDirection != 'desc') ...[
+                      _buildActiveFilterTag(
+                        label: 'Sıralama: Eskiden Yeniye',
+                        onDeleted: () => notifier.setSortDirection('desc'),
                       ),
                       const SizedBox(width: 8),
                     ],
@@ -639,6 +695,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

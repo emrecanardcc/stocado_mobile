@@ -318,7 +318,10 @@ class DashboardService {
   /// Web portalındaki gibi kargoları canlı sorgular ve transaction type bazında tam hesaplar
   Future<Map<String, int>?> _queryDashboardCargoCards(String accountId, {int? days}) async {
     try {
-      final DateTime? cutoff = days != null ? DateTime.now().subtract(Duration(days: days)) : null;
+      final now = DateTime.now();
+      final DateTime? cutoff = days != null
+          ? DateTime(now.year, now.month, now.day).subtract(Duration(days: days))
+          : null;
 
       final response = await _apiClient.post(
         '/accounts/$accountId/cargos/query',
@@ -341,7 +344,7 @@ class DashboardService {
               if (cutoff != null)
                 "filters": [
                   {
-                    "operator": "greaterThanOrEqual",
+                    "operator": "greater_than",
                     "value": cutoff.toIso8601String().substring(0, 10),
                   }
                 ],

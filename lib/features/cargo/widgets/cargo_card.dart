@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../models/cargo_model.dart';
+import 'cargo_company_logo.dart';
+import 'cargo_detail_modal.dart';
 import 'cargo_status_badge.dart';
 
 class CargoCard extends StatelessWidget {
@@ -20,8 +22,6 @@ class CargoCard extends StatelessWidget {
         ? receiverName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join()
         : 'AK';
 
-    final trackingCode = cargo.outTrackingCode.isNotEmpty ? cargo.outTrackingCode : cargo.processNumber;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -30,41 +30,60 @@ class CargoCard extends StatelessWidget {
         border: Border.all(color: AppColors.border, width: 1),
         boxShadow: AppColors.softShadow,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => CargoDetailModal.show(context, cargo),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 1. Satır: Kargo Taşıyıcı Rozeti ve Durum Rozeti
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Taşıyıcı Firma
+                // Taşıyıcı Firma ve Oluşturulma Tarihi
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.local_shipping_rounded, size: 16, color: AppColors.primary),
+                    CargoCompanyLogo(
+                      companyId: cargo.cargoCompany?.id?.toString(),
+                      companyName: cargo.cargoCompany?.title,
+                      size: 28,
+                      borderRadius: 6,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      cargo.cargoCompany?.title ?? 'Kargo',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cargo.cargoCompany?.title ?? 'Kargo',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          cargo.createdAt != null
+                              ? AppFormatters.formatDateTime(cargo.createdAt!)
+                              : '-',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                // Durum Rozeti
+                // Son Hareket Rozeti
                 CargoStatusBadge(
                   status: cargo.status,
-                  statusText: cargo.statusText,
+                  statusText: cargo.latestActionTitle,
                 ),
               ],
             ),
@@ -174,16 +193,72 @@ class CargoCard extends StatelessWidget {
                         const Icon(Icons.qr_code_2_rounded, size: 18, color: AppColors.textSecondary),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            trackingCode,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              color: AppColors.textPrimary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          child: cargo.hasCarrierBarcode
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      cargo.outTrackingCode,
+                                      style: const TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (cargo.processNumber.isNotEmpty && cargo.processNumber != cargo.outTrackingCode)
+                                      Text(
+                                        'Ref: ${cargo.processNumber}',
+                                        style: const TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 10,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                  ],
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.border.withValues(alpha: 0.6),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'Kabul bekleniyor',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (cargo.processNumber.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2.0),
+                                        child: Text(
+                                          'Ref: ${cargo.processNumber}',
+                                          style: const TextStyle(
+                                            fontFamily: 'monospace',
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                         ),
                       ],
                     ),
@@ -191,11 +266,18 @@ class CargoCard extends StatelessWidget {
                   InkWell(
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      Clipboard.setData(ClipboardData(text: trackingCode));
+                      final textToCopy = cargo.hasCarrierBarcode
+                          ? cargo.outTrackingCode
+                          : cargo.processNumber;
+                      Clipboard.setData(ClipboardData(text: textToCopy));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Takip numarası panoya kopyalandı'),
-                          duration: Duration(seconds: 1),
+                        SnackBar(
+                          content: Text(
+                            cargo.hasCarrierBarcode
+                                ? 'Taşıyıcı takip numarası kopyalandı'
+                                : 'Referans barkod numarası kopyalandı',
+                          ),
+                          duration: const Duration(seconds: 1),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
@@ -234,78 +316,129 @@ class CargoCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          const Icon(Icons.payments_outlined, size: 16, color: Color(0xFFB45309)),
-                          const SizedBox(width: 6),
-                          Flexible(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(Icons.payments_outlined, size: 16, color: Color(0xFFB45309)),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'K.Ö. Net: ${AppFormatters.formatCurrency(cargo.payOnDeliveryNetAmount)}',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (cargo.payOnDeliveryTypeText != null) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${cargo.payOnDeliveryTypeText})',
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFFB45309), fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (cargo.payOnDeliveryStatusText != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+                            ),
                             child: Text(
-                              'K.Ö: ${AppFormatters.formatCurrency(cargo.payOnDeliveryAmount)}',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
-                              overflow: TextOverflow.ellipsis,
+                              cargo.payOnDeliveryStatusText!,
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
                             ),
                           ),
-                          if (cargo.payOnDeliveryTypeText != null) ...[
-                            const SizedBox(width: 4),
+                      ],
+                    ),
+                    if (cargo.payOnDeliveryCost != null || cargo.payOnDeliveryOffsetDate != null) ...[
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 2,
+                        children: [
+                          if (cargo.payOnDeliveryAmount != null && cargo.payOnDeliveryCost != null && cargo.payOnDeliveryCost! > 0)
                             Text(
-                              '(${cargo.payOnDeliveryTypeText})',
-                              style: const TextStyle(fontSize: 11, color: Color(0xFFB45309), fontWeight: FontWeight.w500),
+                              'Tahsilat: ${AppFormatters.formatCurrency(cargo.payOnDeliveryAmount)} (Kesinti: ${AppFormatters.formatCurrency(cargo.payOnDeliveryCost)})',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF92400E), fontWeight: FontWeight.w500),
                             ),
-                          ],
+                          if (cargo.payOnDeliveryOffsetDate != null)
+                            Text(
+                              'Tahmini Aktarım: ${AppFormatters.formatDateTime(cargo.payOnDeliveryOffsetDate)}',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF92400E), fontWeight: FontWeight.w600),
+                            ),
                         ],
                       ),
-                    ),
-                    if (cargo.payOnDeliveryStatusText != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
-                        ),
-                        child: Text(
-                          cargo.payOnDeliveryStatusText!,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
-                        ),
-                      ),
+                    ],
                   ],
                 ),
               ),
             ],
 
-            // Son Hareket Açıklaması (Varsa)
-            if (cargo.latestTransaction != null && cargo.latestTransaction!.description.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceSecondary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Son Hareket: ${cargo.latestTransaction!.description}',
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+            // Son Hareket Açıklaması (Web Portali ile Tam Parite)
+            Builder(
+              builder: (context) {
+                final actionTitle = cargo.latestActionTitle;
+                final actionDesc = cargo.latestTransaction?.description.trim();
+                final location = cargo.latestTransaction?.location?.trim();
+                String? latestText;
+
+                if (actionTitle.isNotEmpty) {
+                  latestText = actionTitle;
+                  if (location != null && location.isNotEmpty && !actionTitle.toLowerCase().contains(location.toLowerCase())) {
+                    latestText = '$actionTitle ($location)';
+                  }
+                } else if (actionDesc != null && actionDesc.isNotEmpty) {
+                  latestText = actionDesc;
+                  if (location != null && location.isNotEmpty && !actionDesc.toLowerCase().contains(location.toLowerCase())) {
+                    latestText = '$actionDesc ($location)';
+                  }
+                }
+
+                if (latestText == null || latestText.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSecondary,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
-              ),
-            ],
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Son Hareket: $latestText',
+                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

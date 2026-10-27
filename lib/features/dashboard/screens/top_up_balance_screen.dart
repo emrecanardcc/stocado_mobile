@@ -12,7 +12,7 @@ class TopUpBalanceScreen extends ConsumerWidget {
   static const String bankName = 'Kuveyt Türk Katılım Bankası A.Ş.';
   static const String accountName = 'Adorel Lojistik Kargo Telekomünikasyon Bilişim Yazılım İç ve Dış Tic Anonim Şirketi';
   static const String iban = 'TR38 0020 5000 0956 8498 0000 01';
-  static const String defaultEftCode = 'ADO822716';
+  static const String defaultEftCode = '-';
 
   void _copy(BuildContext context, String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
@@ -291,7 +291,7 @@ class TopUpBalanceScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // 3. Uyarı Kutusu (Görseldeki İle Birebir Uyumlu Sarı/Turuncu Kart)
+            // 3. Uyarı Kutusu 
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -351,7 +351,7 @@ class TopUpBalanceScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // 4. Nasıl Yüklenir? Adım Adım Rehber
+            // 4. Nasıl Yüklenir? 
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

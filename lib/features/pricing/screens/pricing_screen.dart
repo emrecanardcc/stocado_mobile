@@ -192,33 +192,9 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: pricingState.plans.length + 1,
+        itemCount: pricingState.plans.length,
         itemBuilder: (context, index) {
-          if (index == 0) {
-            // Desi Hesaplama Rehber Kartı
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Desi = (En × Boy × Yükseklik) / 3000 • Fiyatlar KDV dahil net tutarlardır.',
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.primary),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          final plan = pricingState.plans[index - 1];
+          final plan = pricingState.plans[index];
           return PricingPlanCard(plan: plan);
         },
       ),

@@ -14,7 +14,8 @@ class CargoListState {
   final String searchQuery;
   final String? errorMessage;
   final String? selectedCargoCompany; // 'ptt', 'surat', 'yurtici', 'hepsijet', 'ups' or null
-  final String? selectedStatus; // 'all', 'drafts', 'in_transit', 'delivered', 'problematic', 'returned'
+  final String? selectedStatus; // '0', '1', '2', '3', '4' or null
+  final String sortDirection; // 'desc' | 'asc'
 
   const CargoListState({
     this.isLoading = false,
@@ -26,13 +27,15 @@ class CargoListState {
     this.errorMessage,
     this.selectedCargoCompany,
     this.selectedStatus,
+    this.sortDirection = 'desc',
   });
 
   bool get hasMore => meta?.hasMore ?? false;
   int get currentPage => meta?.currentPage ?? 1;
   bool get hasActiveFilters =>
       (selectedCargoCompany != null && selectedCargoCompany!.isNotEmpty) ||
-      (selectedStatus != null && selectedStatus!.isNotEmpty && selectedStatus != 'all');
+      (selectedStatus != null && selectedStatus!.isNotEmpty && selectedStatus != 'all') ||
+      sortDirection != 'desc';
 
   CargoListState copyWith({
     bool? isLoading,
@@ -44,6 +47,7 @@ class CargoListState {
     String? errorMessage,
     String? selectedCargoCompany,
     String? selectedStatus,
+    String? sortDirection,
     bool clearCompany = false,
     bool clearStatus = false,
   }) {
@@ -57,6 +61,7 @@ class CargoListState {
       errorMessage: errorMessage,
       selectedCargoCompany: clearCompany ? null : (selectedCargoCompany ?? this.selectedCargoCompany),
       selectedStatus: clearStatus ? null : (selectedStatus ?? this.selectedStatus),
+      sortDirection: sortDirection ?? this.sortDirection,
     );
   }
 }
@@ -75,8 +80,14 @@ class CargoListNotifier extends Notifier<CargoListState> {
         loadCargos(reset: true);
       }
     });
-    Future.microtask(() => loadCargos(reset: true));
-    return const CargoListState(isLoading: true);
+
+    final currentAuth = ref.read(authProvider);
+    if (currentAuth.isAuthenticated && currentAuth.accountId != null) {
+      Future.microtask(() => loadCargos(reset: true));
+      return const CargoListState(isLoading: true);
+    }
+
+    return const CargoListState(isLoading: false);
   }
 
   Future<void> _ensureAddressesLoaded(String? accountId) async {
@@ -153,9 +164,13 @@ class CargoListNotifier extends Notifier<CargoListState> {
       search: state.searchQuery.isNotEmpty ? state.searchQuery : null,
       cargoCompanyId: state.selectedCargoCompany,
       statusFilter: state.selectedStatus,
+      sortDirection: state.sortDirection,
     );
 
     final resolved = await _resolveCargoParties(accountId, response.data);
+
+    // Seçili sıralama kuralına göre sırala
+    resolved.sort((a, b) => CargoModel.compareCargos(a, b, sortDirection: state.sortDirection));
 
     state = state.copyWith(
       isLoading: false,
@@ -163,6 +178,11 @@ class CargoListNotifier extends Notifier<CargoListState> {
       meta: response.meta,
       errorMessage: response.errorMessage,
     );
+
+    // Filtreleme yapıldığında mevcut sayfada eşleşen az ürün kaldıysa otomatik sonraki sayfayı çek
+    if (resolved.length < 5 && state.hasMore && (state.selectedStatus != null || state.selectedCargoCompany != null)) {
+      loadNextPage();
+    }
   }
 
   /// Sonsuz Kaydırma (Infinite Scroll) için sonraki sayfayı yükler
@@ -188,16 +208,28 @@ class CargoListNotifier extends Notifier<CargoListState> {
       search: state.searchQuery.isNotEmpty ? state.searchQuery : null,
       cargoCompanyId: state.selectedCargoCompany,
       statusFilter: state.selectedStatus,
+      sortDirection: state.sortDirection,
     );
 
     final resolved = await _resolveCargoParties(accountId, response.data);
 
+    final existingIds = state.cargos.map((c) => c.id.toString()).toSet();
+    final newItems = resolved.where((c) => !existingIds.contains(c.id.toString())).toList();
+    final combined = [...state.cargos, ...newItems];
+    // Seçili sıralama kuralına göre sırala
+    combined.sort((a, b) => CargoModel.compareCargos(a, b, sortDirection: state.sortDirection));
+
     state = state.copyWith(
       isLoadingMore: false,
-      cargos: [...state.cargos, ...resolved],
+      cargos: combined,
       meta: response.meta ?? state.meta,
       errorMessage: response.errorMessage,
     );
+
+    // Eğer çekilen sayfadaki tüm kayıtlar filtrelenmişse ve arkada daha fazla sayfa varsa devam et
+    if (resolved.isEmpty && state.hasMore && (state.selectedStatus != null || state.selectedCargoCompany != null)) {
+      loadNextPage();
+    }
   }
 
   /// Sekme Değiştirme ('all', 'pod', 'drafts')
@@ -208,17 +240,27 @@ class CargoListNotifier extends Notifier<CargoListState> {
     }
   }
 
-  /// Kargo Şirketi ve Durum Filtrelerini Birlikte Güncelle
-  void applyFilters({String? company, String? status}) {
+  /// Kargo Şirketi, Durum ve Sıralama Filtrelerini Güncelle
+  void applyFilters({String? company, String? status, String? sortDirection}) {
     final companyChanged = state.selectedCargoCompany != company;
     final statusChanged = state.selectedStatus != status;
-    if (companyChanged || statusChanged) {
+    final sortChanged = sortDirection != null && state.sortDirection != sortDirection;
+    if (companyChanged || statusChanged || sortChanged) {
       state = state.copyWith(
         selectedCargoCompany: company,
         clearCompany: company == null,
         selectedStatus: status,
         clearStatus: status == null,
+        sortDirection: sortDirection ?? state.sortDirection,
       );
+      loadCargos(reset: true);
+    }
+  }
+
+  /// Sıralama Yönü Filtresi ('desc' = Yeniden Eskiye, 'asc' = Eskiden Yeniye)
+  void setSortDirection(String direction) {
+    if (state.sortDirection != direction) {
+      state = state.copyWith(sortDirection: direction);
       loadCargos(reset: true);
     }
   }
@@ -251,6 +293,7 @@ class CargoListNotifier extends Notifier<CargoListState> {
       state = state.copyWith(
         clearCompany: true,
         clearStatus: true,
+        sortDirection: 'desc',
       );
       loadCargos(reset: true);
     }

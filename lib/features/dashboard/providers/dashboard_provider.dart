@@ -50,8 +50,14 @@ class DashboardNotifier extends Notifier<DashboardState> {
         loadDashboard();
       }
     });
-    Future.microtask(() => loadDashboard());
-    return const DashboardState(isLoading: true);
+
+    final currentAuth = ref.read(authProvider);
+    if (currentAuth.isAuthenticated && currentAuth.accountId != null) {
+      Future.microtask(() => loadDashboard());
+      return const DashboardState(isLoading: true);
+    }
+
+    return const DashboardState(isLoading: false);
   }
 
   Future<void> loadDashboard() async {

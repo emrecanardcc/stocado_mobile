@@ -164,63 +164,32 @@ class DashboardBalanceHeader extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryLight.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: AppColors.secondary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'Canlı',
-                              style: TextStyle(color: Color(0xFF065F46), fontSize: 10, fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const TopUpBalanceScreen()),
-                          );
-                        },
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const TopUpBalanceScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.add_rounded, size: 13, color: Colors.white),
-                              SizedBox(width: 3),
-                              Text(
-                                'Yükle',
-                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
-                              ),
-                            ],
-                          ),
-                        ),
                       ),
-                    ],
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add_rounded, size: 13, color: Colors.white),
+                          SizedBox(width: 3),
+                          Text(
+                            'Yükle',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -275,7 +244,7 @@ class DashboardBalanceHeader extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Alt Bölüm: K.Ö. Alacak ve Hesap Durumu Çipleri
+              // Alt Bölüm: K.Ö. Alacak Çipi
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -285,60 +254,26 @@ class DashboardBalanceHeader extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
+                    const Icon(Icons.hourglass_bottom_rounded, color: AppColors.warning, size: 18),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.hourglass_bottom_rounded, color: AppColors.warning, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'K.Ö. Alacak',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  AppFormatters.formatCurrency(podReceivable),
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
+                          const Text(
+                            'K.Ö. Alacak',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w500),
                           ),
-                        ],
-                      ),
-                    ),
-                    Container(height: 24, width: 1, color: AppColors.border),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle_outline_rounded, color: AppColors.secondary, size: 18),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Hesap Durumu',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w500),
-                                ),
-                                SizedBox(height: 1),
-                                Text(
-                                  'Aktif / Onaylı',
-                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                          const SizedBox(height: 1),
+                          Text(
+                            AppFormatters.formatCurrency(podReceivable),
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

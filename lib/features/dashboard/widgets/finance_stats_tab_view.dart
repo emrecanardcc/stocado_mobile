@@ -15,8 +15,6 @@ class FinanceStatsTabView extends StatelessWidget {
   });
 
   Widget _buildBalanceHeroCard(BuildContext context) {
-    final offsetBalance = stats?.offsetBalance ?? 0.0;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -30,46 +28,23 @@ class FinanceStatsTabView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'KULLANILABİLİR BAKİYE',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                ],
-              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle_outline_rounded, size: 12, color: AppColors.secondary),
-                    SizedBox(width: 4),
-                    Text(
-                      'Aktif',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.secondary),
-                    ),
-                  ],
+                child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'KULLANILABİLİR BAKİYE',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.4,
                 ),
               ),
             ],
@@ -112,34 +87,6 @@ class FinanceStatsTabView extends StatelessWidget {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    const Icon(Icons.sync_alt_rounded, size: 16, color: AppColors.textSecondary),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        offsetBalance > 0
-                            ? 'Mahsup Bekleyen: ${AppFormatters.formatCurrency(offsetBalance)}'
-                            : 'Bekleyen mahsup işlemi yok',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: offsetBalance > 0 ? AppColors.warning : AppColors.textSecondary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],
@@ -269,40 +216,6 @@ class FinanceStatsTabView extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-
-        // 3. Şeffaf Mahsup ve Güvenlik Bilgilendirme Kartı
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
-          ),
-          child: const Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.shield_outlined, color: AppColors.primary, size: 20),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Otomatik Mahsup & Güvenli Bakiye',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Kargo gönderi bedelleriniz otomatik olarak kapıda ödeme tahsilat bakiyenizden düşülebilir.',
-                      style: TextStyle(fontSize: 11.5, height: 1.35, color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ],
     );

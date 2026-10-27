@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import '../models/location_model.dart';
 import '../../../core/network/api_client.dart';
 
@@ -7,8 +9,45 @@ class LocationService {
   static List<Country>? _cachedCountries;
   static List<City>? _cachedCities;
   static final Map<int, List<District>> _cachedDistricts = {};
+  static bool _isLoadingLocalAsset = false;
 
   LocationService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  /// Varlıklar (assets) içindeki 81 il ve tüm ilçeleri barındıran yerel JSON'ı okur
+  Future<void> _loadLocalLocations() async {
+    if (_cachedCities != null && _cachedCities!.isNotEmpty) return;
+    if (_isLoadingLocalAsset) return;
+    _isLoadingLocalAsset = true;
+
+    try {
+      final jsonStr = await rootBundle.loadString('assets/data/turkey_locations.json');
+      final decoded = jsonDecode(jsonStr);
+      if (decoded is List && decoded.isNotEmpty) {
+        final List<Country> countries = [];
+        for (final item in decoded) {
+          if (item is Map<String, dynamic>) {
+            final country = Country.fromJson(item);
+            countries.add(country);
+            if (country.id == 'TR') {
+              _cachedCities = country.cities;
+              for (final city in country.cities) {
+                if (city.districts.isNotEmpty) {
+                  _cachedDistricts[city.id] = city.districts;
+                }
+              }
+            }
+          }
+        }
+        if (countries.isNotEmpty) {
+          _cachedCountries = countries;
+        }
+      }
+    } catch (e) {
+      debugPrint('LocationService yerel JSON yükleme hatası: $e');
+    } finally {
+      _isLoadingLocalAsset = false;
+    }
+  }
 
   /// Canlı veritabanından tüm ülkeleri çeker
   /// GET /locations/countries
@@ -32,7 +71,8 @@ class LocationService {
       debugPrint('LocationService.getCountries hatası: $e');
     }
 
-    return [];
+    await _loadLocalLocations();
+    return _cachedCountries ?? [Country(id: 'TR', name: 'Türkiye', cities: _cachedCities ?? _defaultCities)];
   }
 
   /// Seçili ülkeye ait şehirleri canlı API'den getirir (Varsayılan: 'TR' - Türkiye)
@@ -62,14 +102,20 @@ class LocationService {
       debugPrint('LocationService.getCities hatası: $e');
     }
 
-    // Ağ hatasında formun kilitlenmesini önlemek için temel şehir listesi fallback'i
+    // API erişilemezse yerel paketteki tüm 81 ili yükle
+    await _loadLocalLocations();
+    if (_cachedCities != null && _cachedCities!.isNotEmpty) {
+      return _cachedCities!;
+    }
+
+    // En son emniyet fallback'i
     return _defaultCities;
   }
 
   /// Seçili şehre ait ilçeleri canlı API'den getirir
   /// GET /locations/cities/{cityId}/districts
   Future<List<District>> getDistricts(int cityId) async {
-    if (_cachedDistricts.containsKey(cityId)) {
+    if (_cachedDistricts.containsKey(cityId) && _cachedDistricts[cityId]!.isNotEmpty) {
       return _cachedDistricts[cityId]!;
     }
 
@@ -81,12 +127,20 @@ class LocationService {
           final list = decoded
               .map((json) => District.fromJson(json as Map<String, dynamic>))
               .toList();
-          _cachedDistricts[cityId] = list;
-          return list;
+          if (list.isNotEmpty) {
+            _cachedDistricts[cityId] = list;
+            return list;
+          }
         }
       }
     } catch (e) {
       debugPrint('LocationService.getDistricts hatası: $e');
+    }
+
+    // API erişilemezse yerel paketteki ilçe verisini yükle
+    await _loadLocalLocations();
+    if (_cachedDistricts.containsKey(cityId) && _cachedDistricts[cityId]!.isNotEmpty) {
+      return _cachedDistricts[cityId]!;
     }
 
     // Ağ hatasında formun kilitlenmesini önlemek için varsayılan ilçe fallback'i

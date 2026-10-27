@@ -224,10 +224,18 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
         loadCities();
       }
     });
-    Future.microtask(() {
-      loadAllAddresses();
-      loadCities();
-    });
+
+    final currentAuth = ref.read(authProvider);
+    if (currentAuth.isAuthenticated && currentAuth.accountId != null) {
+      Future.microtask(() {
+        loadAllAddresses();
+        loadCities();
+      });
+    } else {
+      Future.microtask(() {
+        loadCities();
+      });
+    }
     return const CreateCargoState();
   }
 
@@ -635,26 +643,8 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
 
     state = state.copyWith(isLoadingOffers: true, errorMessage: null);
 
-    // Alıcı Adres ID'sini (foreign_id) Çöz
-    String? foreignId = state.selectedRecipientAddress?.id;
-    if ((foreignId == null || foreignId.isEmpty) &&
-        state.recipientName.trim().isNotEmpty &&
-        state.recipientPhone.trim().isNotEmpty) {
-      final addResult = await createRecipientAddress(
-        name: state.recipientName.trim(),
-        phone: state.recipientPhone.trim(),
-        email: state.recipientEmail.trim().isNotEmpty ? state.recipientEmail.trim() : null,
-        cityId: state.selectedCity?.id ?? 34,
-        districtId: state.selectedDistrict?.id ?? 1101,
-        details: state.addressDetails.trim().isNotEmpty
-            ? state.addressDetails.trim()
-            : '${state.selectedDistrict?.name ?? ""}, ${state.selectedCity?.name ?? ""}',
-        postalCode: state.recipientPostalCode.trim().isNotEmpty ? state.recipientPostalCode.trim() : null,
-      );
-      if (addResult.isSuccess && addResult.address != null) {
-        foreignId = addResult.address!.id;
-      }
-    }
+    // Seçili kayıtlı alıcı varsa onun ID'sini kullan, yoksa teklif hesaplaması için boş geç (adres yalnızca kargo oluştururken kaydedilir)
+    final String? foreignId = state.selectedRecipientAddress?.id;
 
     final request = CargoCalculateRequest(
       accountId: accountId,

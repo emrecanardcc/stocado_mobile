@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../providers/auth_provider.dart';
-import '../../../core/network/api_tester.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -12,8 +11,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController(text: 'gungor@emirhangungor.com');
-  final TextEditingController _passwordController = TextEditingController(text: '12345678.');
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
@@ -249,59 +248,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Geliştirici / API Teşhis Modülü (Daha zarif ve temiz)
-                  Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      tilePadding: EdgeInsets.zero,
-                      title: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.build_circle_outlined, size: 16, color: AppColors.textSecondary),
-                          SizedBox(width: 6),
-                          Text(
-                            'Geliştirici Araçları & API Teşhis',
-                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                      children: [
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            final email = _emailController.text.trim();
-                            final password = _passwordController.text.trim();
-                            if (email.isEmpty || password.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Test için e-posta ve şifre girin.')),
-                              );
-                              return;
-                            }
-                            ApiTester().runAllTests(email, password);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('API testleri başlatıldı, konsol çıktısını kontrol edin.'),
-                                backgroundColor: AppColors.primary,
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.bug_report_outlined, size: 16),
-                          label: const Text('API Testlerini Çalıştır (Konsol)'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textSecondary,
-                            side: const BorderSide(color: AppColors.border),
-                            minimumSize: const Size(double.infinity, 44),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
                   const Text(
                     'Stocado • Güvenli Lojistik Altyapısı',
-                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                   ),
                 ],
               ),

@@ -24,15 +24,15 @@ class CargoStatusBadge extends StatelessWidget {
       dotColor = AppColors.secondary;
       textColor = const Color(0xFF065F46);
       bgColor = AppColors.secondaryLight;
-    } else if (lower.contains('iade') || lower.contains('iptal') || lower.contains('edilemedi') || lower.contains('sorunlu')) {
+    } else if (lower.contains('iade') || lower.contains('iptal') || lower.contains('edilemedi') || lower.contains('sorunlu') || lower.contains('hata')) {
       dotColor = AppColors.error;
       textColor = const Color(0xFF991B1B);
       bgColor = AppColors.errorLight;
-    } else if (lower.contains('dağıtım') || lower.contains('yolda') || lower.contains('transfer')) {
+    } else if (lower.contains('dağıtım') || lower.contains('yolda') || lower.contains('transfer') || lower.contains('şube')) {
       dotColor = AppColors.info;
       textColor = const Color(0xFF1D4ED8);
       bgColor = AppColors.infoLight;
-    } else if (lower.contains('hazır') || lower.contains('bekleyen')) {
+    } else if (lower.contains('hazır') || lower.contains('bekle') || lower.contains('posta')) {
       dotColor = const Color(0xFF6366F1);
       textColor = const Color(0xFF4338CA);
       bgColor = const Color(0xFFEEF2FF);

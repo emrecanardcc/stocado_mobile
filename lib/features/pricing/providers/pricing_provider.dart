@@ -40,8 +40,14 @@ class PricingNotifier extends Notifier<PricingState> {
         loadPricingPlans();
       }
     });
-    Future.microtask(() => loadPricingPlans());
-    return const PricingState(isLoading: true);
+
+    final currentAuth = ref.read(authProvider);
+    if (currentAuth.isAuthenticated && currentAuth.accountId != null) {
+      Future.microtask(() => loadPricingPlans());
+      return const PricingState(isLoading: true);
+    }
+
+    return const PricingState(isLoading: false);
   }
 
   Future<void> loadPricingPlans() async {
