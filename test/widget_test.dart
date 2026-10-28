@@ -25,6 +25,7 @@ import 'package:stocado_mobile/features/cargo/models/cargo_offer_model.dart';
 import 'package:stocado_mobile/features/cargo/models/location_model.dart';
 import 'package:stocado_mobile/features/cargo/providers/create_cargo_provider.dart';
 import 'package:stocado_mobile/features/cargo/screens/create_cargo_screen.dart';
+import 'package:stocado_mobile/features/products/models/product_model.dart';
 import 'package:stocado_mobile/features/products/providers/products_provider.dart';
 import 'package:stocado_mobile/main.dart';
 
@@ -2282,6 +2283,126 @@ void main() {
 
       // Modal kapanmış olmalı
       expect(find.text('Formu Temizle'), findsNothing);
+    });
+
+    testWidgets('Katalogdan urun secildiginde desi ve boyutlar aktarilir ve form temizlendiginde sifirlanir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final testProduct = ProductModel(
+        id: 'prod-coat',
+        name: 'Kışlık Kaban',
+        price: 2800.0,
+        desi: 5.0,
+        width: 40.0,
+        length: 50.0,
+        height: 15.0,
+        weight: 2.5,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(ProductsState(isLoading: false, products: [testProduct])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                cities: [City(id: 34, name: 'İstanbul')],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Başlangıçta 2.00 Desi
+      expect(find.text('2.00 DESİ'), findsOneWidget);
+
+      // Ürün dropdown'ını aç
+      await tester.tap(find.text('Özel / Manuel Paket Boyutu'));
+      await tester.pumpAndSettle();
+
+      // "Kışlık Kaban" seç
+      await tester.tap(find.textContaining('Kışlık Kaban').last);
+      await tester.pumpAndSettle();
+
+      // Desi 10.00 DESİ olmalıdır: (40*50*15)/3000 = 10.0 Desi
+      expect(find.text('10.00 DESİ'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'Kışlık Kaban'), findsOneWidget);
+    });
+
+    testWidgets('320px dar ekranda uzun kargo firmasi basligi ve buyuk tutar ile sabit alt bar tasmasiz render edilir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final longTitleOffer = CargoOffer(
+        cargoCompany: CargoCompany(id: 'long-carrier', title: 'HepsiJET XL Ertesi Gün Özel Taşıma'),
+        price: 1250000.50,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                cities: [City(id: 34, name: 'İstanbul')],
+                offers: [longTitleOffer],
+                selectedOffer: longTitleOffer,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('SEÇİLEN FİRMA'), findsOneWidget);
+      expect(find.text('TOPLAM KARGO BEDELİ'), findsOneWidget);
+      expect(find.text('1.250.000,50 ₺'), findsWidgets);
+      expect(tester.takeException(), isNull);
     });
   });
 }

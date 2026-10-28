@@ -150,10 +150,21 @@ class CargoCompanyLogo extends StatelessWidget {
 
     if (isHoriz) {
       final h = height ?? 20.0;
+      final logo = _buildHorizontalLogo(context, type, h);
+      if (width != null) {
+        return SizedBox(
+          height: h,
+          width: width,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: logo,
+          ),
+        );
+      }
       return SizedBox(
         height: h,
-        width: width,
-        child: _buildHorizontalLogo(context, type, h),
+        child: logo,
       );
     }
 
@@ -495,30 +506,34 @@ class CargoCompanyLogo extends StatelessWidget {
         );
 
       case CargoCompanyType.unknown:
-        final title = (companyName != null && companyName!.trim().isNotEmpty)
-            ? companyName!.trim()
-            : 'Kargo';
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.local_shipping_outlined,
-              size: h * 0.85,
-              color: const Color(0xFF0F172A),
-            ),
-            SizedBox(width: h * 0.2),
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: h * 0.75,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
-                height: 1.0,
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: h * 0.25),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.local_shipping_outlined,
+                size: h * 0.7,
+                color: const Color(0xFF475569),
               ),
-            ),
-          ],
+              SizedBox(width: h * 0.15),
+              Text(
+                'KARGO',
+                style: TextStyle(
+                  fontSize: h * 0.42,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF475569),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
         );
     }
   }

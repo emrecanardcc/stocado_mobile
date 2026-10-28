@@ -50,6 +50,13 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       ref.read(productsProvider.notifier).loadProducts(reset: true);
       final cargoState = ref.read(createCargoProvider);
       final cargoNotifier = ref.read(createCargoProvider.notifier);
+      cargoNotifier.updatePackageDimensions(
+        width: 20,
+        length: 30,
+        height: 10,
+        weight: 1000,
+        directDesi: 2.0,
+      );
       if (cargoState.cities.isEmpty) {
         cargoNotifier.loadCities();
       }
@@ -95,6 +102,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     });
 
     final notifier = ref.read(createCargoProvider.notifier);
+    final state = ref.read(createCargoProvider);
     if (type == 'standard') {
       notifier.updateAdditionalServices(
         payOnDelivery: false,
@@ -102,11 +110,12 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       );
     } else if (type == 'pod') {
       final amt = AppFormatters.parseDouble(_podAmountController.text);
+      final podAmt = amt > 0 ? amt : 850.0;
       notifier.updateAdditionalServices(
         payOnDelivery: true,
-        payOnDeliveryAmount: amt > 0 ? amt : 850.0,
-        payOnDeliveryType: 'cash',
-        canOffsetCargoFee: true,
+        payOnDeliveryAmount: podAmt,
+        payOnDeliveryType: state.payOnDeliveryType.isNotEmpty ? state.payOnDeliveryType : 'cash',
+        canOffsetCargoFee: state.canOffsetCargoFee || true,
         receiverPays: false,
       );
       if (_podAmountController.text.isEmpty) {
@@ -157,9 +166,19 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     final notifier = ref.read(createCargoProvider.notifier);
     notifier.selectProduct(product);
 
-    _widthController.text = (product.width != null && product.width! > 0) ? product.width!.toString() : '20';
-    _lengthController.text = (product.length != null && product.length! > 0) ? product.length!.toString() : '30';
-    _heightController.text = (product.height != null && product.height! > 0) ? product.height!.toString() : '10';
+    final pDesi = product.desi > 0 ? product.desi : 2.0;
+    double w = (product.width != null && product.width! > 0) ? product.width! : 0;
+    double l = (product.length != null && product.length! > 0) ? product.length! : 0;
+    double h = (product.height != null && product.height! > 0) ? product.height! : 0;
+    if (w <= 0 || l <= 0 || h <= 0) {
+      final side = double.parse(math.pow(pDesi * 3000, 1 / 3).toStringAsFixed(1));
+      w = side;
+      l = side;
+      h = side;
+    }
+    _widthController.text = w.toString();
+    _lengthController.text = l.toString();
+    _heightController.text = h.toString();
     final weightInKg = (product.weight != null && product.weight! > 0) ? product.weight! : 1.0;
     _weightController.text = weightInKg.toString();
 
@@ -174,7 +193,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
   void _clearSelectedProduct() {
     final notifier = ref.read(createCargoProvider.notifier);
     notifier.selectProduct(null);
-    _setInitialDefaults();
+    setState(() {
+      _setInitialDefaults();
+    });
     _descriptionController.clear();
     _orderNumberController.clear();
     _podAmountController.clear();
@@ -238,9 +259,17 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              _clearAllFormFields();
+              setState(() {
+                _clearAllFormFields();
+              });
               notifier.reset();
-              _setInitialDefaults();
+              notifier.updatePackageDimensions(
+                width: 20,
+                length: 30,
+                height: 10,
+                weight: 1000,
+                directDesi: 2.0,
+              );
               notifier.calculateOffers();
             },
             child: const Text(
@@ -285,7 +314,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     );
   }
 
-  Future<bool> _checkBalanceAndConfirm(BuildContext context, WidgetRef ref, double cargoFee) async {
+  Future<String> _checkBalanceAndConfirm(BuildContext context, WidgetRef ref, double cargoFee) async {
     final balanceState = ref.read(dashboardProvider);
     final availableBalance = balanceState.balance?.availableBalance ??
         balanceState.balance?.balance ??
@@ -374,18 +403,17 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
             MaterialPageRoute(builder: (_) => const TopUpBalanceScreen()),
           );
         }
-        return false;
+        return 'topup';
       } else if (choice == 'draft') {
-        ref.read(createCargoProvider.notifier).toggleDraft(true);
-        return true;
+        return 'draft';
       } else {
-        return false;
+        return 'cancel';
       }
     }
-    return true;
+    return 'proceed';
   }
 
-  void _showSuccessDialog(BuildContext context, String trackingCode) {
+  void _showSuccessDialog(BuildContext context, String trackingCode, {bool isDraft = false}) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -402,20 +430,23 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: const Color(0xFFD1FAE5),
+                color: isDraft ? const Color(0xFFEFF6FF) : const Color(0xFFD1FAE5),
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF6EE7B7), width: 2),
+                border: Border.all(
+                  color: isDraft ? const Color(0xFF93C5FD) : const Color(0xFF6EE7B7),
+                  width: 2,
+                ),
               ),
-              child: const Icon(
-                Icons.check_rounded,
-                color: Color(0xFF059669),
+              child: Icon(
+                isDraft ? Icons.bookmark_added_rounded : Icons.check_rounded,
+                color: isDraft ? const Color(0xFF2563EB) : const Color(0xFF059669),
                 size: 38,
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'Kargo Oluşturuldu!',
-              style: TextStyle(
+            Text(
+              isDraft ? 'Taslak Kaydedildi!' : 'Kargo Oluşturuldu!',
+              style: const TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.w900,
                 color: Color(0xFF0F172A),
@@ -423,10 +454,12 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Takip barkodunuz üretildi ve kargo firması sistemine başarıyla işlendi.',
+            Text(
+              isDraft
+                  ? 'Kargonuz taslak olarak kaydedildi. Dilediğiniz zaman Kargolarım ekranından tamamlayabilirsiniz.'
+                  : 'Takip barkodunuz üretildi ve kargo firması sistemine başarıyla işlendi.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF64748B),
@@ -443,7 +476,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
               ),
               child: Text(
-                trackingCode.isNotEmpty ? trackingCode : 'STC-7185726557957',
+                trackingCode.isNotEmpty
+                    ? trackingCode
+                    : (isDraft ? 'TASLAK GÖNDERİ' : 'STC-7185726557957'),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'monospace',
@@ -561,17 +596,34 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     }
 
     // 8. Bakiye Yeterlilik Kontrolü
+    bool submittingAsDraft = isDraft;
     final currentSelectedOffer = ref.read(createCargoProvider).selectedOffer;
-    if (!isDraft && !state.receiverPays && currentSelectedOffer != null && !state.canOffsetCargoFee) {
-      final canProceed = await _checkBalanceAndConfirm(
+    if (!submittingAsDraft && !state.receiverPays && currentSelectedOffer != null && !state.canOffsetCargoFee) {
+      final balanceDecision = await _checkBalanceAndConfirm(
         context,
         ref,
         currentSelectedOffer.price,
       );
-      if (!canProceed) return;
+      if (balanceDecision == 'cancel' || balanceDecision == 'topup') return;
+      if (balanceDecision == 'draft') {
+        submittingAsDraft = true;
+      }
     }
 
-    notifier.toggleDraft(isDraft);
+    // Paket boyutlarını ve ölçüleri tam senkronize et
+    final w = AppFormatters.parseDouble(_widthController.text);
+    final l = AppFormatters.parseDouble(_lengthController.text);
+    final h = AppFormatters.parseDouble(_heightController.text);
+    final weightKg = AppFormatters.parseDouble(_weightController.text);
+    notifier.updatePackageDimensions(
+      width: w,
+      length: l,
+      height: h,
+      weight: weightKg * 1000,
+      directDesi: _calculatedDesi,
+    );
+
+    notifier.toggleDraft(submittingAsDraft);
     notifier.updateRecipientInfo(
       name: name,
       phone: _phoneController.text.trim(),
@@ -588,7 +640,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
 
     if (success) {
       final successMsg = ref.read(createCargoProvider).successMessage ?? '';
-      _showSuccessDialog(context, successMsg);
+      _showSuccessDialog(context, successMsg, isDraft: submittingAsDraft);
     } else {
       final error = ref.read(createCargoProvider).errorMessage;
       final displayError = (error != null && error.trim().isNotEmpty)
@@ -599,6 +651,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
   }
 
   void _openDirectoryModal(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier) {
+    _customerSearchController.clear();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1070,28 +1123,35 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 9,
-                    height: 9,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE11D48),
-                      shape: BoxShape.circle,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE11D48),
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    '1. GÖNDERİ VE ÖDEME TÜRÜ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: 0.8,
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        '1. GÖNDERİ VE ÖDEME TÜRÜ',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
@@ -1290,6 +1350,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                       borderRadius: BorderRadius.circular(12),
                       onTap: () {
                         notifier.updateAdditionalServices(canOffsetCargoFee: !state.canOffsetCargoFee);
+                        notifier.calculateOffers();
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1306,6 +1367,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                 onChanged: (val) {
                                   notifier.updateAdditionalServices(canOffsetCargoFee: val ?? false);
+                                  notifier.calculateOffers();
                                 },
                               ),
                             ),
@@ -1455,33 +1517,40 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2563EB),
-                      borderRadius: BorderRadius.circular(8),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '2',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '2',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'ADRES BİLGİLERİ',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'ADRES BİLGİLERİ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () => _openDirectoryModal(context, state, notifier),
                 borderRadius: BorderRadius.circular(8),
@@ -1545,20 +1614,20 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 2,
                         children: [
-                          Flexible(
-                            child: Text(
-                              senderName,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF0F172A),
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            senderName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                             decoration: BoxDecoration(
@@ -1618,14 +1687,19 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Alıcı Müşteri Bilgileri',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
+              Flexible(
+                child: Text(
+                  'Alıcı Müşteri Bilgileri',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
               ),
+              SizedBox(width: 8),
               Text(
                 '* Zorunlu Alanlar',
                 style: TextStyle(
@@ -1891,33 +1965,40 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF059669),
-                      borderRadius: BorderRadius.circular(8),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '3',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '3',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'PAKET & SİPARİŞ DETAYLARI',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'PAKET & SİPARİŞ DETAYLARI',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
@@ -1949,6 +2030,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<ProductModel?>(
+                  key: ValueKey('product_${state.selectedProduct?.id}'),
                   menuMaxHeight: 250,
                   isExpanded: true,
                   initialValue: matchedProduct,
@@ -2181,33 +2263,40 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF7C3AED),
-                      borderRadius: BorderRadius.circular(8),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '4',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '4',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'KARGO FİRMASI SEÇİMİ',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'KARGO FİRMASI SEÇİMİ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
@@ -2270,7 +2359,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               separatorBuilder: (context, _) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final offer = state.offers[index];
-                final isSelected = state.selectedOffer?.cargoCompany.id == offer.cargoCompany.id;
+                final isSelected = state.selectedOffer != null &&
+                    state.selectedOffer!.cargoCompany.id.toString() == offer.cargoCompany.id.toString();
                 // KULLANICI AÇIK TALİMATI: En hızlı olan önemli değil, sadece en uygun fiyatlı olanı belirtmemiz yeterli!
                 final isCheapest = state.offers.length > 1 && (offer.price - minPrice).abs() < 0.01;
 
@@ -2294,9 +2384,10 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                             companyId: offer.cargoCompany.id.toString(),
                             companyName: offer.cargoCompany.title,
                             height: 28,
+                            width: 52,
                             isHorizontal: true,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2339,6 +2430,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                                 const SizedBox(height: 2),
                                 Text(
                                   _getCarrierDeliverySubtitle(offer.cargoCompany.id.toString()),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
@@ -2349,28 +2442,36 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                AppFormatters.formatCurrency(offer.price),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: isCheapest ? const Color(0xFF059669) : const Color(0xFF0F172A),
-                                  letterSpacing: -0.3,
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 88),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    AppFormatters.formatCurrency(offer.price),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: isCheapest ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const Text(
-                                'KDV DAHİL',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF94A3B8),
-                                  letterSpacing: 0.3,
+                                const Text(
+                                  'KDV DAHİL',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF94A3B8),
+                                    letterSpacing: 0.3,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -2424,29 +2525,34 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'SEÇİLEN FİRMA',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF64748B),
-                        letterSpacing: 0.6,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'SEÇİLEN FİRMA',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 0.6,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      carrierTitle,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
+                      const SizedBox(height: 2),
+                      Text(
+                        carrierTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -2500,6 +2606,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0F172A),
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -2513,20 +2620,24 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                               height: 22,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                             )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'KARGOYU OLUŞTUR',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.8,
+                          : const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'KARGOYU OLUŞTUR',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.8,
+                                    ),
                                   ),
-                                ),
-                                SizedBox(width: 8),
-                                Icon(Icons.arrow_forward_rounded, size: 18),
-                              ],
+                                  SizedBox(width: 6),
+                                  Icon(Icons.arrow_forward_rounded, size: 18),
+                                ],
+                              ),
                             ),
                     ),
                   ),

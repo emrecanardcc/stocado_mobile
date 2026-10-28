@@ -639,10 +639,11 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
 
     if (accountId == null || accountId.isEmpty) {
       final fallback = _generateFallbackOffers(desi, state.payOnDelivery, state.controlledDelivery);
+      fallback.sort((a, b) => a.price.compareTo(b.price));
       CargoOffer? currentSelected = state.selectedOffer;
       if (currentSelected != null) {
         currentSelected = fallback.cast<CargoOffer?>().firstWhere(
-          (o) => o?.cargoCompany.id == state.selectedOffer?.cargoCompany.id,
+          (o) => o?.cargoCompany.id.toString() == state.selectedOffer?.cargoCompany.id.toString(),
           orElse: () => null,
         );
       }
@@ -695,10 +696,13 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       offers = _generateFallbackOffers(desi, state.payOnDelivery, state.controlledDelivery);
     }
 
+    // Fiyata göre artan sırala (en uygun fiyatlı firma en üstte)
+    offers.sort((a, b) => a.price.compareTo(b.price));
+
     CargoOffer? selected = state.selectedOffer;
     if (selected != null) {
       selected = offers.cast<CargoOffer?>().firstWhere(
-        (o) => o?.cargoCompany.id == state.selectedOffer?.cargoCompany.id,
+        (o) => o?.cargoCompany.id.toString() == state.selectedOffer?.cargoCompany.id.toString(),
         orElse: () => null,
       );
     }
@@ -723,7 +727,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
         ),
       ];
     }
-    return [
+    final list = [
       CargoOffer(
         cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
         price: (96.14 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
@@ -741,14 +745,16 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
         price: (145.00 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.5 : 0.0)),
       ),
       CargoOffer(
-        cargoCompany: CargoCompany(id: 'yurtici-kargo', title: 'Yurtiçi Kargo'),
-        price: (233.99 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 18.0 : 0.0)),
-      ),
-      CargoOffer(
         cargoCompany: CargoCompany(id: 'ups', title: 'UPS Kargo'),
         price: (176.10 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.67 : 0.0)),
       ),
+      CargoOffer(
+        cargoCompany: CargoCompany(id: 'yurtici-kargo', title: 'Yurtiçi Kargo'),
+        price: (233.99 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 18.0 : 0.0)),
+      ),
     ];
+    list.sort((a, b) => a.price.compareTo(b.price));
+    return list;
   }
 
   /// Kargo Oluşturma İsteği (POST /cargos)
@@ -827,10 +833,12 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     }
 
     // 2. Kargo Şirketi Belirle
-    var cargoCompanyId = state.selectedOffer?.cargoCompany.id?.toString() ?? 'ptt-kargo';
-    if (cargoCompanyId == 'ptt') cargoCompanyId = 'ptt-kargo';
-    if (cargoCompanyId == 'surat') cargoCompanyId = 'surat-kargo';
-    if (cargoCompanyId == 'yurtici') cargoCompanyId = 'yurtici-kargo';
+    var cargoCompanyId = state.selectedOffer?.cargoCompany.id?.toString().toLowerCase().trim() ?? 'ptt-kargo';
+    if (cargoCompanyId == 'ptt' || cargoCompanyId == 'ptt-kargo') cargoCompanyId = 'ptt-kargo';
+    if (cargoCompanyId == 'surat' || cargoCompanyId == 'sur' || cargoCompanyId == 'surat-kargo') cargoCompanyId = 'surat-kargo';
+    if (cargoCompanyId == 'yurtici' || cargoCompanyId == 'yk' || cargoCompanyId == 'yurtici-kargo') cargoCompanyId = 'yurtici-kargo';
+    if (cargoCompanyId == 'hepsijet' || cargoCompanyId == 'hj') cargoCompanyId = 'hepsijet';
+    if (cargoCompanyId == 'kolay-gelsin' || cargoCompanyId == 'kolaygelsin' || cargoCompanyId == 'kg') cargoCompanyId = 'kolay-gelsin';
     if (cargoCompanyId == 'bilinmeyen' || cargoCompanyId.isEmpty) cargoCompanyId = 'ptt-kargo';
 
     // 3. Payload hazırla (Backend API gereksinimlerine tam uyumlu)
