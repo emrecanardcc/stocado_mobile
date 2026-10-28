@@ -52,8 +52,10 @@ class CargoStatusIcon extends StatelessWidget {
 
     // 1. Teslim Edildi
     if (type == 6 ||
-        (status == 2 && lowerTitle.contains('teslim')) ||
-        lowerTitle.contains('teslim edildi')) {
+        (type == null && status == 2) ||
+        lowerTitle.contains('teslim edildi') ||
+        lowerTitle.contains('teslim') ||
+        lowerTitle.contains('tamamlan')) {
       return _StatusInfo(
         color: const Color(0xFF10B981), // Canlı Yeşil (Emerald 500)
         icon: Icons.check_rounded,
@@ -75,14 +77,13 @@ class CargoStatusIcon extends StatelessWidget {
 
     // 3. Sorunlu / İade / İptal / Teslim Edilemedi
     if ((type != null && [0, 7, 8, 10, 11, 12, 13].contains(type)) ||
-        status == 3 ||
-        status == 4 ||
+        (type == null && (status == 3 || status == 4)) ||
         lowerTitle.contains('sorun') ||
         lowerTitle.contains('iade') ||
         lowerTitle.contains('iptal') ||
         lowerTitle.contains('hata') ||
         lowerTitle.contains('edilemedi') ||
-        lowerTitle.contains('posta kağıdı')) {
+        lowerTitle.contains('posta')) {
       final isReturn = (type != null && [10, 11].contains(type)) || lowerTitle.contains('iade');
       return _StatusInfo(
         color: const Color(0xFFF97316), // Canlı Turuncu (Orange 500)
@@ -93,7 +94,7 @@ class CargoStatusIcon extends StatelessWidget {
 
     // 4. Yolda / Transfer / Şube
     if ((type != null && [2, 3, 4, 9].contains(type)) ||
-        status == 2 ||
+        (type == null && status == 1) ||
         lowerTitle.contains('yolda') ||
         lowerTitle.contains('transfer') ||
         lowerTitle.contains('şube') ||

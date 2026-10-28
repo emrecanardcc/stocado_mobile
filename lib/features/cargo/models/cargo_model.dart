@@ -304,9 +304,9 @@ class CargoModel {
       case 0:
         return 'Taslak';
       case 1:
-        return 'Kabul Bekleniyor';
-      case 2:
         return 'Yolda';
+      case 2:
+        return 'Teslim Edildi';
       case 3:
       case 4:
         return 'İptal Edildi';

@@ -17,6 +17,7 @@ class CargoCard extends StatelessWidget {
   void _copyTrackingCode(BuildContext context, String code) {
     HapticFeedback.lightImpact();
     Clipboard.setData(ClipboardData(text: code));
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Takip numarası kopyalandı: $code'),
@@ -32,11 +33,18 @@ class CargoCard extends StatelessWidget {
         ? cargo.receiver!.name.trim()
         : 'İsimsiz Alıcı';
 
-    final cityName = cargo.receiver?.city?.name.isNotEmpty == true
-        ? cargo.receiver!.city!.name
-        : (cargo.receiver?.district?.name.isNotEmpty == true
-            ? cargo.receiver!.district!.name
-            : '');
+    final rawCity = cargo.receiver?.city?.name.trim() ?? '';
+    final rawDistrict = cargo.receiver?.district?.name.trim() ?? '';
+    String cityName = '';
+    if (rawDistrict.isNotEmpty && rawCity.isNotEmpty && rawDistrict != rawCity) {
+      cityName = '$rawDistrict, $rawCity';
+    } else if (rawCity.isNotEmpty) {
+      cityName = rawCity;
+    } else if (rawDistrict.isNotEmpty) {
+      cityName = rawDistrict;
+    } else {
+      cityName = cargo.receiver?.phone ?? '-';
+    }
 
     final trackingCode = cargo.hasCarrierBarcode
         ? cargo.outTrackingCode
@@ -194,84 +202,62 @@ class CargoCard extends StatelessWidget {
                   ],
                 ),
 
-                // 3. Satır: Kapıda Ödeme Şeridi (Varsa)
+                // 3. Satır: Kapıda Ödeme Etiketi (Görsel mockup uyumu: Sol alt etiket)
                 if (cargo.payOnDelivery) ...[
                   const SizedBox(height: 12),
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.account_balance_wallet_outlined,
-                                size: 15,
-                                color: Color(0xFF0F172A),
-                              ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'Kapıda Ödeme',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF475569),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  AppFormatters.formatCurrency(
-                                    cargo.payOnDeliveryNetAmount > 0
-                                        ? cargo.payOnDeliveryNetAmount
-                                        : (cargo.payOnDeliveryAmount ?? 0),
-                                  ),
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (cargo.payOnDeliveryTypeText != null) ...[
-                                const SizedBox(width: 4),
-                                Text(
-                                  '(${cargo.payOnDeliveryTypeText})',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFF64748B),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ],
+                        const Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 15,
+                          color: Color(0xFF0F172A),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Kapıda Ödeme',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569),
                           ),
                         ),
-                        if (cargo.payOnDeliveryStatusText != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(6),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            AppFormatters.formatCurrency(
+                              (cargo.payOnDeliveryAmount != null && cargo.payOnDeliveryAmount! > 0)
+                                  ? cargo.payOnDeliveryAmount!
+                                  : (cargo.payOnDeliveryNetAmount > 0
+                                      ? cargo.payOnDeliveryNetAmount
+                                      : 0.0),
                             ),
-                            child: Text(
-                              cargo.payOnDeliveryStatusText!,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF92400E),
-                              ),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (cargo.payOnDeliveryTypeText != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${cargo.payOnDeliveryTypeText})',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
+                        ],
                       ],
                     ),
                   ),

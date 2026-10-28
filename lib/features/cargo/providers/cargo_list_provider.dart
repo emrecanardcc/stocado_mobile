@@ -234,17 +234,19 @@ class CargoListNotifier extends Notifier<CargoListState> {
 
   /// Sekme Değiştirme ('all', 'yolda', 'sorunlu', 'pod', 'drafts')
   void setTab(String tab) {
-    if (state.activeTab != tab) {
-      String? status;
-      if (tab == 'yolda') {
-        status = '1';
-      } else if (tab == 'sorunlu') {
-        status = '4';
-      } else if (tab == 'drafts') {
-        status = '0';
-      } else if (tab == 'all') {
-        status = null;
-      }
+    String? status;
+    if (tab == 'yolda') {
+      status = '1';
+    } else if (tab == 'sorunlu') {
+      status = '4';
+    } else if (tab == 'drafts') {
+      status = '0';
+    } else if (tab == 'all') {
+      status = null;
+    }
+    final tabChanged = state.activeTab != tab;
+    final statusChanged = state.selectedStatus != status;
+    if (tabChanged || statusChanged) {
       state = state.copyWith(
         activeTab: tab,
         selectedStatus: status,
@@ -260,12 +262,10 @@ class CargoListNotifier extends Notifier<CargoListState> {
     final statusChanged = state.selectedStatus != status;
     final sortChanged = sortDirection != null && state.sortDirection != sortDirection;
     if (companyChanged || statusChanged || sortChanged) {
-      String newTab = state.activeTab;
-      if (status == null || status == 'all') {
-        newTab = 'all';
-      } else if (status == '1' || status == 'active') {
+      String newTab = 'all';
+      if (status == '1' || status == 'active' || status == 'yolda') {
         newTab = 'yolda';
-      } else if (status == '4' || status == 'failed') {
+      } else if (status == '4' || status == 'failed' || status == 'problematic' || status == 'sorunlu') {
         newTab = 'sorunlu';
       }
       state = state.copyWith(
@@ -302,7 +302,14 @@ class CargoListNotifier extends Notifier<CargoListState> {
   /// Kargo Durumu Filtresi
   void setStatusFilter(String? status) {
     if (state.selectedStatus != status) {
+      String newTab = 'all';
+      if (status == '1' || status == 'active' || status == 'yolda') {
+        newTab = 'yolda';
+      } else if (status == '4' || status == 'failed' || status == 'problematic' || status == 'sorunlu') {
+        newTab = 'sorunlu';
+      }
       state = state.copyWith(
+        activeTab: newTab,
         selectedStatus: status,
         clearStatus: status == null,
       );

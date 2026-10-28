@@ -28,10 +28,16 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_handleScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ref.read(dashboardProvider).stats == null) {
+        ref.read(dashboardProvider.notifier).loadDashboard();
+      }
+    });
   }
 
   void _handleScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       ref.read(cargoListProvider.notifier).loadNextPage();
     }
   }
@@ -525,8 +531,18 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
 
     // Sayaç verileri (Dashboard istatistikleri veya meta verisi üzerinden)
     final allCount = dashStats?.totalCargos ?? (state.meta?.total ?? state.cargos.length);
-    final inTransitCount = dashStats?.activeCargos ?? state.cargos.where((c) => c.status == 1 || c.status == 2).length;
-    final problematicCount = dashStats?.problematicCargos ?? state.cargos.where((c) => c.status == 4 || c.status == 3).length;
+    final inTransitCount = dashStats?.activeCargos ??
+        state.cargos.where((c) {
+          final t = c.effectiveTransactionType;
+          if (t != null) return [2, 3, 4, 5, 9].contains(t);
+          return c.status == 1;
+        }).length;
+    final problematicCount = dashStats?.problematicCargos ??
+        state.cargos.where((c) {
+          final t = c.effectiveTransactionType;
+          if (t != null) return [0, 7, 8, 10, 11, 12, 13].contains(t);
+          return c.status == 4 || c.status == 3;
+        }).length;
 
     // Aktif sekme kontrolü
     final isAllSelected = state.selectedStatus == null || state.selectedStatus == 'all';
@@ -669,20 +685,14 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                       label: 'Tümü',
                       count: allCount,
                       isSelected: isAllSelected,
-                      onTap: () {
-                        notifier.setTab('all');
-                        notifier.applyFilters(status: null);
-                      },
+                      onTap: () => notifier.setTab('all'),
                     ),
                     const SizedBox(width: 8),
                     _buildPillTab(
                       label: 'Yolda',
                       count: inTransitCount,
                       isSelected: isInTransitSelected,
-                      onTap: () {
-                        notifier.setTab('yolda');
-                        notifier.applyFilters(status: '1');
-                      },
+                      onTap: () => notifier.setTab('yolda'),
                     ),
                     const SizedBox(width: 8),
                     _buildPillTab(
@@ -690,10 +700,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                       count: problematicCount,
                       isSelected: isProblematicSelected,
                       isHighlight: true,
-                      onTap: () {
-                        notifier.setTab('sorunlu');
-                        notifier.applyFilters(status: '4');
-                      },
+                      onTap: () => notifier.setTab('sorunlu'),
                     ),
                   ],
                 ),

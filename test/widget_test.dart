@@ -1520,6 +1520,128 @@ void main() {
       await tester.pump();
       expect(container.read(cargoListProvider).selectedStatus, isNull);
     });
+
+    testWidgets('status == 2 olan ve transaction kaydi bulunmayan kargo Teslim Edildi olarak render edilir', (tester) async {
+      final cargoWithoutTrans = CargoModel(
+        id: 99,
+        processNumber: 'P-NO-TRANS',
+        outTrackingCode: 'TRK-NO-TRANS',
+        status: 2, // Tamamlandı / Teslim Edildi
+        payOnDelivery: false,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargoWithoutTrans),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      final container = tester.widget<Container>(
+        find.descendant(of: find.byType(CargoStatusIcon), matching: find.byType(Container)),
+      );
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF10B981));
+    });
+
+    testWidgets('Ozel bir durum filtresi (or: Tamamlandi) seciliyken Tumu sekmesine basildiginda filtre sifirlanir', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(
+                isInitialized: true,
+                token: 'valid_token',
+                user: UserModel(
+                  id: '1',
+                  firstName: 'Emirhan',
+                  lastName: 'Demir',
+                  fullName: 'Emirhan Demir',
+                  email: 'e@test.com',
+                  accountId: 'acc-1',
+                  accounts: [],
+                ),
+              ),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(
+              const DashboardState(isLoading: false),
+            ),
+          ),
+          cargoListProvider.overrideWith(
+            () => _TestCargoListNotifier(
+              const CargoListState(
+                isLoading: false,
+                activeTab: 'all',
+                selectedStatus: '2', // Ozel secili durum (Tamamlandi)
+                cargos: [],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CargosScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Tümü sekmesine bas
+      await tester.tap(find.text('Tümü'));
+      await tester.pump();
+
+      expect(container.read(cargoListProvider).selectedStatus, isNull);
+      expect(container.read(cargoListProvider).activeTab, 'all');
+    });
+
+    testWidgets('CargoCard 320px dar ekranda uzun ilce, il ve Kapida Odeme ile tasma olmadan render edilir', (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final narrowCargo = CargoModel(
+        id: 77,
+        processNumber: 'P-NARROW-VERY-LONG-12345678',
+        outTrackingCode: 'HJV-NARROW-998877665544',
+        cargoCompanyId: 'hepsijet',
+        status: 1,
+        latestTransactionType: 3,
+        createdAt: DateTime(2025, 3, 12),
+        payOnDelivery: true,
+        payOnDeliveryAmount: 1250.0,
+        payOnDeliveryCost: 50.0,
+        payOnDeliveryStatus: 0,
+        receiver: CargoParty(
+          id: 'rec-narrow',
+          name: 'Hacı Mehmet Abdurrahman Şentürk Ticaret',
+          phone: '05551234567',
+          city: LocationRef(id: '34', name: 'İstanbul'),
+          district: LocationRef(id: '3401', name: 'Kadıköy'),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: CargoCard(cargo: narrowCargo),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('1.250,00 ₺'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 
