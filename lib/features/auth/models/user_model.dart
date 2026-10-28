@@ -103,8 +103,8 @@ class AccountModel {
       name: json['name']?.toString() ?? '',
       companyName: json['company_name']?.toString() ?? json['name']?.toString(),
       logo: json['logo']?.toString(),
-      eftCode: json['eft_code']?.toString(),
-      accountCode: json['account_code']?.toString(),
+      eftCode: json['eft_code']?.toString() ?? json['eftCode']?.toString(),
+      accountCode: json['account_code']?.toString() ?? json['accountCode']?.toString() ?? json['code']?.toString(),
     );
   }
 

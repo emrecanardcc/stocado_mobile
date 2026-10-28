@@ -164,6 +164,18 @@ class AppFormatters {
     return '$day.$month.$year $hour:$minute';
   }
 
+  static const List<String> _monthsTr = [
+    'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'
+  ];
+
+  /// Sade tarih formatlayıcı (Örn: "12 Mar 2025")
+  static String formatDate(DateTime? dt) {
+    if (dt == null) return '';
+    final local = dt.toLocal();
+    final monthIndex = (local.month >= 1 && local.month <= 12) ? local.month - 1 : 0;
+    return '${local.day} ${_monthsTr[monthIndex]} ${local.year}';
+  }
+
   /// Hem virgül hem nokta ile girilen ondalıklı sayıları güvenle parse eder.
   /// Örnek: "12,50" -> 12.5, "12.50" -> 12.5
   static double parseDouble(dynamic val, [double fallback = 0.0]) {

@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../cargo/screens/cargos_screen.dart';
 import '../../cargo/screens/create_cargo_screen.dart';
-import '../../pricing/screens/pricing_screen.dart';
+import '../../finance/screens/finance_screen.dart';
 import '../providers/navigation_provider.dart';
 import 'dashboard_screen.dart';
+import 'more_screen.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -29,7 +30,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       case 2:
         return const CreateCargoScreen();
       case 3:
-        return const PricingScreen();
+        return const FinanceScreen();
+      case 4:
+        return const MoreScreen();
       default:
         return const SizedBox.shrink();
     }
@@ -43,40 +46,93 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     required int currentIndex,
   }) {
     final isSelected = currentIndex == index;
+    final color = isSelected ? const Color(0xFF0E1E38) : const Color(0xFF94A3B8);
 
     return Expanded(
       child: InkWell(
         onTap: () {
           ref.read(mainNavigationProvider.notifier).selectTab(index);
         },
-        borderRadius: BorderRadius.circular(16),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6.0),
+          padding: const EdgeInsets.fromLTRB(2, 6, 2, 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  isSelected ? activeIcon : icon,
-                  size: 22,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              Icon(
+                isSelected ? activeIcon : icon,
+                size: 22,
+                color: color,
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: color,
+                  ),
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCenterActionButton(int currentIndex) {
+    final isSelected = currentIndex == 2;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          ref.read(mainNavigationProvider.notifier).selectTab(2);
+        },
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(2, 0, 2, 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0E1E38),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0E1E38).withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Yeni Kargo',
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    color: isSelected ? const Color(0xFF0E1E38) : const Color(0xFF64748B),
+                  ),
                 ),
               ),
             ],
@@ -97,55 +153,64 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     return Scaffold(
       body: IndexedStack(
         index: currentIndex,
-        children: List.generate(4, _buildScreen),
+        children: List.generate(5, _buildScreen),
       ),
-      bottomNavigationBar: SafeArea(
-        bottom: true,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border, width: 1),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x100F172A),
-                blurRadius: 18,
-                offset: Offset(0, 6),
-              ),
-            ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: AppColors.border.withValues(alpha: 0.8),
+              width: 1.0,
+            ),
           ),
-          child: Row(
-            children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.grid_view_outlined,
-                activeIcon: Icons.grid_view_rounded,
-                label: 'Özet',
-                currentIndex: currentIndex,
-              ),
-              _buildNavItem(
-                index: 1,
-                icon: Icons.local_shipping_outlined,
-                activeIcon: Icons.local_shipping_rounded,
-                label: 'Kargolar',
-                currentIndex: currentIndex,
-              ),
-              _buildNavItem(
-                index: 2,
-                icon: Icons.add_circle_outline_rounded,
-                activeIcon: Icons.add_circle_rounded,
-                label: 'Yeni Kargo',
-                currentIndex: currentIndex,
-              ),
-              _buildNavItem(
-                index: 3,
-                icon: Icons.receipt_long_outlined,
-                activeIcon: Icons.receipt_long_rounded,
-                label: 'Tarife & Ürün',
-                currentIndex: currentIndex,
-              ),
-            ],
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A0F172A),
+              blurRadius: 12,
+              offset: Offset(0, -3),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          bottom: true,
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home_rounded,
+                  label: 'Ana Sayfa',
+                  currentIndex: currentIndex,
+                ),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.inventory_2_outlined,
+                  activeIcon: Icons.inventory_2_rounded,
+                  label: 'Kargolar',
+                  currentIndex: currentIndex,
+                ),
+                _buildCenterActionButton(currentIndex),
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.bar_chart_outlined,
+                  activeIcon: Icons.bar_chart_rounded,
+                  label: 'Finans',
+                  currentIndex: currentIndex,
+                ),
+                _buildNavItem(
+                  index: 4,
+                  icon: Icons.more_horiz_rounded,
+                  activeIcon: Icons.more_horiz_rounded,
+                  label: 'Diğer',
+                  currentIndex: currentIndex,
+                ),
+              ],
+            ),
           ),
         ),
       ),

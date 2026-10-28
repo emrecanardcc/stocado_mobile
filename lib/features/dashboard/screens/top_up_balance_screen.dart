@@ -15,11 +15,40 @@ class TopUpBalanceScreen extends ConsumerWidget {
   static const String defaultEftCode = '-';
 
   void _copy(BuildContext context, String text, String label) {
-    Clipboard.setData(ClipboardData(text: text));
-    HapticFeedback.lightImpact();
+    if (text.trim().isEmpty || text == '-') {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      messenger?.clearSnackBars();
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Hesabınıza henüz bir $label atanmamış.',
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(milliseconds: 2000),
+        ),
+      );
+      return;
+    }
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
+    try {
+      Clipboard.setData(ClipboardData(text: text));
+      HapticFeedback.lightImpact();
+    } catch (_) {}
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.clearSnackBars();
+    messenger?.showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -42,11 +71,12 @@ class TopUpBalanceScreen extends ConsumerWidget {
   }
 
   void _copyAll(BuildContext context, String code) {
+    final effectiveCode = (code.trim().isEmpty || code == '-') ? '(Açıklama kodu tanımlı değil)' : code;
     final text = 'Banka Adı: $bankName\n'
         'Hesap Adı: $accountName\n'
         'IBAN: $iban\n'
-        'Açıklama Kodu: $code\n'
-        '(Not: Havale/EFT açıklama alanına sadece $code yazınız.)';
+        'Açıklama Kodu: $effectiveCode\n'
+        '(Not: Havale/EFT açıklama alanına sadece $effectiveCode yazınız.)';
 
     _copy(context, text, 'Tüm hesap bilgileri');
   }
@@ -149,21 +179,31 @@ class TopUpBalanceScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
-    final account = user?.accounts.firstOrNull;
-    final eftCode = (account?.eftCode != null && account!.eftCode!.isNotEmpty)
-        ? account.eftCode!
-        : defaultEftCode;
+    final account = (user != null && user.accounts.isNotEmpty)
+        ? (user.accounts.where((a) => a.id == user.accountId).firstOrNull ?? user.accounts.firstOrNull)
+        : null;
+
+    final rawEftCode = account?.eftCode?.trim();
+    final rawAccountCode = account?.accountCode?.trim();
+    final eftCode = (rawEftCode != null && rawEftCode.isNotEmpty)
+        ? rawEftCode
+        : ((rawAccountCode != null && rawAccountCode.isNotEmpty)
+            ? rawAccountCode
+            : defaultEftCode);
 
     final dashboardState = ref.watch(dashboardProvider);
     final currentBalance = dashboardState.balance?.availableBalance ??
         dashboardState.balance?.balance ??
         dashboardState.stats?.availableBalance ??
+        dashboardState.stats?.balance ??
         0.0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        centerTitle: false,
         title: const Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.account_balance_wallet_outlined, size: 20),
             SizedBox(width: 8),
@@ -172,6 +212,11 @@ class TopUpBalanceScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Bakiyeyi Yenile',
+            onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
+          ),
+          IconButton(
             icon: const Icon(Icons.share_outlined),
             tooltip: 'Bilgileri Paylaş',
             onPressed: () => _copyAll(context, eftCode),
@@ -179,58 +224,67 @@ class TopUpBalanceScreen extends ConsumerWidget {
           const SizedBox(width: 4),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Mevcut Bakiye & Bilgi Kartı
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
-                boxShadow: AppColors.softShadow,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(dashboardProvider.notifier).refresh();
+        },
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Mevcut Bakiye & Bilgi Kartı
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                  boxShadow: AppColors.softShadow,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 22),
                     ),
-                    child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'KULLANILABİLİR BAKİYENİZ',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textSecondary,
-                            letterSpacing: 0.4,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'KULLANILABİLİR BAKİYENİZ',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSecondary,
+                              letterSpacing: 0.4,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          AppFormatters.formatCurrency(currentBalance),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              AppFormatters.formatCurrency(currentBalance),
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: currentBalance < 0 ? AppColors.error : AppColors.textPrimary,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
@@ -321,13 +375,12 @@ class TopUpBalanceScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        RichText(
-                          text: TextSpan(
+                        Text.rich(
+                          TextSpan(
                             style: const TextStyle(
                               fontSize: 12,
                               color: Color(0xFF78350F), // Amber-900
                               height: 1.45,
-                              fontFamily: 'Roboto',
                             ),
                             children: [
                               const TextSpan(
@@ -413,7 +466,8 @@ class TopUpBalanceScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildStepItem({

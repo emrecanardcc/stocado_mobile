@@ -2,9 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocado_mobile/core/utils/app_formatters.dart';
+import 'package:stocado_mobile/features/auth/models/user_model.dart';
 import 'package:stocado_mobile/features/auth/providers/auth_provider.dart';
+import 'package:stocado_mobile/features/cargo/models/address_model.dart';
 import 'package:stocado_mobile/features/cargo/models/cargo_model.dart';
 import 'package:stocado_mobile/features/cargo/widgets/cargo_company_logo.dart';
+import 'package:stocado_mobile/features/cargo/widgets/cargo_detail_modal.dart';
+import 'package:stocado_mobile/features/cargo/providers/cargo_list_provider.dart';
+import 'package:stocado_mobile/features/dashboard/models/dashboard_stats_model.dart';
+import 'package:stocado_mobile/features/dashboard/providers/dashboard_provider.dart';
+import 'package:stocado_mobile/features/dashboard/screens/top_up_balance_screen.dart';
+import 'package:stocado_mobile/features/dashboard/widgets/dashboard_balance_hero_card.dart';
+import 'package:stocado_mobile/features/dashboard/widgets/dashboard_package_status_row.dart';
+import 'package:stocado_mobile/features/dashboard/widgets/dashboard_recent_cargos_section.dart';
+import 'package:stocado_mobile/features/home/providers/navigation_provider.dart';
+import 'package:stocado_mobile/features/home/screens/dashboard_screen.dart';
+import 'package:stocado_mobile/features/home/screens/main_screen.dart';
 import 'package:stocado_mobile/main.dart';
 
 class _TestAuthNotifier extends AuthNotifier {
@@ -13,6 +26,22 @@ class _TestAuthNotifier extends AuthNotifier {
 
   @override
   AuthState build() => _initialState;
+}
+
+class _TestCargoListNotifier extends CargoListNotifier {
+  final CargoListState _initialState;
+  _TestCargoListNotifier(this._initialState);
+
+  @override
+  CargoListState build() => _initialState;
+}
+
+class _TestDashboardNotifier extends DashboardNotifier {
+  final DashboardState _initialState;
+  _TestDashboardNotifier(this._initialState);
+
+  @override
+  DashboardState build() => _initialState;
 }
 
 void main() {
@@ -521,4 +550,657 @@ void main() {
       expect(cargoNoZ.createdAt!.hour, local.hour);
     });
   });
+
+  group('Yeni Tasarım AppFormatters & Hero Bakiye Testleri', () {
+    test('formatDate tarihi "12 Mar 2025" seklinde formatlar', () {
+      expect(AppFormatters.formatDate(DateTime(2025, 3, 12)), '12 Mar 2025');
+      expect(AppFormatters.formatDate(DateTime(2025, 1, 1)), '1 Oca 2025');
+      expect(AppFormatters.formatDate(DateTime(2025, 10, 28)), '28 Eki 2025');
+      expect(AppFormatters.formatDate(null), '');
+    });
+
+    testWidgets('DashboardBalanceHeroCard bakiye ve alacak tutarlarini dogru render eder, Hareketler kaldirilmis ve Bakiye Yukle calisir',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuthNotifier(
+                AuthState(
+                  isInitialized: true,
+                  token: 'test-token',
+                  user: UserModel(
+                    id: '1',
+                    firstName: 'Emre',
+                    lastName: 'Arslan',
+                    fullName: 'Emre Arslan',
+                    email: 'emre@stocado.com',
+                    accountId: 'acc-1',
+                    accounts: [
+                      AccountModel(
+                        id: 'acc-1',
+                        name: 'Adorel Lojistik',
+                        companyName: 'Adorel A.Ş.',
+                        eftCode: 'ADO822716',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            dashboardProvider.overrideWith(
+              () => _TestDashboardNotifier(
+                const DashboardState(
+                  isLoading: false,
+                ),
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: DashboardBalanceHeroCard(
+                currentBalance: 20208.35,
+                podReceivable: 8450.00,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Başlık ve tutarlar görünür olmalı
+      expect(find.text('Kullanılabilir Bakiye'), findsOneWidget);
+      expect(find.text('20.208,35 ₺'), findsOneWidget);
+      expect(find.text('8.450,00 ₺'), findsOneWidget);
+      expect(find.text('Bakiye Yükle'), findsOneWidget);
+
+      // Hareketler butonu KESİNLİKLE kaldırılmış olmalı
+      expect(find.text('Hareketler'), findsNothing);
+
+      // Göz ikonuna tıklandığında tutarlar gizlenmeli
+      await tester.tap(find.byIcon(Icons.visibility_outlined));
+      await tester.pump();
+
+      expect(find.text('•••••••• ₺'), findsOneWidget);
+      expect(find.text('•••• ₺'), findsOneWidget);
+
+      // Tekrar tıklandığında tutarlar açılmalı
+      await tester.tap(find.byIcon(Icons.visibility_off_outlined));
+      await tester.pump();
+
+      expect(find.text('20.208,35 ₺'), findsOneWidget);
+
+      // Bakiye Yükle butonuna tıklandığında TopUpBalanceScreen çökmeden, pürüzsüzce açılmalı
+      await tester.tap(find.text('Bakiye Yükle'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TopUpBalanceScreen), findsOneWidget);
+      expect(find.text('Kuveyt Türk Katılım Bankası A.Ş.'), findsOneWidget);
+      expect(find.text('ADO822716'), findsWidgets);
+    });
+  });
+
+  group('TopUpBalanceScreen Kapsamli Testleri', () {
+    testWidgets('TopUpBalanceScreen banka hesap bilgilerini eksiksiz render eder ve kopyalama aksiyonlari hatasiz calisir',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuthNotifier(
+                AuthState(
+                  isInitialized: true,
+                  token: 'test-token',
+                  user: UserModel(
+                    id: '1',
+                    firstName: 'Emre',
+                    lastName: 'Arslan',
+                    fullName: 'Emre Arslan',
+                    email: 'emre@stocado.com',
+                    accountId: 'acc-1',
+                    accounts: [
+                      AccountModel(
+                        id: 'acc-1',
+                        name: 'Adorel Lojistik',
+                        eftCode: 'ADO822716',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            dashboardProvider.overrideWith(
+              () => _TestDashboardNotifier(
+                const DashboardState(
+                  isLoading: false,
+                ),
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: TopUpBalanceScreen(),
+          ),
+        ),
+      );
+
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      expect(find.text('Bakiye Yükle'), findsOneWidget);
+      expect(find.text('Kuveyt Türk Katılım Bankası A.Ş.'), findsOneWidget);
+      expect(find.text('TR38 0020 5000 0956 8498 0000 01'), findsOneWidget);
+      expect(find.text('ADO822716'), findsWidgets);
+      expect(find.text('Nasıl Yüklenir?'), findsOneWidget);
+      // Tümünü kopyala butonuna basıldığında exception atılmamalı
+      await tester.ensureVisible(find.text('Tüm Hesap Bilgilerini Kopyala'));
+      await tester.tap(find.text('Tüm Hesap Bilgilerini Kopyala'));
+      await tester.pump();
+
+      // Üst bardaki paylaş/kopyala ikonuna basıldığında exception atılmamalı
+      await tester.tap(find.byIcon(Icons.share_outlined));
+      await tester.pump();
+
+      // Üst bardaki yenile ikonuna basıldığında exception atılmamalı
+      await tester.tap(find.byIcon(Icons.refresh_rounded));
+      await tester.pump();
+
+      // Tekil kopyalama butonlarına basıldığında SnackBar'lar görüntülenmeli
+      final copyButtons = find.byTooltip('Kopyala');
+      expect(copyButtons, findsNWidgets(4));
+      await tester.tap(copyButtons.first);
+      await tester.pump();
+      expect(find.text('Banka Adı panoya kopyalandı.'), findsOneWidget);
+    });
+
+    testWidgets('TopUpBalanceScreen hesabi veya eft kodu olmayan kullanici durumunda guvenle render edilir ve kopyalamada uyarir',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuthNotifier(
+                const AuthState(
+                  isInitialized: true,
+                  token: 'test-token',
+                  user: null,
+                ),
+              ),
+            ),
+            dashboardProvider.overrideWith(
+              () => _TestDashboardNotifier(
+                const DashboardState(isLoading: false),
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: TopUpBalanceScreen(),
+          ),
+        ),
+      );
+
+      expect(find.text('Bakiye Yükle'), findsOneWidget);
+      expect(find.text('-'), findsWidgets);
+      expect(find.text('0,00 ₺'), findsOneWidget);
+
+      // Açıklama kodu atanmamışken tekil kopyala butonuna basıldığında uyarı SnackBar'ı çıkmalı
+      final copyButtons = find.byTooltip('Kopyala');
+      await tester.tap(copyButtons.last);
+      await tester.pump();
+      expect(find.text('Hesabınıza henüz bir Açıklama Kodu atanmamış.'), findsOneWidget);
+    });
+
+    testWidgets('DashboardBalanceHeroCard onTopUpTap callback parametresi basariyla calisir',
+        (WidgetTester tester) async {
+      bool tapped = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DashboardBalanceHeroCard(
+              currentBalance: 1500.0,
+              podReceivable: 500.0,
+              onTopUpTap: () {
+                tapped = true;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Bakiye Yükle'));
+      expect(tapped, isTrue);
+    });
+  });
+
+  group('DashboardPackageStatusRow Testleri', () {
+    testWidgets('Yatay 4lu durum kutulari ve dikkat seridi dogru render edilir',
+        (WidgetTester tester) async {
+      String? tappedFilter;
+
+      final mockStats = DashboardStats(
+        totalCargos: 252,
+        activeCargos: 28,
+        pendingCargos: 12,
+        problematicCargos: 3,
+        deliveredToday: 206,
+        returnedCargos: 6,
+        deliveryRate: 95.0,
+        balance: 20208.35,
+        availableBalance: 20208.35,
+        offsetBalance: 0.0,
+        podCargoCount: 5,
+        podPending: 8450.0,
+        podCollected: 12000.0,
+        podWillPay: 8450.0,
+        recentCargos: [],
+        weeklyTrend: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DashboardPackageStatusRow(
+              stats: mockStats,
+              onStatusTap: (filter) => tappedFilter = filter,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Kargolarım'), findsOneWidget);
+      expect(find.text('Hazırlanan'), findsOneWidget);
+      expect(find.text('12'), findsOneWidget);
+      expect(find.text('Yolda'), findsOneWidget);
+      expect(find.text('28'), findsOneWidget);
+      expect(find.text('Teslim'), findsOneWidget);
+      expect(find.text('206'), findsOneWidget);
+      expect(find.text('İade'), findsOneWidget);
+      expect(find.text('6'), findsOneWidget);
+
+      // Dikkat / işlem bekleyen kutusu
+      expect(find.text('3 gönderi işlem bekliyor'), findsOneWidget);
+
+      // Durum kutuları tıklamaları test edilsin
+      await tester.tap(find.text('Hazırlanan'));
+      expect(tappedFilter, '0');
+
+      await tester.tap(find.text('Yolda'));
+      expect(tappedFilter, '1');
+
+      await tester.tap(find.text('Teslim'));
+      expect(tappedFilter, '2');
+
+      await tester.tap(find.text('İade'));
+      expect(tappedFilter, '4');
+
+      // Dikkat kutusuna tıklandığında sorunlu/işlem bekleyenler (status 4) filtrelenir
+      await tester.tap(find.text('3 gönderi işlem bekliyor'));
+      expect(tappedFilter, '4');
+    });
+  });
+
+  group('MainScreen 5-Tab Bar Testi', () {
+    testWidgets('Gorseldeki 5 sekmeli navbar eksiksiz render edilir',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: MainScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('Ana Sayfa'), findsOneWidget);
+      expect(find.text('Kargolar'), findsOneWidget);
+      expect(find.text('Yeni Kargo'), findsOneWidget);
+      expect(find.text('Finans'), findsOneWidget);
+      expect(find.text('Diğer'), findsOneWidget);
+      expect(find.byIcon(Icons.add_rounded), findsWidgets);
+    });
+  });
+
+  group('DashboardRecentCargosSection Testleri', () {
+    testWidgets('Kargo listesi bos oldugunda bos durum ve Yeni Kargo butonu render edilir', (WidgetTester tester) async {
+      bool newCargoTapped = false;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cargoListProvider.overrideWith(() => _TestCargoListNotifier(const CargoListState(isLoading: false, cargos: []))),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: DashboardRecentCargosSection(
+                onSeeAllTap: () {},
+                onNewCargoTap: () => newCargoTapped = true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Son Gönderiler'), findsOneWidget);
+      expect(find.text('Tümünü Gör'), findsOneWidget);
+      expect(find.text('Henüz kayıtlı gönderiniz bulunmuyor'), findsOneWidget);
+      expect(find.text('Yeni Kargo Oluştur'), findsOneWidget);
+
+      await tester.tap(find.text('Yeni Kargo Oluştur'));
+      expect(newCargoTapped, isTrue);
+    });
+
+    testWidgets('Kargo verileri ile kartlar gorseldeki formatta render edilir', (WidgetTester tester) async {
+      final mockCargo = CargoModel(
+        id: '1',
+        processNumber: 'PR-100',
+        outTrackingCode: 'HJV1234567890',
+        status: 1,
+        latestTransactionType: 2,
+        latestTransaction: CargoTransaction(
+          type: 2,
+          description: 'Kargo yola çıktı',
+        ),
+        receiver: CargoParty(
+          id: 'rec-1',
+          name: 'Ayşe Yılmaz',
+          phone: '05551234567',
+          city: LocationRef(id: '6', name: 'Ankara'),
+        ),
+        cargoCompanyId: 'hepsijet',
+        createdAt: DateTime(2025, 3, 12),
+        payOnDelivery: false,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cargoListProvider.overrideWith(() => _TestCargoListNotifier(CargoListState(isLoading: false, cargos: [mockCargo]))),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: DashboardRecentCargosSection(
+                onSeeAllTap: () {},
+                onNewCargoTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Son Gönderiler'), findsOneWidget);
+      expect(find.text('Ayşe Yılmaz'), findsOneWidget);
+      expect(find.text('Yolda'), findsOneWidget);
+      expect(find.textContaining('Ankara'), findsOneWidget);
+      expect(find.textContaining('12 Mar 2025'), findsOneWidget);
+    });
+  });
+
+  group('DashboardScreen Tum Etkilesimler Testi', () {
+    testWidgets('DashboardScreen bildirim ziline ve profil butonuna tiklandiginda sheetler acilir', (WidgetTester tester) async {
+      final mockUser = UserModel(
+        id: '1',
+        firstName: 'Emre',
+        lastName: 'Arslan',
+        fullName: 'Emre Arslan',
+        email: 'emre@stocado.com',
+        accountId: 'acc-1',
+        accounts: [
+          AccountModel(
+            id: 'acc-1',
+            name: 'Adorel Lojistik',
+            companyName: 'Adorel Lojistik A.Ş.',
+            eftCode: 'ADO822716',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuthNotifier(
+                AuthState(
+                  isInitialized: true,
+                  token: 'test-token',
+                  user: mockUser,
+                ),
+              ),
+            ),
+            dashboardProvider.overrideWith(
+              () => _TestDashboardNotifier(
+                const DashboardState(isLoading: false),
+              ),
+            ),
+            cargoListProvider.overrideWith(
+              () => _TestCargoListNotifier(
+                const CargoListState(isLoading: false, cargos: []),
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: DashboardScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Kullanıcı karşılaması görünür olmalı
+      expect(find.text('Merhaba, Emre'), findsOneWidget);
+
+      // 1. Bildirim Zili Tıklaması
+      await tester.tap(find.byIcon(Icons.notifications_none_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bildirimler'), findsOneWidget);
+      expect(find.text('Tüm kargo ve bakiye bildirimleriniz günceldir.'), findsOneWidget);
+
+      // Kapat
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+
+      // 2. Profil İkonu Tıklaması
+      await tester.tap(find.byIcon(Icons.person_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Emre Arslan'), findsOneWidget);
+      expect(find.text('Adorel Lojistik A.Ş.'), findsOneWidget);
+      expect(find.text('Oturumu Kapat'), findsOneWidget);
+    });
+
+    testWidgets('DashboardScreen coklu hesap durumunda aktif accountId ile eslesen sirket adini gosterir', (WidgetTester tester) async {
+      final multiAccountUser = UserModel(
+        id: '2',
+        firstName: 'Can',
+        lastName: 'Kaya',
+        fullName: 'Can Kaya',
+        email: 'can@stocado.com',
+        accountId: 'acc-2',
+        accounts: [
+          AccountModel(id: 'acc-1', name: 'Birinci Sirket', companyName: 'Birinci Sirket A.Ş.'),
+          AccountModel(id: 'acc-2', name: 'İkinci Sirket', companyName: 'İkinci Sirket Ltd.'),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuthNotifier(
+                AuthState(
+                  isInitialized: true,
+                  token: 'test-token',
+                  user: multiAccountUser,
+                ),
+              ),
+            ),
+            dashboardProvider.overrideWith(
+              () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+            ),
+            cargoListProvider.overrideWith(
+              () => _TestCargoListNotifier(const CargoListState(isLoading: false, cargos: [])),
+            ),
+          ],
+          child: const MaterialApp(
+            home: DashboardScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Profil ikonuna tıkla
+      await tester.tap(find.byIcon(Icons.person_rounded));
+      await tester.pumpAndSettle();
+
+      // İlk şirket değil, aktif olan acc-2'nin şirket adı görünmeli
+      expect(find.text('İkinci Sirket Ltd.'), findsOneWidget);
+      expect(find.text('Birinci Sirket A.Ş.'), findsNothing);
+    });
+
+    testWidgets('DashboardScreen son gonderi kartina tiklandiginda detay modali acilir ve uzun basildiginda kopyalanir', (WidgetTester tester) async {
+      final mockCargo = CargoModel(
+        id: '1',
+        processNumber: 'PR-100',
+        outTrackingCode: 'HJV1234567890',
+        status: 1,
+        latestTransactionType: 2,
+        latestTransaction: CargoTransaction(type: 2, description: 'Yolda'),
+        receiver: CargoParty(
+          id: 'rec-1',
+          name: 'Mehmet Demir',
+          phone: '05551234567',
+          city: LocationRef(id: '34', name: 'İstanbul'),
+        ),
+        cargoCompanyId: 'hepsijet',
+        createdAt: DateTime(2025, 3, 12),
+        payOnDelivery: false,
+      );
+
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuthNotifier(
+                const AuthState(isInitialized: true, token: 'test-token'),
+              ),
+            ),
+            dashboardProvider.overrideWith(
+              () => _TestDashboardNotifier(
+                const DashboardState(isLoading: false),
+              ),
+            ),
+            cargoListProvider.overrideWith(
+              () => _TestCargoListNotifier(
+                CargoListState(isLoading: false, cargos: [mockCargo]),
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: DashboardScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.text('Mehmet Demir'), findsOneWidget);
+      await tester.ensureVisible(find.text('Mehmet Demir'));
+
+      // Uzun basıldığında takip numarası kopyalanmalı
+      await tester.longPress(find.text('Mehmet Demir'));
+      await tester.pump();
+      expect(find.text('Takip numarası kopyalandı.'), findsOneWidget);
+
+      // Tıklandığında CargoDetailModal açılmalı
+      await tester.tap(find.text('Mehmet Demir'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(find.byType(CargoDetailModal), findsOneWidget);
+    });
+
+    testWidgets('DashboardScreen Tumunu Gor ve durum kutulari secimleri sekmeyi ve filtreyi gunceller', (WidgetTester tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              const AuthState(isInitialized: true, token: 'test-token'),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(
+              const DashboardState(isLoading: false),
+            ),
+          ),
+          cargoListProvider.overrideWith(
+            () => _TestCargoListNotifier(
+              const CargoListState(isLoading: false, cargos: []),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: DashboardScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Tümünü Gör tıklaması Tab 1'e geçmeli, aktif sekmeyi 'all' yapmalı ve filtreleri temizlemeli
+      await tester.tap(find.text('Tümünü Gör'));
+      expect(container.read(mainNavigationProvider).tabIndex, 1);
+      expect(container.read(cargoListProvider).activeTab, 'all');
+      expect(container.read(cargoListProvider).selectedStatus, isNull);
+
+      // Durum kutusu tıklaması Tab 1'e geçmeli ve filtreyi ayarlamalı
+      await tester.tap(find.text('Hazırlanan'));
+      expect(container.read(mainNavigationProvider).tabIndex, 1);
+      expect(container.read(cargoListProvider).activeTab, 'all');
+      expect(container.read(cargoListProvider).selectedStatus, '0');
+
+      await tester.tap(find.text('Yolda'));
+      expect(container.read(cargoListProvider).selectedStatus, '1');
+
+      await tester.tap(find.text('Teslim'));
+      expect(container.read(cargoListProvider).selectedStatus, '2');
+
+      await tester.tap(find.text('İade'));
+      expect(container.read(cargoListProvider).selectedStatus, '4');
+    });
+
+    test('AccountModel.fromJson camelCase ve code fallback alanlarini hatasiz cozer', () {
+      final acc1 = AccountModel.fromJson({
+        'id': '10',
+        'name': 'Test Lojistik',
+        'eftCode': 'EFT123',
+        'accountCode': 'ACC456',
+      });
+      expect(acc1.eftCode, 'EFT123');
+      expect(acc1.accountCode, 'ACC456');
+
+      final acc2 = AccountModel.fromJson({
+        'id': '11',
+        'name': 'Test 2',
+        'code': 'CODE789',
+      });
+      expect(acc2.accountCode, 'CODE789');
+    });
+  });
 }
+

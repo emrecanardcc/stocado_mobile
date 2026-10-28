@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class MainNavigationState {
-  final int tabIndex; // 0: Özet, 1: Kargolar, 2: Yeni Kargo, 3: Tarifeler & Ürünler
-  final int hubSubIndex; // 0: Tarifeler, 1: Kayıtlı Ürünlerim
+  final int tabIndex; // 0: Ana Sayfa, 1: Kargolar, 2: Yeni Kargo, 3: Finans, 4: Diğer
+  final int hubSubIndex; // 0: Fiyat Tarifeleri, 1: Kayıtlı Ürünlerim
 
   const MainNavigationState({
     this.tabIndex = 0,
