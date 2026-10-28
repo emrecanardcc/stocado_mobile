@@ -635,11 +635,26 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
   Future<void> calculateOffers() async {
     final auth = ref.read(authProvider);
     final accountId = auth.accountId ?? auth.user?.accounts.firstOrNull?.id;
+    final desi = state.desi > 0 ? state.desi : 1.0;
+
     if (accountId == null || accountId.isEmpty) {
-      state = state.copyWith(isLoadingOffers: false, errorMessage: 'Kullanıcı hesabı bulunamadı.');
+      final fallback = _generateFallbackOffers(desi, state.payOnDelivery, state.controlledDelivery);
+      CargoOffer? currentSelected = state.selectedOffer;
+      if (currentSelected != null) {
+        currentSelected = fallback.cast<CargoOffer?>().firstWhere(
+          (o) => o?.cargoCompany.id == state.selectedOffer?.cargoCompany.id,
+          orElse: () => null,
+        );
+      }
+      currentSelected ??= fallback.isNotEmpty ? fallback.first : null;
+      state = state.copyWith(
+        isLoadingOffers: false,
+        offers: fallback,
+        selectedOffer: currentSelected,
+        errorMessage: null,
+      );
       return;
     }
-    final desi = state.desi > 0 ? state.desi : 1.0;
 
     state = state.copyWith(isLoadingOffers: true, errorMessage: null);
 
@@ -680,44 +695,58 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       offers = _generateFallbackOffers(desi, state.payOnDelivery, state.controlledDelivery);
     }
 
+    CargoOffer? selected = state.selectedOffer;
+    if (selected != null) {
+      selected = offers.cast<CargoOffer?>().firstWhere(
+        (o) => o?.cargoCompany.id == state.selectedOffer?.cargoCompany.id,
+        orElse: () => null,
+      );
+    }
+    selected ??= offers.isNotEmpty ? offers.first : null;
+
     state = state.copyWith(
       isLoadingOffers: false,
       offers: offers,
-      selectedOffer: offers.isNotEmpty ? offers.first : null,
+      selectedOffer: selected,
       errorMessage: offerResult.isSuccess ? null : offerResult.errorMessage,
     );
   }
 
   List<CargoOffer> _generateFallbackOffers(double desi, bool isPod, [bool isControlled = false]) {
     final effectiveDesi = desi <= 2 ? 2.0 : desi;
+    final podFee = isPod ? 15.0 : 0.0;
     if (isControlled) {
       return [
         CargoOffer(
           cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
-          price: (96.14 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
+          price: (96.14 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
         ),
       ];
     }
     return [
       CargoOffer(
         cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
-        price: (96.14 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
+        price: (96.14 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
       ),
       CargoOffer(
-        cargoCompany: CargoCompany(id: 'hepsijet', title: 'HEPSİJET'),
-        price: (104.40 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.0 : 0.0)),
+        cargoCompany: CargoCompany(id: 'hepsijet', title: 'HepsiJET'),
+        price: (104.40 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.0 : 0.0)),
       ),
       CargoOffer(
         cargoCompany: CargoCompany(id: 'surat-kargo', title: 'Sürat Kargo'),
-        price: (136.21 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 17.0 : 0.0)),
+        price: (136.21 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 17.0 : 0.0)),
+      ),
+      CargoOffer(
+        cargoCompany: CargoCompany(id: 'kolay-gelsin', title: 'Kolay Gelsin'),
+        price: (145.00 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.5 : 0.0)),
       ),
       CargoOffer(
         cargoCompany: CargoCompany(id: 'yurtici-kargo', title: 'Yurtiçi Kargo'),
-        price: (233.99 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 18.0 : 0.0)),
+        price: (233.99 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 18.0 : 0.0)),
       ),
       CargoOffer(
         cargoCompany: CargoCompany(id: 'ups', title: 'UPS Kargo'),
-        price: (176.10 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.67 : 0.0)),
+        price: (176.10 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.67 : 0.0)),
       ),
     ];
   }

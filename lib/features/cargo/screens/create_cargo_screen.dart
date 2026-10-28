@@ -1,16 +1,18 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
+import '../../dashboard/providers/dashboard_provider.dart';
+import '../../dashboard/screens/top_up_balance_screen.dart';
+import '../../home/providers/navigation_provider.dart';
 import '../../products/models/product_model.dart';
 import '../../products/providers/products_provider.dart';
 import '../../products/widgets/add_edit_product_modal.dart';
+import '../models/location_model.dart';
+import '../providers/cargo_list_provider.dart';
 import '../providers/create_cargo_provider.dart';
-import '../widgets/cargo_bottom_bar.dart';
-import '../widgets/step1_addresses_widget.dart';
-import '../widgets/step2_package_widget.dart';
-import '../widgets/step3_services_widget.dart';
-import '../widgets/step4_offers_widget.dart';
-import '../widgets/stepper_header.dart';
+import '../widgets/add_sender_address_modal.dart';
+import '../widgets/cargo_company_logo.dart';
 
 class CreateCargoScreen extends ConsumerStatefulWidget {
   const CreateCargoScreen({super.key});
@@ -34,10 +36,16 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _orderNumberController = TextEditingController();
   final TextEditingController _podAmountController = TextEditingController();
+  final TextEditingController _customerSearchController = TextEditingController();
+
+  String _deliveryType = 'standard'; // 'standard', 'pod', 'receiver'
+  double _calculatedDesi = 2.0;
 
   @override
   void initState() {
     super.initState();
+    _setInitialDefaults();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(productsProvider.notifier).loadProducts(reset: true);
       final cargoState = ref.read(createCargoProvider);
@@ -48,7 +56,18 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       if (cargoState.senderAddresses.isEmpty) {
         cargoNotifier.loadAllAddresses();
       }
+      cargoNotifier.calculateOffers();
     });
+  }
+
+  void _setInitialDefaults() {
+    _deliveryType = 'standard';
+    _widthController.text = '20';
+    _lengthController.text = '30';
+    _heightController.text = '10';
+    _weightController.text = '1';
+    _desiController.text = '2.00';
+    _calculatedDesi = 2.0;
   }
 
   @override
@@ -66,39 +85,107 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     _descriptionController.dispose();
     _orderNumberController.dispose();
     _podAmountController.dispose();
+    _customerSearchController.dispose();
     super.dispose();
   }
 
-  void _populateFromProduct(ProductModel product, CreateCargoNotifier notifier) {
-    notifier.selectProduct(product);
-    _widthController.text = (product.width != null && product.width! > 0) ? product.width!.toString() : '';
-    _lengthController.text = (product.length != null && product.length! > 0) ? product.length!.toString() : '';
-    _heightController.text = (product.height != null && product.height! > 0) ? product.height!.toString() : '';
-    _weightController.text = (product.weight != null && product.weight! > 0) ? (product.weight! * 1000).toStringAsFixed(0) : '';
+  void _setDeliveryType(String type) {
+    setState(() {
+      _deliveryType = type;
+    });
 
-    final rawDesi = product.desi > 0
-        ? product.desi
-        : ((product.width ?? 0) > 0 && (product.length ?? 0) > 0 && (product.height ?? 0) > 0
-            ? ((product.width! * product.length! * product.height!) / 3000)
-            : 0.0);
-    _desiController.text = rawDesi > 0 ? rawDesi.toStringAsFixed(2) : '';
+    final notifier = ref.read(createCargoProvider.notifier);
+    if (type == 'standard') {
+      notifier.updateAdditionalServices(
+        payOnDelivery: false,
+        receiverPays: false,
+      );
+    } else if (type == 'pod') {
+      final amt = AppFormatters.parseDouble(_podAmountController.text);
+      notifier.updateAdditionalServices(
+        payOnDelivery: true,
+        payOnDeliveryAmount: amt > 0 ? amt : 850.0,
+        payOnDeliveryType: 'cash',
+        canOffsetCargoFee: true,
+        receiverPays: false,
+      );
+      if (_podAmountController.text.isEmpty) {
+        _podAmountController.text = '850';
+      }
+    } else if (type == 'receiver') {
+      notifier.updateAdditionalServices(
+        payOnDelivery: false,
+        receiverPays: true,
+      );
+    }
+    notifier.calculateOffers();
+  }
+
+  void _calculateDesi() {
+    final w = AppFormatters.parseDouble(_widthController.text);
+    final l = AppFormatters.parseDouble(_lengthController.text);
+    final h = AppFormatters.parseDouble(_heightController.text);
+    final weightKg = AppFormatters.parseDouble(_weightController.text);
+
+    double volumetricDesi = (w > 0 && l > 0 && h > 0) ? (w * l * h) / 3000.0 : 0.0;
+    if (volumetricDesi > 0 && volumetricDesi < 1.0) {
+      volumetricDesi = 1.0;
+    }
+    double effective = math.max(volumetricDesi, weightKg);
+    if (effective < 1.0 && (w > 0 || l > 0 || h > 0 || weightKg > 0)) {
+      effective = 1.0;
+    }
+
+    final rounded = double.parse(effective.toStringAsFixed(2));
+    setState(() {
+      _calculatedDesi = rounded > 0 ? rounded : 1.0;
+    });
+
+    _desiController.text = _calculatedDesi.toStringAsFixed(2);
+    final notifier = ref.read(createCargoProvider.notifier);
+    notifier.updatePackageDimensions(
+      width: w,
+      length: l,
+      height: h,
+      weight: weightKg * 1000,
+      directDesi: _calculatedDesi,
+    );
+    notifier.calculateOffers();
+  }
+
+  void _populateFromProduct(ProductModel product) {
+    final notifier = ref.read(createCargoProvider.notifier);
+    notifier.selectProduct(product);
+
+    _widthController.text = (product.width != null && product.width! > 0) ? product.width!.toString() : '20';
+    _lengthController.text = (product.length != null && product.length! > 0) ? product.length!.toString() : '30';
+    _heightController.text = (product.height != null && product.height! > 0) ? product.height!.toString() : '10';
+    final weightInKg = (product.weight != null && product.weight! > 0) ? product.weight! : 1.0;
+    _weightController.text = weightInKg.toString();
+
     _descriptionController.text = product.name;
     if (product.price > 0) {
       _podAmountController.text = product.price.toStringAsFixed(2);
-    } else {
-      _podAmountController.clear();
+      notifier.updateAdditionalServices(payOnDeliveryAmount: product.price);
     }
+    _calculateDesi();
   }
 
-  void _clearSelectedProduct(CreateCargoNotifier notifier) {
+  void _clearSelectedProduct() {
+    final notifier = ref.read(createCargoProvider.notifier);
     notifier.selectProduct(null);
-    _widthController.clear();
-    _lengthController.clear();
-    _heightController.clear();
-    _weightController.clear();
-    _desiController.clear();
+    _setInitialDefaults();
     _descriptionController.clear();
+    _orderNumberController.clear();
     _podAmountController.clear();
+    notifier.updatePackageDimensions(
+      width: 20,
+      length: 30,
+      height: 10,
+      weight: 1000,
+      directDesi: 2.0,
+    );
+    notifier.calculateOffers();
   }
 
   void _clearAllFormFields() {
@@ -107,14 +194,11 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     _emailController.clear();
     _addressController.clear();
     _postalCodeController.clear();
-    _desiController.clear();
-    _widthController.clear();
-    _lengthController.clear();
-    _heightController.clear();
-    _weightController.clear();
     _descriptionController.clear();
     _orderNumberController.clear();
     _podAmountController.clear();
+    _customerSearchController.clear();
+    _setInitialDefaults();
   }
 
   void _showResetConfirmation(CreateCargoNotifier notifier) {
@@ -124,37 +208,728 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.restart_alt_rounded, color: AppColors.warning, size: 22),
+            Icon(Icons.restart_alt_rounded, color: Color(0xFFE11D48), size: 22),
             SizedBox(width: 8),
-            Text('Formu Temizle', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(
+              'Formu Temizle',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+            ),
           ],
         ),
         content: const Text(
           'Girdiğiniz tüm kargo ve alıcı bilgileri sıfırlanacaktır. Devam etmek istiyor musunuz?',
-          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
         ),
         actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Vazgeç', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Vazgeç',
+              style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w800),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warning,
+              backgroundColor: const Color(0xFFE11D48),
               foregroundColor: Colors.white,
-              minimumSize: const Size(100, 40),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
             ),
             onPressed: () {
               Navigator.pop(ctx);
               _clearAllFormFields();
               notifier.reset();
+              _setInitialDefaults();
+              notifier.calculateOffers();
             },
-            child: const Text('Temizle', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Temizle',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  void _showWarning(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline_rounded : Icons.warning_amber_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? const Color(0xFFE11D48) : const Color(0xFFD97706),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<bool> _checkBalanceAndConfirm(BuildContext context, WidgetRef ref, double cargoFee) async {
+    final balanceState = ref.read(dashboardProvider);
+    final availableBalance = balanceState.balance?.availableBalance ??
+        balanceState.balance?.balance ??
+        balanceState.stats?.availableBalance ??
+        0.0;
+
+    if (availableBalance < cargoFee) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Row(
+            children: [
+              Icon(Icons.account_balance_wallet_outlined, color: Color(0xFFD97706), size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Yetersiz Bakiye',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kargo taşıma ücreti (${AppFormatters.formatCurrency(cargoFee)}), cüzdan bakiyenizden (${AppFormatters.formatCurrency(availableBalance)}) yüksektir.',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Text(
+                  'Kargonuzu oluşturabilmek için bakiye yükleyebilir veya daha sonra tamamlamak üzere "Taslak" olarak kaydedebilirsiniz.',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'cancel'),
+              child: const Text(
+                'Vazgeç',
+                style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w800),
+              ),
+            ),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, 'draft'),
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              child: const Text(
+                'Taslak Kaydet',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, 'topup'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Bakiye Yükle',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (choice == 'topup') {
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TopUpBalanceScreen()),
+          );
+        }
+        return false;
+      } else if (choice == 'draft') {
+        ref.read(createCargoProvider.notifier).toggleDraft(true);
+        return true;
+      } else {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _showSuccessDialog(BuildContext context, String trackingCode) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: const BorderSide(color: Color(0xFF0F172A), width: 3),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD1FAE5),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF6EE7B7), width: 2),
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Color(0xFF059669),
+                size: 38,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Kargo Oluşturuldu!',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A),
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Takip barkodunuz üretildi ve kargo firması sistemine başarıyla işlendi.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+              ),
+              child: Text(
+                trackingCode.isNotEmpty ? trackingCode : 'STC-7185726557957',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _clearAllFormFields();
+                  ref.read(createCargoProvider.notifier).reset();
+                  ref.read(cargoListProvider.notifier).refresh();
+                  ref.read(dashboardProvider.notifier).refresh();
+                  ref.read(mainNavigationProvider.notifier).selectTab(1);
+                },
+                child: const Text(
+                  'KARGOLARIM EKRANINA GİT',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitCargoForm({bool isDraft = false}) async {
+    final notifier = ref.read(createCargoProvider.notifier);
+    final state = ref.read(createCargoProvider);
+
+    // 1. Gönderici Kontrolü
+    if (state.selectedSenderAddress == null) {
+      if (state.senderAddresses.isNotEmpty) {
+        notifier.setSenderAddress(state.senderAddresses.first);
+      } else {
+        _showWarning('Lütfen kargonun çıkış yapacağı gönderici adresini seçiniz veya yeni depo ekleyiniz.');
+        return;
+      }
+    }
+
+    // 2. Alıcı Ad Soyad
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      _showWarning('Lütfen alıcı ad ve soyadını giriniz.');
+      return;
+    }
+    if (name.length < 3) {
+      _showWarning('Lütfen geçerli bir alıcı ad ve soyadı giriniz (en az 3 karakter).');
+      return;
+    }
+
+    // 3. Telefon
+    final phoneDigits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    if (phoneDigits.length < 10) {
+      _showWarning('Lütfen en az 10 haneli geçerli bir telefon numarası giriniz.');
+      return;
+    }
+
+    // 4. İl & İlçe
+    if (state.selectedCity == null) {
+      _showWarning('Lütfen teslimat yapılacak ili (şehri) seçiniz.');
+      return;
+    }
+
+    // 5. Açık Adres
+    final address = _addressController.text.trim();
+    if (address.isEmpty || address.length < 5) {
+      _showWarning('Lütfen geçerli ve detaylı bir teslimat adresi giriniz.');
+      return;
+    }
+
+    // 6. Kapıda Ödeme
+    if (state.payOnDelivery) {
+      final podAmount = AppFormatters.parseDouble(_podAmountController.text);
+      if (podAmount <= 0) {
+        _showWarning('Kapıda ödeme seçildiğinde tahsil edilecek tutar en az 1 TL olmalıdır.');
+        return;
+      }
+      if (podAmount > 30000) {
+        _showWarning('Kapıda ödeme yasal tahsilat üst sınırı 30.000 TL\'dir.');
+        return;
+      }
+      notifier.updateAdditionalServices(payOnDeliveryAmount: podAmount);
+    }
+
+    // 7. Teklif Kontrolü
+    if (!isDraft && state.selectedOffer == null) {
+      if (state.offers.isNotEmpty) {
+        notifier.selectOffer(state.offers.first);
+      } else {
+        _showWarning('Lütfen kargonuzu taşımak için bir kargo firması seçiniz.');
+        return;
+      }
+    }
+
+    // 8. Bakiye Yeterlilik Kontrolü
+    final currentSelectedOffer = ref.read(createCargoProvider).selectedOffer;
+    if (!isDraft && !state.receiverPays && currentSelectedOffer != null && !state.canOffsetCargoFee) {
+      final canProceed = await _checkBalanceAndConfirm(
+        context,
+        ref,
+        currentSelectedOffer.price,
+      );
+      if (!canProceed) return;
+    }
+
+    notifier.toggleDraft(isDraft);
+    notifier.updateRecipientInfo(
+      name: name,
+      phone: _phoneController.text.trim(),
+      email: _emailController.text.trim(),
+      details: address,
+    );
+    notifier.updatePackageNotes(
+      orderNumber: _orderNumberController.text.trim(),
+      description: _descriptionController.text.trim(),
+    );
+
+    final success = await notifier.submitCargo();
+    if (!mounted) return;
+
+    if (success) {
+      final successMsg = ref.read(createCargoProvider).successMessage ?? '';
+      _showSuccessDialog(context, successMsg);
+    } else {
+      final error = ref.read(createCargoProvider).errorMessage;
+      final displayError = (error != null && error.trim().isNotEmpty)
+          ? error
+          : 'Kargo oluşturulamadı. Lütfen bilgilerinizi kontrol ediniz.';
+      _showWarning(displayError, isError: true);
+    }
+  }
+
+  void _openDirectoryModal(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final query = _customerSearchController.text.trim().toLowerCase();
+            final filtered = state.recipientAddresses.where((a) {
+              if (query.isEmpty) return true;
+              return a.name.toLowerCase().contains(query) ||
+                  a.phone.contains(query) ||
+                  (a.city?.name.toLowerCase().contains(query) ?? false) ||
+                  (a.district?.name.toLowerCase().contains(query) ?? false);
+            }).toList();
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'KAYITLI ALICI REHBERİ',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                        onPressed: () => Navigator.pop(ctx),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _customerSearchController,
+                    onChanged: (_) => setModalState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Müşteri adı veya telefon ara...',
+                      hintStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Flexible(
+                    child: filtered.isEmpty
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(vertical: 28),
+                            alignment: Alignment.center,
+                            child: Text(
+                              state.recipientAddresses.isEmpty
+                                  ? 'Henüz kayıtlı alıcı bulunmuyor.'
+                                  : 'Arama kriterine uygun alıcı bulunamadı.',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: filtered.length,
+                            separatorBuilder: (context, _) => const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final addr = filtered[index];
+                              return Material(
+                                color: const Color(0xFFF8FAFC),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                                ),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () {
+                                    _nameController.text = addr.name;
+                                    _phoneController.text = addr.phone;
+                                    _emailController.text = addr.email ?? '';
+                                    _addressController.text = addr.details;
+                                    _postalCodeController.text = addr.postalCode ?? '';
+                                    notifier.selectRecipientAddress(addr);
+                                    notifier.calculateOffers();
+                                    Navigator.pop(ctx);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          addr.name,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w900,
+                                            color: Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          '${addr.district?.name ?? ''}, ${addr.city?.name ?? ''} • ${addr.phone}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openSenderModal(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.75,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'GÖNDERİCİ DEPO SEÇİN',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF64748B)),
+                    onPressed: () => Navigator.pop(ctx),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: state.senderAddresses.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Kayıtlı gönderici depo adresi bulunamadı.',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: state.senderAddresses.length,
+                        separatorBuilder: (context, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final addr = state.senderAddresses[index];
+                          final isSelected = state.selectedSenderAddress?.id == addr.id;
+                          return Material(
+                            color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              side: BorderSide(
+                                color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                                width: isSelected ? 2 : 1.5,
+                              ),
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () {
+                                notifier.setSenderAddress(addr);
+                                notifier.calculateOffers();
+                                Navigator.pop(ctx);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                addr.name,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: isSelected ? const Color(0xFF1E40AF) : const Color(0xFF0F172A),
+                                                ),
+                                              ),
+                                              if (addr.isDefault) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFE2E8F0),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: const Text(
+                                                    'VARSAYILAN',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.w900,
+                                                      color: Color(0xFF1E293B),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            '${addr.district?.name ?? ''}, ${addr.city?.name ?? ''} • ${addr.phone}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      const Icon(Icons.check_circle_rounded, color: Color(0xFF2563EB), size: 20),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    AddSenderAddressModal.show(context, state.cities, notifier);
+                  },
+                  icon: const Icon(Icons.add_rounded, size: 18, color: Color(0xFF2563EB)),
+                  label: const Text(
+                    'YENİ DEPO EKLE',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF2563EB),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -165,97 +940,1602 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     final productsState = ref.watch(productsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF1F5F9), // Slate-100
       appBar: AppBar(
-        title: const Row(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        titleSpacing: 16,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A), size: 22),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.add_box_outlined, size: 20),
-            SizedBox(width: 8),
-            Text('Yeni Kargo Oluştur'),
+            Text(
+              'Yeni Kargo Oluştur',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A),
+                letterSpacing: -0.4,
+              ),
+            ),
+            Text(
+              'Dikey Hızlı Gönderi Formu',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF64748B),
+              ),
+            ),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.restart_alt_rounded),
-            tooltip: 'Formu Temizle',
-            onPressed: () => _showResetConfirmation(notifier),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFFFFF1F2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Color(0xFFFECDD3), width: 1),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => _showResetConfirmation(notifier),
+              child: const Text(
+                'SIFIRLA',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFE11D48),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
           ),
-          const SizedBox(width: 4),
         ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1.5),
+          child: Divider(height: 1.5, color: Color(0xFFE2E8F0)),
+        ),
       ),
       body: (state.isLoadingCities && state.cities.isEmpty)
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)))
           : GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
               behavior: HitTestBehavior.opaque,
               child: Column(
                 children: [
-                  StepperHeader(currentStep: state.currentStep),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16.0),
                       physics: const AlwaysScrollableScrollPhysics(),
-                      child: _buildCurrentStep(state, notifier, productsState.products),
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // 1. GÖNDERİ VE ÖDEME TÜRÜ
+                          _buildDeliveryTypeSection(state, notifier),
+                          const SizedBox(height: 14),
+
+                          // 2. ADRES BİLGİLERİ
+                          _buildAddressSection(state, notifier),
+                          const SizedBox(height: 14),
+
+                          // 3. PAKET & SİPARİŞ DETAYLARI
+                          _buildPackageDetailsSection(state, notifier, productsState.products),
+                          const SizedBox(height: 14),
+
+                          // 4. KARGO FİRMASI SEÇİMİ
+                          _buildCarrierOffersSection(state, notifier),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
                     ),
                   ),
-                  CargoBottomBar(
-                    state: state,
-                    notifier: notifier,
-                    onClearForm: _clearAllFormFields,
-                  ),
+
+                  // SABİT ALT AKSİYON BARI
+                  _buildStickyBottomBar(context, state, notifier),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildCurrentStep(
+  // BÖLÜM 1: GÖNDERİ TÜRÜ & KAPIDA ÖDEME
+  Widget _buildDeliveryTypeSection(CreateCargoState state, CreateCargoNotifier notifier) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 9,
+                    height: 9,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE11D48),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '1. GÖNDERİ VE ÖDEME TÜRÜ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'ZORUNLU',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFE11D48),
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // 3'lü Kalın Pill Butonlar
+          Container(
+            padding: const EdgeInsets.all(3.5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+            ),
+            child: Row(
+              children: [
+                _buildPillButton(
+                  title: 'Standart',
+                  isSelected: _deliveryType == 'standard',
+                  selectedColor: const Color(0xFF0F172A),
+                  onTap: () => _setDeliveryType('standard'),
+                ),
+                const SizedBox(width: 4),
+                _buildPillButton(
+                  title: 'Kapıda Ödeme',
+                  isSelected: _deliveryType == 'pod',
+                  selectedColor: const Color(0xFFE11D48),
+                  onTap: () => _setDeliveryType('pod'),
+                ),
+                const SizedBox(width: 4),
+                _buildPillButton(
+                  title: 'Alıcı Öder',
+                  isSelected: _deliveryType == 'receiver',
+                  selectedColor: const Color(0xFF4F46E5),
+                  onTap: () => _setDeliveryType('receiver'),
+                ),
+              ],
+            ),
+          ),
+
+          // Kapıda Ödeme Dinamik Açılan Detay Alanı
+          if (_deliveryType == 'pod') ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.only(top: 12),
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Color(0xFFFECDD3),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Tutar Girişi (Büyük & Vurgulu)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1F2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFDA4AF), width: 1.5),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'TAHSİL EDİLECEK TUTAR (₺):',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF881337),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Text(
+                              'Alıcıdan Alınacak',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFBE123C),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _podAmountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.5,
+                          ),
+                          decoration: InputDecoration(
+                            suffixText: ' ₺',
+                            suffixStyle: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFBE123C),
+                            ),
+                            hintText: '0.00',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFFDA4AF), width: 1.5),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFFDA4AF), width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFE11D48), width: 2),
+                            ),
+                          ),
+                          onChanged: (val) {
+                            final parsed = AppFormatters.parseDouble(val);
+                            notifier.updateAdditionalServices(payOnDeliveryAmount: parsed);
+                            notifier.calculateOffers();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Ödeme Alma Şekli
+                  const Text(
+                    'ÖDEME ALMA ŞEKLİ:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF1E293B),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildPodTypeOption(
+                          title: 'Nakit Tahsilat',
+                          isSelected: state.payOnDeliveryType == 'cash',
+                          onTap: () {
+                            notifier.updateAdditionalServices(payOnDeliveryType: 'cash');
+                            notifier.calculateOffers();
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildPodTypeOption(
+                          title: 'Kredi Kartı',
+                          isSelected: state.payOnDeliveryType == 'credit_card',
+                          onTap: () {
+                            notifier.updateAdditionalServices(payOnDeliveryType: 'credit_card');
+                            notifier.calculateOffers();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Mahsup Seçeneği
+                  Material(
+                    color: const Color(0xFFF8FAFC),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        notifier.updateAdditionalServices(canOffsetCargoFee: !state.canOffsetCargoFee);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: Checkbox(
+                                value: state.canOffsetCargoFee,
+                                activeColor: const Color(0xFFE11D48),
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                onChanged: (val) {
+                                  notifier.updateAdditionalServices(canOffsetCargoFee: val ?? false);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Kargo Taşıma Ücreti Tahsilattan Düşülsün',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF0F172A),
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Kargo bedeli cüzdanınızdan değil, müşteriden toplanan paradan kesilir.',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF64748B),
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPillButton({
+    required String title,
+    required bool isSelected,
+    required Color selectedColor,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: isSelected ? selectedColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: selectedColor.withValues(alpha: 0.35),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: isSelected ? FontWeight.w900 : FontWeight.w800,
+              color: isSelected ? Colors.white : const Color(0xFF334155),
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPodTypeOption({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF1F2) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFE11D48) : const Color(0xFFCBD5E1),
+            width: isSelected ? 2 : 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+              size: 16,
+              color: isSelected ? const Color(0xFFE11D48) : const Color(0xFF94A3B8),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w900,
+                color: isSelected ? const Color(0xFF881337) : const Color(0xFF0F172A),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // BÖLÜM 2: ADRESLER
+  Widget _buildAddressSection(CreateCargoState state, CreateCargoNotifier notifier) {
+    final senderName = state.selectedSenderAddress?.name ?? 'Merkez Depo';
+    final senderLocation = '${state.selectedSenderAddress?.district?.name ?? state.selectedSenderAddress?.city?.name ?? "Kadıköy / İstanbul"} • ${state.selectedSenderAddress?.phone ?? "0532 100 20 30"}';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '2',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'ADRES BİLGİLERİ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: () => _openDirectoryModal(context, state, notifier),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBFDBFE), width: 1),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.contacts_outlined, size: 14, color: Color(0xFF2563EB)),
+                      SizedBox(width: 4),
+                      Text(
+                        'REHBERDEN SEÇ',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF2563EB),
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Gönderici Depo Kartı
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDBEAFE),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'DEP',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF1E40AF),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              senderName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF0F172A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'VARSAYILAN',
+                              style: TextStyle(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        senderLocation,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF64748B),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => _openSenderModal(context, state, notifier),
+                  child: const Text(
+                    'Değiştir',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF2563EB),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Alıcı Müşteri Bilgileri
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Alıcı Müşteri Bilgileri',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              Text(
+                '* Zorunlu Alanlar',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF94A3B8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ALICI AD SOYAD *',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _nameController,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        hintText: 'Ad Soyad',
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+                        ),
+                      ),
+                      onChanged: (val) => notifier.updateRecipientInfo(name: val),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'TELEFON NO *',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        hintText: '05xx xxx xx xx',
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+                        ),
+                      ),
+                      onChanged: (val) => notifier.updateRecipientInfo(phone: val),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'İL (ŞEHİR) *',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    ),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<City>(
+                      key: ValueKey('city_${state.selectedCity?.id}'),
+                      menuMaxHeight: 250,
+                      isExpanded: true,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                      ),
+                      hint: const Text('Şehir Seçiniz', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      initialValue: state.cities.any((c) => c.id == state.selectedCity?.id)
+                          ? state.cities.firstWhere((c) => c.id == state.selectedCity?.id)
+                          : null,
+                      items: state.cities.map((city) {
+                        return DropdownMenuItem<City>(
+                          value: city,
+                          child: Text(city.name, overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (city) {
+                        notifier.selectCity(city);
+                        notifier.calculateOffers();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'İLÇE *',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    ),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<District>(
+                      key: ValueKey('district_${state.selectedCity?.id}_${state.selectedDistrict?.id}'),
+                      menuMaxHeight: 250,
+                      isExpanded: true,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                      ),
+                      hint: Text(
+                        state.isLoadingDistricts ? 'Yükleniyor...' : 'İlçe Seçiniz',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                      initialValue: state.districts.any((d) => d.id == state.selectedDistrict?.id)
+                          ? state.districts.firstWhere((d) => d.id == state.selectedDistrict?.id)
+                          : null,
+                      items: state.districts.map((dist) {
+                        return DropdownMenuItem<District>(
+                          value: dist,
+                          child: Text(dist.name, overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: state.selectedCity == null
+                          ? null
+                          : (dist) {
+                              notifier.selectDistrict(dist);
+                              notifier.calculateOffers();
+                            },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'TESLİMAT ADRESİ *',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: _addressController,
+                maxLines: 2,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                decoration: InputDecoration(
+                  hintText: 'Cadde, sokak, bina no, daire, tarif...',
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  contentPadding: const EdgeInsets.all(10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+                  ),
+                ),
+                onChanged: (val) => notifier.updateRecipientInfo(details: val),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // BÖLÜM 3: PAKET & SİPARİŞ DETAYLARI
+  Widget _buildPackageDetailsSection(
     CreateCargoState state,
     CreateCargoNotifier notifier,
     List<ProductModel> products,
   ) {
-    switch (state.currentStep) {
-      case 0:
-        return Step1AddressesWidget(
-          state: state,
-          notifier: notifier,
-          cities: state.cities,
-          districts: state.districts,
-          nameController: _nameController,
-          phoneController: _phoneController,
-          emailController: _emailController,
-          addressController: _addressController,
-          postalCodeController: _postalCodeController,
-        );
-      case 1:
-        return Step2PackageWidget(
-          state: state,
-          notifier: notifier,
-          products: products,
-          orderNumberController: _orderNumberController,
-          descriptionController: _descriptionController,
-          widthController: _widthController,
-          lengthController: _lengthController,
-          heightController: _heightController,
-          weightController: _weightController,
-          desiController: _desiController,
-          onProductSelected: (prod) => _populateFromProduct(prod, notifier),
-          onClearProduct: () => _clearSelectedProduct(notifier),
-          onAddNewProduct: () => AddEditProductModal.show(context, ref),
-        );
-      case 2:
-        return Step3ServicesWidget(
-          state: state,
-          notifier: notifier,
-          podAmountController: _podAmountController,
-        );
-      case 3:
-        return Step4OffersWidget(
-          state: state,
-          notifier: notifier,
-        );
-      default:
-        return const SizedBox.shrink();
+    ProductModel? matchedProduct;
+    if (state.selectedProduct != null) {
+      matchedProduct = products.cast<ProductModel?>().firstWhere(
+        (p) => p?.id == state.selectedProduct?.id,
+        orElse: () => null,
+      );
     }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '3',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'PAKET & SİPARİŞ DETAYLARI',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF6EE7B7), width: 1),
+                ),
+                child: Text(
+                  '${_calculatedDesi.toStringAsFixed(2)} DESİ',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF065F46),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Hızlı Kayıtlı Ürün Seçimi
+          const Text(
+            'KAYITLI ÜRÜN KATALOĞUNDAN SEÇ:',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<ProductModel?>(
+                  menuMaxHeight: 250,
+                  isExpanded: true,
+                  initialValue: matchedProduct,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem<ProductModel?>(
+                      value: null,
+                      child: Text('Özel / Manuel Paket Boyutu', overflow: TextOverflow.ellipsis),
+                    ),
+                    ...products.map((p) {
+                      return DropdownMenuItem<ProductModel?>(
+                        value: p,
+                        child: Text(
+                          '${p.name} (${p.desi.toStringAsFixed(1)} Desi - ${AppFormatters.formatCurrency(p.price)})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }),
+                  ],
+                  onChanged: (p) {
+                    if (p != null) {
+                      _populateFromProduct(p);
+                    } else {
+                      _clearSelectedProduct();
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                ),
+                child: IconButton(
+                  tooltip: 'Yeni Ürün Ekle',
+                  icon: const Icon(Icons.add_rounded, size: 20, color: Color(0xFF0F172A)),
+                  onPressed: () => AddEditProductModal.show(context, ref),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 4'lü Kompakt Boyut Girişi (En, Boy, Yükseklik, Ağırlık)
+          Row(
+            children: [
+              _buildDimensionInput('En (cm)', _widthController),
+              const SizedBox(width: 6),
+              _buildDimensionInput('Boy (cm)', _lengthController),
+              const SizedBox(width: 6),
+              _buildDimensionInput('Yükseklik', _heightController),
+              const SizedBox(width: 6),
+              _buildDimensionInput('Ağırlık (kg)', _weightController),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Sipariş No & İçerik Açıklaması
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'SİPARİŞ / FATURA NO',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _orderNumberController,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        hintText: 'Örn: TY-84920',
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                      ),
+                      onChanged: (val) => notifier.updatePackageNotes(orderNumber: val),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'KARGO İÇERİK / ETİKET',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _descriptionController,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        hintText: 'Örn: Tekstil Ürünü',
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                      ),
+                      onChanged: (val) => notifier.updatePackageNotes(description: val),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDimensionInput(String label, TextEditingController controller) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF64748B),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A),
+              ),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                isDense: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                ),
+              ),
+              onChanged: (_) => _calculateDesi(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // BÖLÜM 4: CANLI KARGO TEKLİFLERİ
+  Widget _buildCarrierOffersSection(CreateCargoState state, CreateCargoNotifier notifier) {
+    double minPrice = 0.0;
+    if (state.offers.isNotEmpty) {
+      minPrice = state.offers.map((o) => o.price).reduce(math.min);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '4',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'KARGO FİRMASI SEÇİMİ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'CANLI TARİFELER',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF6D28D9),
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (state.isLoadingOffers)
+            Container(
+              padding: const EdgeInsets.all(24),
+              alignment: Alignment.center,
+              child: const Column(
+                children: [
+                  CircularProgressIndicator(color: Color(0xFF7C3AED), strokeWidth: 2.5),
+                  SizedBox(height: 10),
+                  Text(
+                    'Anlık kargo tarifeleri hesaplanıyor...',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            )
+          else if (state.offers.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              alignment: Alignment.center,
+              child: Column(
+                children: [
+                  const Text(
+                    'Tarife bulunamadı.',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => notifier.calculateOffers(),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Teklifleri Yenile', style: TextStyle(fontWeight: FontWeight.w900)),
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: state.offers.length,
+              separatorBuilder: (context, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final offer = state.offers[index];
+                final isSelected = state.selectedOffer?.cargoCompany.id == offer.cargoCompany.id;
+                // KULLANICI AÇIK TALİMATI: En hızlı olan önemli değil, sadece en uygun fiyatlı olanı belirtmemiz yeterli!
+                final isCheapest = state.offers.length > 1 && (offer.price - minPrice).abs() < 0.01;
+
+                return Material(
+                  color: isSelected ? const Color(0xFFF8FAFC) : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                      width: isSelected ? 3.0 : 1.5,
+                    ),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => notifier.selectOffer(offer),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                      child: Row(
+                        children: [
+                          CargoCompanyLogo(
+                            companyId: offer.cargoCompany.id.toString(),
+                            companyName: offer.cargoCompany.title,
+                            height: 28,
+                            isHorizontal: true,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        offer.cargoCompany.title,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    // Yalnızca en ucuz olan teklife EN UYGUN FİYAT rozeti verilir
+                                    if (isCheapest) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF059669),
+                                          borderRadius: BorderRadius.circular(999),
+                                        ),
+                                        child: const Text(
+                                          'EN UYGUN FİYAT',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _getCarrierDeliverySubtitle(offer.cargoCompany.id.toString()),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                AppFormatters.formatCurrency(offer.price),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: isCheapest ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              const Text(
+                                'KDV DAHİL',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF94A3B8),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _getCarrierDeliverySubtitle(String rawId) {
+    final lower = rawId.toLowerCase();
+    if (lower.contains('hepsijet')) return 'Ertesi Gün Teslimat';
+    if (lower.contains('surat')) return '1-2 İş Günü';
+    if (lower.contains('ptt')) return '2-3 İş Günü';
+    if (lower.contains('kolay')) return 'Adresten Kurye Alımı';
+    if (lower.contains('yurtici')) return '1-2 İş Günü';
+    return '1-3 İş Günü';
+  }
+
+  // ALT SABİT ONAY BARI
+  Widget _buildStickyBottomBar(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier) {
+    final carrierTitle = state.selectedOffer != null
+        ? state.selectedOffer!.cargoCompany.title
+        : 'Firma Seçiniz';
+    final totalPrice = state.selectedOffer?.price ?? 0.0;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(
+          top: BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'SEÇİLEN FİRMA',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      carrierTitle,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'TOPLAM KARGO BEDELİ',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF64748B),
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      AppFormatters.formatCurrency(totalPrice),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                // Taslak Olarak Kaydet Butonu
+                Container(
+                  width: 52,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                  ),
+                  child: IconButton(
+                    tooltip: 'Taslak Olarak Kaydet',
+                    icon: const Icon(Icons.bookmark_add_outlined, color: Color(0xFF0F172A), size: 22),
+                    onPressed: state.isSubmitting ? null : () => _submitCargoForm(isDraft: true),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Kargoyu Oluştur Butonu
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 4,
+                        shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.3),
+                      ),
+                      onPressed: state.isSubmitting ? null : () => _submitCargoForm(isDraft: false),
+                      child: state.isSubmitting
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'KARGOYU OLUŞTUR',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward_rounded, size: 18),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
