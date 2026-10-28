@@ -10,6 +10,7 @@ import '../../products/widgets/add_edit_product_modal.dart';
 import '../../products/widgets/product_card.dart';
 import '../../products/widgets/product_empty_state.dart';
 import '../providers/pricing_provider.dart';
+import '../widgets/live_price_calculator.dart';
 import '../widgets/pricing_empty_state.dart';
 import '../widgets/pricing_plan_card.dart';
 
@@ -166,7 +167,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
             CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
             SizedBox(height: 16),
             Text(
-              'Anlaşmalı kargo tarifeleri yükleniyor...',
+              'Anlasmalı kargo tarifeleri yukleniyor...',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ],
@@ -176,7 +177,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
 
     if (pricingState.errorMessage != null && pricingState.plans.isEmpty) {
       return AppErrorState(
-        title: 'Fiyat Tarifeleri Yüklenemedi',
+        title: 'Fiyat Tarifeleri Yuklenemedi',
         message: pricingState.errorMessage!,
         onRetry: () => pricingNotifier.refresh(),
       );
@@ -189,14 +190,53 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
     return RefreshIndicator(
       onRefresh: () => pricingNotifier.refresh(),
       color: AppColors.primary,
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: pricingState.plans.length,
-        itemBuilder: (context, index) {
-          final plan = pricingState.plans[index];
-          return PricingPlanCard(plan: plan);
-        },
+        children: [
+          // Canli Fiyat Hesaplama Kutucugu
+          LivePriceCalculator(plans: pricingState.plans),
+          const SizedBox(height: 16),
+
+          // Firma Detay Tarifeleri Basligi
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'FIRMA DETAY TARiFELERi',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    '${pricingState.plans.length} ANLASMA',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Kargo Firma Tarifeleri Listesi
+          ...pricingState.plans.map((plan) => PricingPlanCard(plan: plan)),
+        ],
       ),
     );
   }
@@ -336,6 +376,35 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
           ],
         ),
         actions: [
+          // API AKTİF rozeti — sadece pricing sekmesinde ve veriler yuklendiginde
+          if (!isProductsTab) ...[
+            Consumer(builder: (context, ref, _) {
+              final plans = ref.watch(pricingProvider).plans;
+              if (plans.isNotEmpty) {
+                return Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD1FAE5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF6EE7B7)),
+                    ),
+                    child: const Text(
+                      'API AKTiF',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF065F46),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+          ],
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Yenile',
