@@ -8,6 +8,9 @@ import 'package:stocado_mobile/features/cargo/models/address_model.dart';
 import 'package:stocado_mobile/features/cargo/models/cargo_model.dart';
 import 'package:stocado_mobile/features/cargo/widgets/cargo_company_logo.dart';
 import 'package:stocado_mobile/features/cargo/widgets/cargo_detail_modal.dart';
+import 'package:stocado_mobile/features/cargo/widgets/cargo_card.dart';
+import 'package:stocado_mobile/features/cargo/widgets/cargo_status_icon.dart';
+import 'package:stocado_mobile/features/cargo/screens/cargos_screen.dart';
 import 'package:stocado_mobile/features/cargo/providers/cargo_list_provider.dart';
 import 'package:stocado_mobile/features/dashboard/models/dashboard_stats_model.dart';
 import 'package:stocado_mobile/features/dashboard/providers/dashboard_provider.dart';
@@ -1202,5 +1205,322 @@ void main() {
       expect(acc2.accountCode, 'CODE789');
     });
   });
+
+  group('CargoStatusIcon & Status Rozeti Testleri', () {
+    testWidgets('Teslim Edildi durumu icin yesil dairesel rozet ve tik ikonu render edilir', (tester) async {
+      final cargo = CargoModel(
+        id: 1,
+        processNumber: 'P100',
+        outTrackingCode: 'HJV123',
+        status: 2,
+        payOnDelivery: false,
+        latestTransactionType: 6,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargo),
+          ),
+        ),
+      );
+
+      expect(find.byType(CargoStatusIcon), findsOneWidget);
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+
+      final container = tester.widget<Container>(
+        find.descendant(of: find.byType(CargoStatusIcon), matching: find.byType(Container)),
+      );
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF10B981));
+      expect(decoration.shape, BoxShape.circle);
+    });
+
+    testWidgets('Dagitimda durumu icin acik mavi rozet ve kurye ikonu render edilir', (tester) async {
+      final cargo = CargoModel(
+        id: 2,
+        processNumber: 'P101',
+        outTrackingCode: 'HJV124',
+        status: 1,
+        payOnDelivery: false,
+        latestTransactionType: 5,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargo),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.delivery_dining_rounded), findsOneWidget);
+
+      final container = tester.widget<Container>(
+        find.descendant(of: find.byType(CargoStatusIcon), matching: find.byType(Container)),
+      );
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF0284C7));
+    });
+
+    testWidgets('Yolda durumu icin canli mavi rozet ve kamyon ikonu render edilir', (tester) async {
+      final cargo = CargoModel(
+        id: 3,
+        processNumber: 'P102',
+        outTrackingCode: 'HJV125',
+        status: 2,
+        payOnDelivery: false,
+        latestTransactionType: 3,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargo),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.local_shipping_rounded), findsOneWidget);
+
+      final container = tester.widget<Container>(
+        find.descendant(of: find.byType(CargoStatusIcon), matching: find.byType(Container)),
+      );
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF2563EB));
+    });
+
+    testWidgets('Sorunlu ve Iade durumu icin canli turuncu rozet render edilir', (tester) async {
+      final cargo = CargoModel(
+        id: 4,
+        processNumber: 'P103',
+        outTrackingCode: 'HJV126',
+        status: 4,
+        payOnDelivery: false,
+        latestTransactionType: 10,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargo),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.assignment_return_rounded), findsOneWidget);
+
+      final container = tester.widget<Container>(
+        find.descendant(of: find.byType(CargoStatusIcon), matching: find.byType(Container)),
+      );
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFFF97316));
+    });
+  });
+
+  group('CargoCard Yeni Tasarim & Etkilesim Testleri', () {
+    testWidgets('CargoCard gorsel mockup tasarimina uygun tum alanlari eksiksiz render eder', (tester) async {
+      final testCargo = CargoModel(
+        id: 101,
+        processNumber: 'STC999',
+        outTrackingCode: 'HJV1234567890',
+        cargoCompanyId: 'hepsijet',
+        status: 2,
+        latestTransactionType: 3,
+        createdAt: DateTime(2025, 3, 12, 10, 0),
+        payOnDelivery: true,
+        payOnDeliveryAmount: 1250.0,
+        payOnDeliveryCost: 0.0,
+        receiver: CargoParty(
+          id: 'rec-1',
+          name: 'Ayşe Yılmaz',
+          phone: '05551234567',
+          city: LocationRef(id: '06', name: 'Ankara'),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoCard(cargo: testCargo),
+          ),
+        ),
+      );
+
+      // 1. Logo ve Takip No
+      expect(find.text('HJV1234567890'), findsOneWidget);
+      expect(find.byIcon(Icons.copy_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
+
+      // 2. Alici ve Sehir
+      expect(find.text('Ayşe Yılmaz'), findsOneWidget);
+      expect(find.text('Ankara'), findsOneWidget);
+
+      // 3. Durum Simgesi ve Tarih
+      expect(find.byType(CargoStatusIcon), findsOneWidget);
+      expect(find.text('12 Mar 2025'), findsOneWidget);
+
+      // 4. Kapida Odeme Seridi
+      expect(find.text('Kapıda Ödeme'), findsOneWidget);
+      expect(find.text('1.250,00 ₺'), findsOneWidget);
+      expect(find.byIcon(Icons.account_balance_wallet_outlined), findsOneWidget);
+    });
+
+    testWidgets('Kopyala ikonuna basildiginda pano geri bildirimi verilir', (tester) async {
+      final testCargo = CargoModel(
+        id: 102,
+        processNumber: 'P200',
+        outTrackingCode: 'HJV987654',
+        status: 1,
+        payOnDelivery: false,
+        receiver: CargoParty(
+          id: 'rec-2',
+          name: 'Mehmet Kaya',
+          phone: '05559876543',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoCard(cargo: testCargo),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.copy_rounded));
+      await tester.pump();
+
+      expect(find.textContaining('Takip numarası kopyalandı'), findsOneWidget);
+    });
+  });
+
+  group('CargosScreen Yeniden Tasarim & Filtre Testleri', () {
+    testWidgets('CargosScreen baslik, arama kutusu ve 3lu pill sekmelerini dogru render eder', (tester) async {
+      final mockCargos = [
+        CargoModel(
+          id: 1,
+          processNumber: 'P1',
+          outTrackingCode: 'HJV1',
+          cargoCompanyId: 'hepsijet',
+          status: 2,
+          latestTransactionType: 3,
+          createdAt: DateTime(2025, 3, 12),
+          payOnDelivery: true,
+          payOnDeliveryAmount: 1250.0,
+          receiver: CargoParty(id: '1', name: 'Ayşe Yılmaz', phone: '0555', city: LocationRef(id: '6', name: 'Ankara')),
+        ),
+        CargoModel(
+          id: 2,
+          processNumber: 'P2',
+          outTrackingCode: 'SR2',
+          cargoCompanyId: 'surat',
+          status: 2,
+          latestTransactionType: 6,
+          createdAt: DateTime(2025, 3, 11),
+          payOnDelivery: false,
+          receiver: CargoParty(id: '2', name: 'Mehmet Kaya', phone: '0555', city: LocationRef(id: '34', name: 'İstanbul')),
+        ),
+      ];
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(
+                isInitialized: true,
+                token: 'valid_token',
+                user: UserModel(
+                  id: '1',
+                  firstName: 'Emirhan',
+                  lastName: 'Demir',
+                  fullName: 'Emirhan Demir',
+                  email: 'e@test.com',
+                  accountId: 'acc-1',
+                  accounts: [],
+                ),
+              ),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(
+              DashboardState(
+                isLoading: false,
+                stats: DashboardStats(
+                  totalCargos: 252,
+                  activeCargos: 28,
+                  problematicCargos: 3,
+                  pendingCargos: 5,
+                  deliveredToday: 206,
+                  deliveryRate: 98.0,
+                  balance: 20208.35,
+                  availableBalance: 20208.35,
+                  offsetBalance: 0,
+                  podCargoCount: 15,
+                  podPending: 8450.0,
+                  podCollected: 5000.0,
+                  podWillPay: 8450.0,
+                  recentCargos: const [],
+                  weeklyTrend: const [],
+                ),
+              ),
+            ),
+          ),
+          cargoListProvider.overrideWith(
+            () => _TestCargoListNotifier(
+              CargoListState(
+                isLoading: false,
+                cargos: mockCargos,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CargosScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // 1. Baslik ve Butonlar
+      expect(find.text('Kargolarım'), findsOneWidget);
+      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+
+      // 2. Arama Kutusu
+      expect(find.text('Ad, telefon veya barkod ara'), findsOneWidget);
+
+      // 3. 3 Kompakt Pill Tab ve Sayaclar (Mockup uyumu: Tumu 252, Yolda 28, Sorunlu 3)
+      expect(find.text('Tümü'), findsOneWidget);
+      expect(find.text('252'), findsOneWidget);
+      expect(find.text('Yolda'), findsOneWidget);
+      expect(find.text('28'), findsOneWidget);
+      expect(find.text('Sorunlu'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+
+      // 4. Kargo Kartlari
+      expect(find.text('Ayşe Yılmaz'), findsOneWidget);
+      expect(find.text('Mehmet Kaya'), findsOneWidget);
+
+      // 5. Pill sekmesine tiklama testi
+      await tester.tap(find.text('Yolda'));
+      await tester.pump();
+      expect(container.read(cargoListProvider).selectedStatus, '1');
+
+      await tester.tap(find.text('Sorunlu'));
+      await tester.pump();
+      expect(container.read(cargoListProvider).selectedStatus, '4');
+
+      await tester.tap(find.text('Tümü'));
+      await tester.pump();
+      expect(container.read(cargoListProvider).selectedStatus, isNull);
+    });
+  });
 }
+
 

@@ -252,13 +252,13 @@ class CargoService {
           statusInt = parsed;
         } else if (statusFilter == 'drafts') {
           statusInt = 0;
-        } else if (statusFilter == 'active') {
+        } else if (statusFilter == 'active' || statusFilter == 'yolda' || statusFilter == 'in_transit') {
           statusInt = 1;
         } else if (statusFilter == 'delivered' || statusFilter == 'completed') {
           statusInt = 2;
         } else if (statusFilter == 'cancelled') {
           statusInt = 3;
-        } else if (statusFilter == 'failed') {
+        } else if (statusFilter == 'failed' || statusFilter == 'sorunlu' || statusFilter == 'problematic') {
           statusInt = 4;
         }
       }

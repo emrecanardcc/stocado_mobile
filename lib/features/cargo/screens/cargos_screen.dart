@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/app_formatters.dart';
 import '../../../core/widgets/app_error_state.dart';
+import '../../dashboard/providers/dashboard_provider.dart';
 import '../providers/cargo_list_provider.dart';
 import '../widgets/cargo_card.dart';
 import '../widgets/cargo_company_logo.dart';
@@ -15,28 +17,17 @@ class CargosScreen extends ConsumerStatefulWidget {
   ConsumerState<CargosScreen> createState() => _CargosScreenState();
 }
 
-class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _CargosScreenState extends ConsumerState<CargosScreen> {
   late final ScrollController _scrollController;
   final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
+  final FocusNode _searchFocusNode = FocusNode();
   Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(_handleTabChange);
-
     _scrollController = ScrollController();
     _scrollController.addListener(_handleScroll);
-  }
-
-  void _handleTabChange() {
-    if (_tabController.indexIsChanging) return;
-    final tabs = ['all', 'pod', 'drafts'];
-    ref.read(cargoListProvider.notifier).setTab(tabs[_tabController.index]);
-    setState(() {});
   }
 
   void _handleScroll() {
@@ -48,9 +39,9 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _tabController.dispose();
     _scrollController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -97,47 +88,6 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
     }
   }
 
-  Widget _buildFilterChip(int index, String title, IconData icon) {
-    final isSelected = _tabController.index == index;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          _tabController.animateTo(index);
-          setState(() {});
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected ? AppColors.softShadow : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 15,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildFilterChipItem({
     required String label,
     required bool isSelected,
@@ -150,16 +100,16 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.white,
+          color: isSelected ? const Color(0xFF0E1E38) : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
+            color: isSelected ? const Color(0xFF0E1E38) : const Color(0xFFE2E8F0),
             width: 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.25),
+                    color: const Color(0xFF0E1E38).withValues(alpha: 0.25),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   )
@@ -178,7 +128,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? Colors.white : AppColors.textPrimary,
+                color: isSelected ? Colors.white : const Color(0xFF0F172A),
               ),
             ),
           ],
@@ -191,9 +141,9 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 4, 6, 4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: const Color(0xFF0E1E38).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        border: Border.all(color: const Color(0xFF0E1E38).withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -203,7 +153,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+              color: Color(0xFF0E1E38),
             ),
           ),
           const SizedBox(width: 4),
@@ -212,10 +162,103 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
             child: const Icon(
               Icons.cancel_rounded,
               size: 16,
-              color: AppColors.primary,
+              color: Color(0xFF0E1E38),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPillTab({
+    required String label,
+    required int count,
+    required bool isSelected,
+    required VoidCallback onTap,
+    bool isHighlight = false,
+  }) {
+    final countStr = AppFormatters.formatNumber(count);
+
+    Color bgColor;
+    Color textColor;
+    Color badgeBg;
+    Color badgeText;
+    Border? border;
+
+    if (isSelected) {
+      bgColor = const Color(0xFF0E1E38); // Koyu Lacivert Seçili Zemin
+      textColor = Colors.white;
+      badgeBg = Colors.white.withValues(alpha: 0.2);
+      badgeText = Colors.white;
+      border = null;
+    } else if (isHighlight) {
+      bgColor = const Color(0xFFFEF3C7); // Açık Turuncu/Sarı Vurgulu Zemin
+      textColor = const Color(0xFFD97706);
+      badgeBg = const Color(0xFFFDE68A);
+      badgeText = const Color(0xFF92400E);
+      border = Border.all(color: const Color(0xFFFCD34D), width: 0.8);
+    } else {
+      bgColor = const Color(0xFFF8FAFC);
+      textColor = const Color(0xFF475569);
+      badgeBg = const Color(0xFFE2E8F0);
+      badgeText = const Color(0xFF475569);
+      border = Border.all(color: const Color(0xFFE2E8F0), width: 0.8);
+    }
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: border,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF0E1E38).withValues(alpha: 0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: textColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  countStr,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: badgeText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -248,7 +291,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: AppColors.border,
+                          color: const Color(0xFFCBD5E1),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -259,14 +302,14 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.tune_rounded, size: 20, color: AppColors.primary),
+                            Icon(Icons.tune_rounded, size: 20, color: Color(0xFF0E1E38)),
                             SizedBox(width: 8),
                             Text(
                               'Kargoları Filtrele',
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                                color: Color(0xFF0F172A),
                               ),
                             ),
                           ],
@@ -289,7 +332,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                               'Sıfırla',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.textSecondary,
+                                color: Color(0xFF64748B),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -297,14 +340,14 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const Divider(height: 1, color: AppColors.border),
+                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
                     const SizedBox(height: 16),
                     const Text(
                       'Kargo Firması',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: Color(0xFF0F172A),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -361,7 +404,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: Color(0xFF0F172A),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -380,8 +423,8 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                           onSelected: () => setSheetState(() => tempStatus = '0'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Aktif',
-                          isSelected: tempStatus == '1' || tempStatus == 'active',
+                          label: 'Aktif / Yolda',
+                          isSelected: tempStatus == '1' || tempStatus == 'active' || tempStatus == 'yolda',
                           onSelected: () => setSheetState(() => tempStatus = '1'),
                         ),
                         _buildFilterChipItem(
@@ -395,8 +438,8 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                           onSelected: () => setSheetState(() => tempStatus = '3'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Başarısız',
-                          isSelected: tempStatus == '4' || tempStatus == 'failed' || tempStatus == 'problematic',
+                          label: 'Başarısız / Sorunlu',
+                          isSelected: tempStatus == '4' || tempStatus == 'failed' || tempStatus == 'problematic' || tempStatus == 'sorunlu',
                           onSelected: () => setSheetState(() => tempStatus = '4'),
                         ),
                       ],
@@ -407,7 +450,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: Color(0xFF0F172A),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -420,7 +463,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                             leading: Icon(
                               Icons.arrow_downward_rounded,
                               size: 15,
-                              color: tempSort == 'desc' ? Colors.white : AppColors.primary,
+                              color: tempSort == 'desc' ? Colors.white : const Color(0xFF0E1E38),
                             ),
                             onSelected: () => setSheetState(() => tempSort = 'desc'),
                           ),
@@ -433,7 +476,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                             leading: Icon(
                               Icons.arrow_upward_rounded,
                               size: 15,
-                              color: tempSort == 'asc' ? Colors.white : AppColors.primary,
+                              color: tempSort == 'asc' ? Colors.white : const Color(0xFF0E1E38),
                             ),
                             onSelected: () => setSheetState(() => tempSort = 'asc'),
                           ),
@@ -451,7 +494,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
                         Navigator.pop(ctx);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: const Color(0xFF0E1E38),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -478,224 +521,303 @@ class _CargosScreenState extends ConsumerState<CargosScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     final state = ref.watch(cargoListProvider);
     final notifier = ref.read(cargoListProvider.notifier);
+    final dashStats = ref.watch(dashboardProvider).stats;
+
+    // Sayaç verileri (Dashboard istatistikleri veya meta verisi üzerinden)
+    final allCount = dashStats?.totalCargos ?? (state.meta?.total ?? state.cargos.length);
+    final inTransitCount = dashStats?.activeCargos ?? state.cargos.where((c) => c.status == 1 || c.status == 2).length;
+    final problematicCount = dashStats?.problematicCargos ?? state.cargos.where((c) => c.status == 4 || c.status == 3).length;
+
+    // Aktif sekme kontrolü
+    final isAllSelected = state.selectedStatus == null || state.selectedStatus == 'all';
+    final isInTransitSelected = state.selectedStatus == '1' || state.selectedStatus == 'active' || state.selectedStatus == 'yolda';
+    final isProblematicSelected = state.selectedStatus == '4' || state.selectedStatus == 'failed' || state.selectedStatus == 'problematic' || state.selectedStatus == 'sorunlu';
+
+    final hasCustomFilters = (state.selectedCargoCompany != null && state.selectedCargoCompany!.isNotEmpty) ||
+        (state.selectedStatus != null && state.selectedStatus != 'all' && state.selectedStatus != '1' && state.selectedStatus != '4') ||
+        state.sortDirection != 'desc';
 
     return PopScope(
-      canPop: !_isSearching,
+      canPop: _searchController.text.isEmpty,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && _isSearching) {
+        if (!didPop && _searchController.text.isNotEmpty) {
           setState(() {
             _debounceTimer?.cancel();
             _searchController.clear();
+            _searchFocusNode.unfocus();
             notifier.setSearch('');
-            _isSearching = false;
           });
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-                cursorColor: Colors.white,
-                decoration: const InputDecoration(
-                  hintText: 'Barkod, alıcı adı veya takip no...',
-                  hintStyle: TextStyle(color: Colors.white60, fontSize: 14),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                  filled: false,
-                ),
-                onChanged: (val) {
-                  _debounceTimer?.cancel();
-                  _debounceTimer = Timer(const Duration(milliseconds: 350), () {
-                    notifier.setSearch(val.trim());
-                  });
-                },
-                onSubmitted: (val) {
-                  _debounceTimer?.cancel();
-                  notifier.setSearch(val.trim());
-                },
-              )
-            : const Row(
-                children: [
-                  Icon(Icons.local_shipping_outlined, size: 20),
-                  SizedBox(width: 8),
-                  Text('Kargolarım'),
-                ],
-              ),
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
-            tooltip: _isSearching ? 'Aramayı Kapat' : 'Ara',
-            onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _debounceTimer?.cancel();
-                  _searchController.clear();
-                  notifier.setSearch('');
-                  _isSearching = false;
-                } else {
-                  _isSearching = true;
-                }
-              });
-            },
-          ),
-          IconButton(
-            icon: Badge(
-              isLabelVisible: state.hasActiveFilters,
-              smallSize: 8,
-              backgroundColor: AppColors.accent,
-              child: const Icon(Icons.tune_rounded),
-            ),
-            tooltip: 'Filtrele',
-            onPressed: () => _showFilterSheet(context),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Filtre Sekmeleri (Pill Selector)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: Colors.white,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceSecondary,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
-                children: [
-                  _buildFilterChip(0, 'Tümü', Icons.list_alt_rounded),
-                  _buildFilterChip(1, 'Kapıda Ödemeli', Icons.payments_outlined),
-                  _buildFilterChip(2, 'Taslaklar', Icons.drafts_outlined),
-                ],
-              ),
-            ),
-          ),
-          const Divider(height: 1, color: AppColors.border),
-
-          // Aktif Filtre Etiketleri (Varsa)
-          if (state.hasActiveFilters)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Colors.white,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Üst Başlık ve İkonlar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 6),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    if (state.selectedCargoCompany != null) ...[
-                      _buildActiveFilterTag(
-                        label: 'Firma: ${_companyLabel(state.selectedCargoCompany)}',
-                        onDeleted: () => notifier.setCargoCompany(null),
+                    const Text(
+                      'Kargolarım',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0E1E38),
+                        letterSpacing: -0.5,
                       ),
-                      const SizedBox(width: 8),
-                    ],
-                    if (state.selectedStatus != null && state.selectedStatus != 'all') ...[
-                      _buildActiveFilterTag(
-                        label: 'Durum: ${_statusLabel(state.selectedStatus)}',
-                        onDeleted: () => notifier.setStatusFilter(null),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    if (state.sortDirection != 'desc') ...[
-                      _buildActiveFilterTag(
-                        label: 'Sıralama: Eskiden Yeniye',
-                        onDeleted: () => notifier.setSortDirection('desc'),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    TextButton.icon(
-                      onPressed: () => notifier.clearFilters(),
-                      icon: const Icon(Icons.close_rounded, size: 14, color: AppColors.textSecondary),
-                      label: const Text(
-                        'Temizle',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.search, size: 24, color: Color(0xFF0E1E38)),
+                          tooltip: 'Ara',
+                          onPressed: () => _searchFocusNode.requestFocus(),
+                        ),
+                        IconButton(
+                          icon: Badge(
+                            isLabelVisible: hasCustomFilters,
+                            smallSize: 8,
+                            backgroundColor: AppColors.accent,
+                            child: const Icon(Icons.tune_rounded, size: 24, color: Color(0xFF0E1E38)),
+                          ),
+                          tooltip: 'Filtrele',
+                          onPressed: () => _showFilterSheet(context),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ),
 
-          if (state.errorMessage != null && state.cargos.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.errorLight,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+              // 2. Arama Kutusu ("Ad, telefon veya barkod ara")
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Container(
+                  height: 46,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF0F172A),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: 'Ad, telefon veya barkod ara',
+                            hintStyle: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF94A3B8),
+                              fontWeight: FontWeight.w400,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onChanged: (val) {
+                            _debounceTimer?.cancel();
+                            _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+                              notifier.setSearch(val.trim());
+                            });
+                            setState(() {});
+                          },
+                          onSubmitted: (val) {
+                            _debounceTimer?.cancel();
+                            notifier.setSearch(val.trim());
+                          },
+                        ),
+                      ),
+                      if (_searchController.text.isNotEmpty)
+                        GestureDetector(
+                          onTap: () {
+                            _debounceTimer?.cancel();
+                            _searchController.clear();
+                            notifier.setSearch('');
+                            setState(() {});
+                          },
+                          child: const Icon(
+                            Icons.cancel_rounded,
+                            size: 18,
+                            color: Color(0xFF94A3B8),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.error),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      state.errorMessage!,
-                      style: const TextStyle(fontSize: 12, color: AppColors.error, fontWeight: FontWeight.w500),
+
+              // 3. Kompakt Filtre Çipleri (Pill Tabs)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+                child: Row(
+                  children: [
+                    _buildPillTab(
+                      label: 'Tümü',
+                      count: allCount,
+                      isSelected: isAllSelected,
+                      onTap: () {
+                        notifier.setTab('all');
+                        notifier.applyFilters(status: null);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _buildPillTab(
+                      label: 'Yolda',
+                      count: inTransitCount,
+                      isSelected: isInTransitSelected,
+                      onTap: () {
+                        notifier.setTab('yolda');
+                        notifier.applyFilters(status: '1');
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _buildPillTab(
+                      label: 'Sorunlu',
+                      count: problematicCount,
+                      isSelected: isProblematicSelected,
+                      isHighlight: true,
+                      onTap: () {
+                        notifier.setTab('sorunlu');
+                        notifier.applyFilters(status: '4');
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // 4. Özel Aktif Filtre Etiketleri (Firma, Özel Durum veya Sıralama Varsa)
+              if (hasCustomFilters)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        if (state.selectedCargoCompany != null) ...[
+                          _buildActiveFilterTag(
+                            label: 'Firma: ${_companyLabel(state.selectedCargoCompany)}',
+                            onDeleted: () => notifier.setCargoCompany(null),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (state.selectedStatus != null &&
+                            state.selectedStatus != 'all' &&
+                            state.selectedStatus != '1' &&
+                            state.selectedStatus != '4') ...[
+                          _buildActiveFilterTag(
+                            label: 'Durum: ${_statusLabel(state.selectedStatus)}',
+                            onDeleted: () => notifier.setStatusFilter(null),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (state.sortDirection != 'desc') ...[
+                          _buildActiveFilterTag(
+                            label: 'Sıralama: Eskiden Yeniye',
+                            onDeleted: () => notifier.setSortDirection('desc'),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        TextButton.icon(
+                          onPressed: () => notifier.clearFilters(),
+                          icon: const Icon(Icons.close_rounded, size: 14, color: Color(0xFF64748B)),
+                          label: const Text(
+                            'Temizle',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
+
+              // Hata Mesajı Çubuğu
+              if (state.errorMessage != null && state.cargos.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorLight,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          state.errorMessage!,
+                          style: const TextStyle(fontSize: 12, color: AppColors.error, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 5. Kargo Listesi
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => notifier.refresh(),
+                  color: const Color(0xFF0E1E38),
+                  child: state.isLoading && state.cargos.isEmpty
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF0E1E38)))
+                      : state.errorMessage != null && state.cargos.isEmpty
+                          ? AppErrorState(
+                              title: 'Kargolar Yüklenemedi',
+                              message: state.errorMessage!,
+                              onRetry: () => notifier.refresh(),
+                            )
+                          : state.cargos.isEmpty
+                              ? const CargoEmptyState()
+                              : ListView.builder(
+                                  controller: _scrollController,
+                                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  itemCount: state.cargos.length + (state.isLoadingMore ? 1 : 0),
+                                  itemBuilder: (context, index) {
+                                    if (index == state.cargos.length) {
+                                      return const Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 20.0),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0E1E38)),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    final cargo = state.cargos[index];
+                                    return CargoCard(cargo: cargo);
+                                  },
+                                ),
+                ),
               ),
-            ),
-
-          // Liste Görünümü
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => notifier.refresh(),
-              color: AppColors.primary,
-              child: state.isLoading && state.cargos.isEmpty
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                  : state.errorMessage != null && state.cargos.isEmpty
-                      ? AppErrorState(
-                          title: 'Kargolar Yüklenemedi',
-                          message: state.errorMessage!,
-                          onRetry: () => notifier.refresh(),
-                        )
-                      : state.cargos.isEmpty
-                          ? const CargoEmptyState()
-                          : ListView.builder(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.all(16),
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              itemCount: state.cargos.length + (state.isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == state.cargos.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 20.0),
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                final cargo = state.cargos[index];
-                                return CargoCard(cargo: cargo);
-                              },
-                            ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

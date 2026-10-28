@@ -232,10 +232,24 @@ class CargoListNotifier extends Notifier<CargoListState> {
     }
   }
 
-  /// Sekme Değiştirme ('all', 'pod', 'drafts')
+  /// Sekme Değiştirme ('all', 'yolda', 'sorunlu', 'pod', 'drafts')
   void setTab(String tab) {
     if (state.activeTab != tab) {
-      state = state.copyWith(activeTab: tab);
+      String? status;
+      if (tab == 'yolda') {
+        status = '1';
+      } else if (tab == 'sorunlu') {
+        status = '4';
+      } else if (tab == 'drafts') {
+        status = '0';
+      } else if (tab == 'all') {
+        status = null;
+      }
+      state = state.copyWith(
+        activeTab: tab,
+        selectedStatus: status,
+        clearStatus: status == null,
+      );
       loadCargos(reset: true);
     }
   }
@@ -246,7 +260,16 @@ class CargoListNotifier extends Notifier<CargoListState> {
     final statusChanged = state.selectedStatus != status;
     final sortChanged = sortDirection != null && state.sortDirection != sortDirection;
     if (companyChanged || statusChanged || sortChanged) {
+      String newTab = state.activeTab;
+      if (status == null || status == 'all') {
+        newTab = 'all';
+      } else if (status == '1' || status == 'active') {
+        newTab = 'yolda';
+      } else if (status == '4' || status == 'failed') {
+        newTab = 'sorunlu';
+      }
       state = state.copyWith(
+        activeTab: newTab,
         selectedCargoCompany: company,
         clearCompany: company == null,
         selectedStatus: status,
@@ -289,8 +312,9 @@ class CargoListNotifier extends Notifier<CargoListState> {
 
   /// Tüm filtreleri sıfırla
   void clearFilters() {
-    if (state.hasActiveFilters) {
+    if (state.hasActiveFilters || state.activeTab != 'all') {
       state = state.copyWith(
+        activeTab: 'all',
         clearCompany: true,
         clearStatus: true,
         sortDirection: 'desc',
