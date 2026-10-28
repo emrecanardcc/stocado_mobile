@@ -92,11 +92,10 @@ class CargoStatusIcon extends StatelessWidget {
     final status = cargo.status;
 
     // 1. Teslim Edildi
-    if (type == 6 ||
-        (type == null && status == 2) ||
-        lowerTitle.contains('teslim edildi') ||
-        lowerTitle.contains('teslim') ||
-        lowerTitle.contains('tamamlan')) {
+    final isDeliveredTitle = (lowerTitle.contains('teslim edildi') && !lowerTitle.contains('edilemedi')) ||
+        lowerTitle.contains('tamamlandı') ||
+        lowerTitle.contains('tamamlan');
+    if (type == 6 || (type == null && status == 2) || isDeliveredTitle) {
       return _StatusInfo(
         color: const Color(0xFF10B981), // Canlı Yeşil (Emerald 500)
         icon: Icons.check_rounded,
@@ -120,7 +119,7 @@ class CargoStatusIcon extends StatelessWidget {
         pillBgColor: const Color(0xFFE0F2FE), // Açık Mavi Zemin
         pillBorderColor: const Color(0xFFBAE6FD),
         pillTextColor: const Color(0xFF0369A1), // Mavi Metin & İkon
-        pillIcon: Icons.local_shipping_outlined,
+        pillIcon: Icons.delivery_dining_rounded, // Kurye ikonu
         label: 'Dağıtımda',
         tooltip: actionTitle.isNotEmpty ? actionTitle : 'Dağıtımda',
       );

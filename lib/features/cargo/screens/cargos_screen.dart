@@ -65,6 +65,12 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
         return 'UPS Kargo';
       case 'kolay-gelsin':
         return 'Kolay Gelsin';
+      case 'aras':
+        return 'Aras Kargo';
+      case 'mng':
+        return 'MNG Kargo';
+      case 'trendyol':
+        return 'Trendyol Express';
       default:
         return 'Tümü';
     }
@@ -402,6 +408,24 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                           leading: const CargoCompanyLogo(companyId: 'kolay-gelsin', height: 16, isHorizontal: true),
                           onSelected: () => setSheetState(() => tempCompany = 'kolay-gelsin'),
                         ),
+                        _buildFilterChipItem(
+                          label: 'Aras Kargo',
+                          isSelected: tempCompany == 'aras',
+                          leading: const CargoCompanyLogo(companyId: 'aras', height: 16, isHorizontal: true),
+                          onSelected: () => setSheetState(() => tempCompany = 'aras'),
+                        ),
+                        _buildFilterChipItem(
+                          label: 'MNG Kargo',
+                          isSelected: tempCompany == 'mng',
+                          leading: const CargoCompanyLogo(companyId: 'mng', height: 16, isHorizontal: true),
+                          onSelected: () => setSheetState(() => tempCompany = 'mng'),
+                        ),
+                        _buildFilterChipItem(
+                          label: 'Trendyol Express',
+                          isSelected: tempCompany == 'trendyol',
+                          leading: const CargoCompanyLogo(companyId: 'trendyol', height: 16, isHorizontal: true),
+                          onSelected: () => setSheetState(() => tempCompany = 'trendyol'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -612,16 +636,18 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
               // 2. Arama Kutusu ("Ad, telefon veya barkod ara")
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Container(
-                  height: 44,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
-                  ),
-                  child: Row(
-                    children: [
+                child: GestureDetector(
+                  onTap: () => _searchFocusNode.requestFocus(),
+                  child: Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                    ),
+                    child: Row(
+                      children: [
                       const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
                       const SizedBox(width: 10),
                       Expanded(
@@ -675,6 +701,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                   ),
                 ),
               ),
+            ),
 
               // 3. Kompakt Filtre Çipleri (Pill Tabs)
               Padding(

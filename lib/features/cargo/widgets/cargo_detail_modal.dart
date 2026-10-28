@@ -198,7 +198,7 @@ class _CargoDetailModalState extends ConsumerState<CargoDetailModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _cargo.cargoCompany?.title ?? 'Kargo',
+                          _cargo.cargoCompany?.title ?? CargoCompanyType.fromString(_cargo.cargoCompanyId).displayName,
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         if (_cargo.createdAt != null)

@@ -84,56 +84,63 @@ class CargoCard extends StatelessWidget {
                 // 1. Satır: Firma Logosu + Takip No / Kopyala + Sağ Ok (Chevron)
                 Row(
                   children: [
-                    CargoCompanyLogo(
-                      companyId: cargo.cargoCompany?.id?.toString() ?? cargo.cargoCompanyId,
-                      companyName: cargo.cargoCompany?.title,
-                      height: 20,
-                      isHorizontal: true,
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CargoCompanyLogo(
+                            companyId: cargo.cargoCompany?.id?.toString() ?? cargo.cargoCompanyId,
+                            companyName: cargo.cargoCompany?.title,
+                            height: 20,
+                            isHorizontal: true,
+                          ),
+                          const SizedBox(width: 8),
+                          if (trackingCode.isNotEmpty) ...[
+                            Flexible(
+                              child: Text(
+                                trackingCode,
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  color: Color(0xFF0F172A),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            InkWell(
+                              onTap: () => _copyTrackingCode(context, trackingCode),
+                              borderRadius: BorderRadius.circular(4),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.copy_rounded,
+                                  size: 14,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ),
+                          ] else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Kabul Bekleniyor',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    if (trackingCode.isNotEmpty) ...[
-                      Flexible(
-                        child: Text(
-                          trackingCode,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                            color: Color(0xFF0F172A),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      InkWell(
-                        onTap: () => _copyTrackingCode(context, trackingCode),
-                        borderRadius: BorderRadius.circular(4),
-                        child: const Padding(
-                          padding: EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.copy_rounded,
-                            size: 14,
-                            color: Color(0xFF94A3B8),
-                          ),
-                        ),
-                      ),
-                    ] else
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'Kabul Bekleniyor',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                    const Spacer(),
                     const Icon(
                       Icons.chevron_right_rounded,
                       size: 20,

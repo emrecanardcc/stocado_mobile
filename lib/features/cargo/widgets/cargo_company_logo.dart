@@ -16,15 +16,15 @@ enum CargoCompanyType {
   static CargoCompanyType fromString(String? raw) {
     if (raw == null) return CargoCompanyType.unknown;
     final lower = raw.toLowerCase().trim();
-    if (lower.contains('ptt')) return CargoCompanyType.ptt;
-    if (lower.contains('yurtici') || lower.contains('yurtiçi')) return CargoCompanyType.yurtici;
-    if (lower.contains('surat') || lower.contains('sürat')) return CargoCompanyType.surat;
-    if (lower.contains('hepsijet') || lower.contains('hepsi jet')) return CargoCompanyType.hepsijet;
-    if (lower.contains('ups')) return CargoCompanyType.ups;
-    if (lower.contains('kolay') || lower.contains('gelsin')) return CargoCompanyType.kolayGelsin;
-    if (lower.contains('aras')) return CargoCompanyType.aras;
-    if (lower.contains('mng')) return CargoCompanyType.mng;
-    if (lower.contains('trendyol')) return CargoCompanyType.trendyol;
+    if (lower == 'ptt' || lower.contains('ptt')) return CargoCompanyType.ptt;
+    if (lower == 'yk' || lower.contains('yurtici') || lower.contains('yurtiçi')) return CargoCompanyType.yurtici;
+    if (lower == 'sur' || lower.contains('surat') || lower.contains('sürat')) return CargoCompanyType.surat;
+    if (lower == 'hj' || lower.contains('hepsijet') || lower.contains('hepsi jet')) return CargoCompanyType.hepsijet;
+    if (lower == 'ups' || lower.contains('ups')) return CargoCompanyType.ups;
+    if (lower == 'kg' || lower.contains('kolay') || lower.contains('gelsin')) return CargoCompanyType.kolayGelsin;
+    if (lower == 'aras' || lower.contains('aras')) return CargoCompanyType.aras;
+    if (lower == 'mng' || lower.contains('mng')) return CargoCompanyType.mng;
+    if (lower == 'ty' || lower.contains('trendyol')) return CargoCompanyType.trendyol;
     return CargoCompanyType.unknown;
   }
 
@@ -298,25 +298,27 @@ class CargoCompanyLogo extends StatelessWidget {
               painter: const YurticiEmblemPainter(),
             ),
             SizedBox(width: h * 0.22),
-            RichText(
-              text: TextSpan(
-                style: TextStyle(
-                  fontFamily: 'Roboto',
-                  fontSize: fs * 0.92,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.3,
-                  height: 1.0,
-                ),
-                children: const [
-                  TextSpan(
-                    text: 'yurtiçi',
-                    style: TextStyle(color: Color(0xFF004B93)),
-                  ),
-                  TextSpan(
-                    text: 'kargo',
-                    style: TextStyle(color: Color(0xFFF37021), fontWeight: FontWeight.w700),
-                  ),
-                ],
+            Text(
+              'yurtiçi',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs * 0.92,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF004B93),
+                letterSpacing: -0.3,
+                height: 1.0,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Text(
+              'kargo',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs * 0.92,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFF37021),
+                letterSpacing: -0.3,
+                height: 1.0,
               ),
             ),
           ],
@@ -328,20 +330,9 @@ class CargoCompanyLogo extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: h * 0.85,
-              height: h * 0.85,
-              decoration: const BoxDecoration(
-                color: Color(0xFF00AA4F),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.check_rounded,
-                  color: Colors.white,
-                  size: h * 0.58,
-                ),
-              ),
+            CustomPaint(
+              size: Size(h * 0.9, h * 0.9),
+              painter: const KolayGelsinEmblemPainter(),
             ),
             SizedBox(width: h * 0.2),
             Text(
@@ -390,31 +381,32 @@ class CargoCompanyLogo extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(
-              Icons.flutter_dash_rounded,
-              color: const Color(0xFFFF7900),
-              size: h * 0.88,
+            CustomPaint(
+              size: Size(h * 0.95, h * 0.95),
+              painter: const MngEmblemPainter(),
             ),
-            SizedBox(width: h * 0.18),
-            RichText(
-              text: TextSpan(
-                style: TextStyle(
-                  fontFamily: 'Roboto',
-                  fontSize: fs * 0.9,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.2,
-                  height: 1.0,
-                ),
-                children: const [
-                  TextSpan(
-                    text: 'MNG',
-                    style: TextStyle(color: Color(0xFF002244)),
-                  ),
-                  TextSpan(
-                    text: 'kargo',
-                    style: TextStyle(color: Color(0xFFFF7900), fontWeight: FontWeight.w700),
-                  ),
-                ],
+            SizedBox(width: h * 0.2),
+            Text(
+              'MNG',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs * 0.9,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF002244),
+                letterSpacing: -0.2,
+                height: 1.0,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Text(
+              'kargo',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs * 0.9,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFFF7900),
+                letterSpacing: -0.2,
+                height: 1.0,
               ),
             ),
           ],
@@ -701,3 +693,79 @@ class ArasEmblemPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+/// MNG Kargo'nun kurumsal dinamik uçan kuş amblemi
+class MngEmblemPainter extends CustomPainter {
+  final Color color;
+  const MngEmblemPainter({this.color = const Color(0xFFFF7900)});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final path = Path()
+      ..moveTo(0, h * 0.62)
+      ..quadraticBezierTo(w * 0.12, h * 0.52, w * 0.22, h * 0.55)
+      ..quadraticBezierTo(w * 0.36, h * 0.54, w * 0.46, h * 0.40)
+      ..quadraticBezierTo(w * 0.52, h * 0.14, w * 0.60, h * 0.02)
+      ..quadraticBezierTo(w * 0.62, h * 0.20, w * 0.68, h * 0.26)
+      ..quadraticBezierTo(w * 0.74, h * 0.30, w * 0.84, h * 0.32)
+      ..quadraticBezierTo(w * 0.72, h * 0.46, w * 0.64, h * 0.53)
+      ..quadraticBezierTo(w * 0.84, h * 0.57, w, h * 0.60)
+      ..quadraticBezierTo(w * 0.76, h * 0.68, w * 0.55, h * 0.68)
+      ..quadraticBezierTo(w * 0.36, h * 0.68, w * 0.25, h * 0.64)
+      ..quadraticBezierTo(w * 0.10, h * 0.66, 0, h * 0.62)
+      ..close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Kolay Gelsin'in konum pini & yeşil tik kurumsal amblemi
+class KolayGelsinEmblemPainter extends CustomPainter {
+  const KolayGelsinEmblemPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Pin halkası (gri kontur)
+    final pinPaint = Paint()
+      ..color = const Color(0xFF94A3B8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.13
+      ..isAntiAlias = true;
+
+    final pinCenter = Offset(w * 0.5, h * 0.44);
+    canvas.drawCircle(pinCenter, w * 0.38, pinPaint);
+
+    // Yeşil tik amblemi
+    final checkPaint = Paint()
+      ..color = const Color(0xFF00AA4F)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.18
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..isAntiAlias = true;
+
+    final checkPath = Path()
+      ..moveTo(w * 0.24, h * 0.54)
+      ..lineTo(w * 0.44, h * 0.78)
+      ..lineTo(w * 0.82, h * 0.28);
+    canvas.drawPath(checkPath, checkPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

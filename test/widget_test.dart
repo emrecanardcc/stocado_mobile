@@ -119,17 +119,22 @@ void main() {
 
       expect(CargoCompanyType.fromString('yurtici'), CargoCompanyType.yurtici);
       expect(CargoCompanyType.fromString('yurtiçi-kargo'), CargoCompanyType.yurtici);
+      expect(CargoCompanyType.fromString('yk'), CargoCompanyType.yurtici);
 
       expect(CargoCompanyType.fromString('surat'), CargoCompanyType.surat);
       expect(CargoCompanyType.fromString('Sürat Kargo'), CargoCompanyType.surat);
+      expect(CargoCompanyType.fromString('sur'), CargoCompanyType.surat);
 
       expect(CargoCompanyType.fromString('hepsijet'), CargoCompanyType.hepsijet);
+      expect(CargoCompanyType.fromString('hj'), CargoCompanyType.hepsijet);
       expect(CargoCompanyType.fromString('ups'), CargoCompanyType.ups);
       expect(CargoCompanyType.fromString('kolay-gelsin'), CargoCompanyType.kolayGelsin);
       expect(CargoCompanyType.fromString('Kolay Gelsin'), CargoCompanyType.kolayGelsin);
+      expect(CargoCompanyType.fromString('kg'), CargoCompanyType.kolayGelsin);
       expect(CargoCompanyType.fromString('aras'), CargoCompanyType.aras);
       expect(CargoCompanyType.fromString('mng'), CargoCompanyType.mng);
       expect(CargoCompanyType.fromString('trendyol'), CargoCompanyType.trendyol);
+      expect(CargoCompanyType.fromString('ty'), CargoCompanyType.trendyol);
       expect(CargoCompanyType.fromString('bilinmeyen'), CargoCompanyType.unknown);
       expect(CargoCompanyType.ptt.assetPath, 'assets/images/cargo/ptt.png');
       expect(CargoCompanyType.kolayGelsin.assetPath, 'assets/images/cargo/kolay_gelsin.png');
@@ -1340,17 +1345,92 @@ void main() {
       expect(find.text('Teslim Edildi'), findsOneWidget);
     });
 
+    testWidgets('latestTransactionType == 4 (Teslimat Subesi) Yolda olarak render edilir, Teslim Edildi ile karismaz', (tester) async {
+      final cargo = CargoModel(
+        id: 6,
+        processNumber: 'P105',
+        outTrackingCode: 'HJV128',
+        status: 1,
+        payOnDelivery: false,
+        latestTransactionType: 4, // Teslimat Şubesi
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargo, showLabel: true),
+          ),
+        ),
+      );
+
+      expect(find.text('Yolda'), findsOneWidget);
+      expect(find.text('Teslim Edildi'), findsNothing);
+    });
+
+    testWidgets('latestTransactionType == 7 (Teslim Edilemedi) Sorunlu olarak render edilir', (tester) async {
+      final cargo = CargoModel(
+        id: 7,
+        processNumber: 'P106',
+        outTrackingCode: 'HJV129',
+        status: 1,
+        payOnDelivery: false,
+        latestTransactionType: 7, // Teslim Edilemedi
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargo, showLabel: true),
+          ),
+        ),
+      );
+
+      expect(find.text('Sorunlu'), findsOneWidget);
+      expect(find.text('Teslim Edildi'), findsNothing);
+    });
+
+    testWidgets('latestTransactionType == 5 (Dagitimda) kurye ikonu ve Dagitimda metni ile render edilir', (tester) async {
+      final cargo = CargoModel(
+        id: 8,
+        processNumber: 'P107',
+        outTrackingCode: 'HJV130',
+        status: 1,
+        payOnDelivery: false,
+        latestTransactionType: 5, // Dağıtımda
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargo, showLabel: true),
+          ),
+        ),
+      );
+
+      expect(find.text('Dağıtımda'), findsOneWidget);
+      expect(find.byIcon(Icons.delivery_dining_rounded), findsOneWidget);
+    });
+
     testWidgets('CargoCompanyLogo yatay modda firma logosunu net ve dogru render eder', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: CargoCompanyLogo(companyId: 'hepsijet', height: 20, isHorizontal: true),
+            body: Column(
+              children: [
+                CargoCompanyLogo(companyId: 'hepsijet', height: 20, isHorizontal: true),
+                CargoCompanyLogo(companyId: 'mng', height: 20, isHorizontal: true),
+                CargoCompanyLogo(companyId: 'kolay-gelsin', height: 20, isHorizontal: true),
+              ],
+            ),
           ),
         ),
       );
 
       expect(find.text('hepsi'), findsOneWidget);
       expect(find.text('JET'), findsOneWidget);
+      expect(find.text('MNG'), findsOneWidget);
+      expect(find.text('kolay gelsin'), findsOneWidget);
+      expect(find.byType(CustomPaint), findsWidgets);
     });
   });
 

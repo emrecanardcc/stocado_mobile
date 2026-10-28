@@ -73,7 +73,7 @@ class DashboardRecentCargosSection extends ConsumerWidget {
               children: [
                 // Sol: Taşıyıcı Kargo Firması Logosu
                 CargoCompanyLogo(
-                  companyId: cargo.cargoCompany?.id?.toString(),
+                  companyId: cargo.cargoCompany?.id?.toString() ?? cargo.cargoCompanyId,
                   companyName: cargo.cargoCompany?.title,
                   height: 20,
                   isHorizontal: true,
