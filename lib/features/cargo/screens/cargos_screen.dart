@@ -369,37 +369,37 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                         _buildFilterChipItem(
                           label: 'PTT Kargo',
                           isSelected: tempCompany == 'ptt',
-                          leading: const CargoCompanyLogo(companyId: 'ptt', size: 18, borderRadius: 4, showBorder: false),
+                          leading: const CargoCompanyLogo(companyId: 'ptt', height: 16, isHorizontal: true),
                           onSelected: () => setSheetState(() => tempCompany = 'ptt'),
                         ),
                         _buildFilterChipItem(
                           label: 'Sürat Kargo',
                           isSelected: tempCompany == 'surat',
-                          leading: const CargoCompanyLogo(companyId: 'surat', size: 18, borderRadius: 4, showBorder: false),
+                          leading: const CargoCompanyLogo(companyId: 'surat', height: 16, isHorizontal: true),
                           onSelected: () => setSheetState(() => tempCompany = 'surat'),
                         ),
                         _buildFilterChipItem(
                           label: 'Yurtiçi Kargo',
                           isSelected: tempCompany == 'yurtici',
-                          leading: const CargoCompanyLogo(companyId: 'yurtici', size: 18, borderRadius: 4, showBorder: false),
+                          leading: const CargoCompanyLogo(companyId: 'yurtici', height: 16, isHorizontal: true),
                           onSelected: () => setSheetState(() => tempCompany = 'yurtici'),
                         ),
                         _buildFilterChipItem(
                           label: 'HepsiJET',
                           isSelected: tempCompany == 'hepsijet',
-                          leading: const CargoCompanyLogo(companyId: 'hepsijet', size: 18, borderRadius: 4, showBorder: false),
+                          leading: const CargoCompanyLogo(companyId: 'hepsijet', height: 16, isHorizontal: true),
                           onSelected: () => setSheetState(() => tempCompany = 'hepsijet'),
                         ),
                         _buildFilterChipItem(
                           label: 'UPS Kargo',
                           isSelected: tempCompany == 'ups',
-                          leading: const CargoCompanyLogo(companyId: 'ups', size: 18, borderRadius: 4, showBorder: false),
+                          leading: const CargoCompanyLogo(companyId: 'ups', height: 16, isHorizontal: true),
                           onSelected: () => setSheetState(() => tempCompany = 'ups'),
                         ),
                         _buildFilterChipItem(
                           label: 'Kolay Gelsin',
                           isSelected: tempCompany == 'kolay-gelsin',
-                          leading: const CargoCompanyLogo(companyId: 'kolay-gelsin', size: 18, borderRadius: 4, showBorder: false),
+                          leading: const CargoCompanyLogo(companyId: 'kolay-gelsin', height: 16, isHorizontal: true),
                           onSelected: () => setSheetState(() => tempCompany = 'kolay-gelsin'),
                         ),
                       ],
@@ -613,11 +613,11 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Container(
-                  height: 46,
+                  height: 44,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
                   ),
                   child: Row(

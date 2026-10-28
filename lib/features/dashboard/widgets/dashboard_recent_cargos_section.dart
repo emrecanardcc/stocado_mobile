@@ -7,6 +7,7 @@ import '../../cargo/models/cargo_model.dart';
 import '../../cargo/providers/cargo_list_provider.dart';
 import '../../cargo/widgets/cargo_company_logo.dart';
 import '../../cargo/widgets/cargo_detail_modal.dart';
+import '../../cargo/widgets/cargo_status_icon.dart';
 
 class DashboardRecentCargosSection extends ConsumerWidget {
   final VoidCallback onSeeAllTap;
@@ -17,72 +18,6 @@ class DashboardRecentCargosSection extends ConsumerWidget {
     required this.onSeeAllTap,
     required this.onNewCargoTap,
   });
-
-  Widget _buildStatusPill(CargoModel cargo) {
-    String statusText;
-    final type = cargo.effectiveTransactionType;
-    if (type == 6 || (cargo.status == 2 && cargo.latestActionTitle.toLowerCase().contains('teslim'))) {
-      statusText = 'Teslim Edildi';
-    } else if (type == 5) {
-      statusText = 'Dağıtımda';
-    } else if (type != null && [2, 3, 4, 9].contains(type)) {
-      statusText = 'Yolda';
-    } else if (type != null && [10, 11].contains(type)) {
-      statusText = 'İade';
-    } else if (type != null && [0, 7, 12, 13].contains(type)) {
-      statusText = cargo.latestActionTitle.isNotEmpty ? cargo.latestActionTitle : 'Sorunlu';
-    } else {
-      statusText = cargo.latestActionTitle.isNotEmpty ? cargo.latestActionTitle : cargo.statusText;
-    }
-
-    final lower = statusText.toLowerCase();
-
-    Color bgColor;
-    Color textColor;
-    IconData icon;
-
-    if (lower.contains('teslim')) {
-      bgColor = const Color(0xFFDCFCE7); // Emerald-100
-      textColor = const Color(0xFF15803D); // Emerald-700
-      icon = Icons.check_circle_rounded;
-    } else if (lower.contains('sorun') || lower.contains('iade') || lower.contains('hata') || lower.contains('iptal') || cargo.status == 3) {
-      bgColor = const Color(0xFFFFEDD5); // Orange-100
-      textColor = const Color(0xFFC2410C); // Orange-700
-      icon = Icons.warning_amber_rounded;
-    } else if (lower.contains('dağıtım') || lower.contains('dagitim')) {
-      bgColor = const Color(0xFFDBEAFE); // Blue-100
-      textColor = const Color(0xFF1D4ED8); // Blue-700
-      icon = Icons.local_shipping_outlined;
-    } else {
-      // Yolda / Gönderime Hazır
-      bgColor = const Color(0xFFEFF6FF); // Sky-100
-      textColor = const Color(0xFF2563EB); // Sky-700
-      icon = Icons.local_shipping_outlined;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: textColor),
-          const SizedBox(width: 4),
-          Text(
-            statusText,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildShipmentCard(BuildContext context, CargoModel cargo) {
     final receiverName = cargo.receiver?.name ?? 'İsimsiz Alıcı';
@@ -140,9 +75,8 @@ class DashboardRecentCargosSection extends ConsumerWidget {
                 CargoCompanyLogo(
                   companyId: cargo.cargoCompany?.id?.toString(),
                   companyName: cargo.cargoCompany?.title,
-                  size: 34,
-                  borderRadius: 8,
-                  showBorder: false,
+                  height: 20,
+                  isHorizontal: true,
                 ),
                 const SizedBox(width: 12),
 
@@ -184,7 +118,7 @@ class DashboardRecentCargosSection extends ConsumerWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildStatusPill(cargo),
+                    CargoStatusIcon(cargo: cargo, showLabel: true),
                     const SizedBox(width: 4),
                     const Icon(
                       Icons.chevron_right_rounded,

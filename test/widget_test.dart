@@ -1316,6 +1316,42 @@ void main() {
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, const Color(0xFFF97316));
     });
+
+    testWidgets('showLabel true oldugunda kapsul rozet icinde hem ikon hem durum metni birlikte render edilir', (tester) async {
+      final cargo = CargoModel(
+        id: 5,
+        processNumber: 'P104',
+        outTrackingCode: 'HJV127',
+        status: 2,
+        payOnDelivery: false,
+        latestTransactionType: 6,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CargoStatusIcon(cargo: cargo, showLabel: true),
+          ),
+        ),
+      );
+
+      expect(find.byType(CargoStatusIcon), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      expect(find.text('Teslim Edildi'), findsOneWidget);
+    });
+
+    testWidgets('CargoCompanyLogo yatay modda firma logosunu net ve dogru render eder', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CargoCompanyLogo(companyId: 'hepsijet', height: 20, isHorizontal: true),
+          ),
+        ),
+      );
+
+      expect(find.text('hepsi'), findsOneWidget);
+      expect(find.text('JET'), findsOneWidget);
+    });
   });
 
   group('CargoCard Yeni Tasarim & Etkilesim Testleri', () {
@@ -1498,7 +1534,7 @@ void main() {
       // 3. 3 Kompakt Pill Tab ve Sayaclar (Mockup uyumu: Tumu 252, Yolda 28, Sorunlu 3)
       expect(find.text('Tümü'), findsOneWidget);
       expect(find.text('252'), findsOneWidget);
-      expect(find.text('Yolda'), findsOneWidget);
+      expect(find.text('Yolda'), findsNWidgets(2)); // Üst filtre sekmesinde ve kargo kartı rozetinde
       expect(find.text('28'), findsOneWidget);
       expect(find.text('Sorunlu'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
@@ -1506,9 +1542,10 @@ void main() {
       // 4. Kargo Kartlari
       expect(find.text('Ayşe Yılmaz'), findsOneWidget);
       expect(find.text('Mehmet Kaya'), findsOneWidget);
+      expect(find.text('Teslim Edildi'), findsOneWidget); // Mehmet Kaya'nın durum rozetinde
 
       // 5. Pill sekmesine tiklama testi
-      await tester.tap(find.text('Yolda'));
+      await tester.tap(find.text('Yolda').first);
       await tester.pump();
       expect(container.read(cargoListProvider).selectedStatus, '1');
 

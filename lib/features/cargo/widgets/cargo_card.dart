@@ -87,9 +87,8 @@ class CargoCard extends StatelessWidget {
                     CargoCompanyLogo(
                       companyId: cargo.cargoCompany?.id?.toString() ?? cargo.cargoCompanyId,
                       companyName: cargo.cargoCompany?.title,
-                      size: 24,
-                      borderRadius: 6,
-                      showBorder: false,
+                      height: 20,
+                      isHorizontal: true,
                     ),
                     const SizedBox(width: 8),
                     if (trackingCode.isNotEmpty) ...[
@@ -181,10 +180,10 @@ class CargoCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // Son Hareket / Durum Simgesi (Kullanıcı talimatı: sadece simge olarak, dikkat çekici)
+                        // Son Hareket / Durum Rozeti (İkon yanında durum metni birlikte)
                         CargoStatusIcon(
                           cargo: cargo,
-                          size: 36,
+                          showLabel: true,
                         ),
                         if (dateText.isNotEmpty) ...[
                           const SizedBox(height: 5),

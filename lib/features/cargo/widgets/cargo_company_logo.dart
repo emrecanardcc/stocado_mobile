@@ -53,25 +53,81 @@ enum CargoCompanyType {
         return null;
     }
   }
+
+  String get displayName {
+    switch (this) {
+      case CargoCompanyType.ptt:
+        return 'PTT Kargo';
+      case CargoCompanyType.yurtici:
+        return 'Yurtiçi Kargo';
+      case CargoCompanyType.surat:
+        return 'Sürat Kargo';
+      case CargoCompanyType.hepsijet:
+        return 'HepsiJET';
+      case CargoCompanyType.ups:
+        return 'UPS Kargo';
+      case CargoCompanyType.kolayGelsin:
+        return 'Kolay Gelsin';
+      case CargoCompanyType.aras:
+        return 'Aras Kargo';
+      case CargoCompanyType.mng:
+        return 'MNG Kargo';
+      case CargoCompanyType.trendyol:
+        return 'Trendyol Express';
+      case CargoCompanyType.unknown:
+        return 'Kargo';
+    }
+  }
+
+  Color get brandColor {
+    switch (this) {
+      case CargoCompanyType.ptt:
+        return const Color(0xFF003E7E);
+      case CargoCompanyType.yurtici:
+        return const Color(0xFF004B93);
+      case CargoCompanyType.surat:
+        return const Color(0xFFE30613);
+      case CargoCompanyType.hepsijet:
+        return const Color(0xFFFF6000);
+      case CargoCompanyType.ups:
+        return const Color(0xFF351C15);
+      case CargoCompanyType.kolayGelsin:
+        return const Color(0xFF00AA4F);
+      case CargoCompanyType.aras:
+        return const Color(0xFF002B49);
+      case CargoCompanyType.mng:
+        return const Color(0xFF002244);
+      case CargoCompanyType.trendyol:
+        return const Color(0xFFF27A1A);
+      case CargoCompanyType.unknown:
+        return AppColors.primary;
+    }
+  }
 }
 
-/// Kargo firmalarının orijinal yüksek çözünürlüklü kurumsal marka logoları bileşeni.
-/// Orijinal görsel varlığı temiz ve dengeli beyaz arka plan kartı üzerinde render edilir;
-/// asset çözümlenemediğinde veya bilinmeyen firmalarda zarif vektörel yedek tasarım devreye girer.
+/// Kargo firmalarının güncel, orijinal kurumsal marka logoları bileşeni.
+/// Kartlarda ve listelerde yatayda net okunan, basıklaşmayan ve standartlaştırılmış
+/// kurumsal logo formatı sunar (HepsiJET, SURAT, Ptt, Yurtiçi, Kolay Gelsin vb.).
 class CargoCompanyLogo extends StatelessWidget {
   final String? companyId;
   final String? companyName;
-  final double size;
+  final double? size;
+  final double? height;
+  final double? width;
   final double borderRadius;
   final bool showBorder;
+  final bool? isHorizontal;
 
   const CargoCompanyLogo({
     super.key,
     this.companyId,
     this.companyName,
-    this.size = 38.0,
-    this.borderRadius = 10.0,
+    this.size,
+    this.height,
+    this.width,
+    this.borderRadius = 8.0,
     this.showBorder = true,
+    this.isHorizontal,
   });
 
   CargoCompanyType get _type {
@@ -80,296 +136,222 @@ class CargoCompanyLogo extends StatelessWidget {
     return CargoCompanyType.fromString(companyName);
   }
 
+  bool get _resolvedIsHorizontal {
+    if (isHorizontal != null) return isHorizontal!;
+    if (height != null) return true;
+    if (size != null) return false;
+    return true; // Varsayılan olarak yatay, net okunan logo
+  }
+
   @override
   Widget build(BuildContext context) {
     final type = _type;
-    final assetPath = type.assetPath;
+    final isHoriz = _resolvedIsHorizontal;
 
-    if (assetPath != null) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(borderRadius),
-          border: showBorder ? Border.all(color: AppColors.border, width: 1.0) : null,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        padding: EdgeInsets.all(size * 0.12),
-        child: Center(
-          child: Image.asset(
-            assetPath,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-            errorBuilder: (context, error, stackTrace) => _buildFallbackContent(type),
-          ),
-        ),
+    if (isHoriz) {
+      final h = height ?? 20.0;
+      return SizedBox(
+        height: h,
+        width: width,
+        child: _buildHorizontalLogo(context, type, h),
       );
     }
 
-    return _buildFallbackContainer(type);
+    final effSize = size ?? 38.0;
+    return _buildBadgeContainer(context, type, effSize);
   }
 
-  Widget _buildFallbackContainer(CargoCompanyType type) {
+  Widget _buildBadgeContainer(BuildContext context, CargoCompanyType type, double effSize) {
     return Container(
-      width: size,
-      height: size,
+      width: effSize,
+      height: effSize,
       decoration: BoxDecoration(
-        color: _getBackgroundColor(type),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: showBorder ? Border.all(color: _getBorderColor(type), width: 1.0) : null,
+        border: showBorder ? Border.all(color: const Color(0xFFE2E8F0), width: 1.0) : null,
         boxShadow: [
           BoxShadow(
-            color: _getBrandColor(type).withValues(alpha: 0.12),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 1.5),
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
+      padding: EdgeInsets.all(effSize * 0.12),
       child: Center(
-        child: _buildFallbackContent(type),
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: _buildHorizontalLogo(context, type, effSize * 0.65),
+        ),
       ),
     );
   }
 
-  Color _getBackgroundColor(CargoCompanyType type) {
+  Widget _buildHorizontalLogo(BuildContext context, CargoCompanyType type, double h) {
     switch (type) {
-      case CargoCompanyType.ptt:
-        return const Color(0xFFFDB913); // PTT Resmi Sarı
-      case CargoCompanyType.yurtici:
-        return const Color(0xFF004B93); // Yurtiçi Resmi Mavi
-      case CargoCompanyType.surat:
-        return const Color(0xFFE30613); // Sürat Resmi Kırmızı
       case CargoCompanyType.hepsijet:
-        return const Color(0xFF111111); // HepsiJet Siyah
-      case CargoCompanyType.ups:
-        return const Color(0xFF351C15); // UPS Klasik Kahve
-      case CargoCompanyType.kolayGelsin:
-        return const Color(0xFF00B074); // Kolay Gelsin Yeşil
-      case CargoCompanyType.aras:
-        return const Color(0xFF00205B); // Aras Lacivert
-      case CargoCompanyType.mng:
-        return const Color(0xFF002A54); // MNG Derin Mavi
-      case CargoCompanyType.trendyol:
-        return const Color(0xFFF27A1A); // Trendyol Turuncu
-      case CargoCompanyType.unknown:
-        return AppColors.surfaceSecondary;
-    }
-  }
-
-  Color _getBorderColor(CargoCompanyType type) {
-    switch (type) {
-      case CargoCompanyType.ptt:
-        return const Color(0xFFE09F00);
-      case CargoCompanyType.yurtici:
-        return const Color(0xFF00366B);
-      case CargoCompanyType.surat:
-        return const Color(0xFFBA040F);
-      case CargoCompanyType.hepsijet:
-        return const Color(0xFF2E2E2E);
-      case CargoCompanyType.ups:
-        return const Color(0xFF26120D);
-      case CargoCompanyType.kolayGelsin:
-        return const Color(0xFF008F5D);
-      case CargoCompanyType.aras:
-        return const Color(0xFF00153D);
-      case CargoCompanyType.mng:
-        return const Color(0xFF001C38);
-      case CargoCompanyType.trendyol:
-        return const Color(0xFFD6640E);
-      case CargoCompanyType.unknown:
-        return AppColors.border;
-    }
-  }
-
-  Color _getBrandColor(CargoCompanyType type) {
-    switch (type) {
-      case CargoCompanyType.ptt:
-        return const Color(0xFFFDB913);
-      case CargoCompanyType.yurtici:
-        return const Color(0xFF004B93);
-      case CargoCompanyType.surat:
-        return const Color(0xFFE30613);
-      case CargoCompanyType.hepsijet:
-        return const Color(0xFFFF6000);
-      case CargoCompanyType.ups:
-        return const Color(0xFFFFB500);
-      case CargoCompanyType.kolayGelsin:
-        return const Color(0xFF00B074);
-      case CargoCompanyType.aras:
-        return const Color(0xFFFF5B00);
-      case CargoCompanyType.mng:
-        return const Color(0xFF00ADEF);
-      case CargoCompanyType.trendyol:
-        return const Color(0xFFF27A1A);
-      case CargoCompanyType.unknown:
-        return AppColors.primary;
-    }
-  }
-
-  Widget _buildFallbackContent(CargoCompanyType type) {
-    final scale = size / 38.0;
-
-    switch (type) {
-      case CargoCompanyType.ptt:
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        final fs = h * 0.88;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
             Text(
-              'PTT',
+              'hepsi',
               style: TextStyle(
                 fontFamily: 'Roboto',
-                color: const Color(0xFF002B49),
+                fontSize: fs,
                 fontWeight: FontWeight.w900,
-                fontSize: 13.0 * scale,
-                letterSpacing: 0.5,
-                height: 0.9,
-              ),
-            ),
-            Container(
-              margin: EdgeInsets.only(top: 1.5 * scale),
-              width: 18 * scale,
-              height: 2.0 * scale,
-              decoration: BoxDecoration(
-                color: const Color(0xFF002B49),
-                borderRadius: BorderRadius.circular(1),
-              ),
-            ),
-          ],
-        );
-
-      case CargoCompanyType.yurtici:
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned(
-              right: 4 * scale,
-              top: 4 * scale,
-              child: Container(
-                width: 6 * scale,
-                height: 6 * scale,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFDB813),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Text(
-              'YK',
-              style: TextStyle(
-                fontFamily: 'Roboto',
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 14.0 * scale,
-                letterSpacing: 0.8,
+                color: const Color(0xFFFF6000),
+                letterSpacing: -0.6,
                 height: 1.0,
               ),
             ),
-          ],
-        );
-
-      case CargoCompanyType.surat:
-        return Transform.rotate(
-          angle: -0.05,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'SÜRAT',
-                style: TextStyle(
-                  fontFamily: 'Roboto',
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 8.5 * scale,
-                  fontStyle: FontStyle.italic,
-                  letterSpacing: 0.5,
-                  height: 1.0,
-                ),
-              ),
-              Icon(
-                Icons.fast_forward_rounded,
-                color: Colors.white,
-                size: 14 * scale,
-              ),
-            ],
-          ),
-        );
-
-      case CargoCompanyType.hepsijet:
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.bolt_rounded,
-              color: const Color(0xFFFF6000),
-              size: 14 * scale,
-            ),
             Text(
-              'jet',
+              'JET',
               style: TextStyle(
                 fontFamily: 'Roboto',
-                color: Colors.white,
+                fontSize: fs,
                 fontWeight: FontWeight.w900,
-                fontSize: 13.0 * scale,
                 fontStyle: FontStyle.italic,
+                color: const Color(0xFF431870),
                 letterSpacing: 0.2,
                 height: 1.0,
               ),
             ),
+            Transform.translate(
+              offset: Offset(fs * 0.06, -fs * 0.36),
+              child: Transform.rotate(
+                angle: 0.45,
+                child: Container(
+                  width: fs * 0.16,
+                  height: fs * 0.42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF6000),
+                    borderRadius: BorderRadius.circular(fs * 0.05),
+                  ),
+                ),
+              ),
+            ),
           ],
         );
 
-      case CargoCompanyType.ups:
-        return Container(
-          width: 22 * scale,
-          height: 24 * scale,
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFFFB500), width: 1.8 * scale),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(3 * scale),
-              topRight: Radius.circular(3 * scale),
-              bottomLeft: Radius.circular(11 * scale),
-              bottomRight: Radius.circular(11 * scale),
+      case CargoCompanyType.surat:
+        final fs = h * 0.82;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CustomPaint(
+              size: Size(h * 0.86, h * 0.86),
+              painter: const SuratEmblemPainter(),
             ),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            'ups',
-            style: TextStyle(
-              fontFamily: 'Roboto',
-              color: const Color(0xFFFFB500),
-              fontWeight: FontWeight.w900,
-              fontSize: 9.5 * scale,
-              height: 0.9,
+            SizedBox(width: h * 0.2),
+            Text(
+              'SURAT',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic,
+                color: const Color(0xFF00387A),
+                letterSpacing: 0.6,
+                height: 1.0,
+              ),
             ),
-          ),
+          ],
+        );
+
+      case CargoCompanyType.ptt:
+        final fs = h * 0.86;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CustomPaint(
+              size: Size(h * 0.95, h * 0.95),
+              painter: const PttEmblemPainter(),
+            ),
+            SizedBox(width: h * 0.2),
+            Text(
+              'Ptt',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs * 1.05,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF003E7E),
+                letterSpacing: -0.2,
+                height: 1.0,
+              ),
+            ),
+          ],
+        );
+
+      case CargoCompanyType.yurtici:
+        final fs = h * 0.82;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CustomPaint(
+              size: Size(h * 0.95, h * 0.95),
+              painter: const YurticiEmblemPainter(),
+            ),
+            SizedBox(width: h * 0.22),
+            RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: fs * 0.92,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.3,
+                  height: 1.0,
+                ),
+                children: const [
+                  TextSpan(
+                    text: 'yurtiçi',
+                    style: TextStyle(color: Color(0xFF004B93)),
+                  ),
+                  TextSpan(
+                    text: 'kargo',
+                    style: TextStyle(color: Color(0xFFF37021), fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ],
         );
 
       case CargoCompanyType.kolayGelsin:
+        final fs = h * 0.82;
         return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(
-              Icons.directions_run_rounded,
-              color: Colors.white,
-              size: 13 * scale,
+            Container(
+              width: h * 0.85,
+              height: h * 0.85,
+              decoration: const BoxDecoration(
+                color: Color(0xFF00AA4F),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: h * 0.58,
+                ),
+              ),
             ),
+            SizedBox(width: h * 0.2),
             Text(
-              'KG',
+              'kolay gelsin',
               style: TextStyle(
                 fontFamily: 'Roboto',
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 11.5 * scale,
-                letterSpacing: 0.5,
+                fontSize: fs * 0.88,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF00AA4F),
+                letterSpacing: -0.3,
                 height: 1.0,
               ),
             ),
@@ -377,79 +359,345 @@ class CargoCompanyLogo extends StatelessWidget {
         );
 
       case CargoCompanyType.aras:
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        final fs = h * 0.84;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 4 * scale,
-                  height: 4 * scale,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF5B00),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                SizedBox(width: 2 * scale),
-                Text(
-                  'aras',
-                  style: TextStyle(
-                    fontFamily: 'Roboto',
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 11.5 * scale,
-                    letterSpacing: 0.5,
-                    height: 1.0,
-                  ),
-                ),
-              ],
+            CustomPaint(
+              size: Size(h * 0.82, h * 0.82),
+              painter: const ArasEmblemPainter(),
+            ),
+            SizedBox(width: h * 0.24),
+            Text(
+              'aras',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs * 0.96,
+                fontWeight: FontWeight.w900,
+                fontStyle: FontStyle.italic,
+                color: const Color(0xFF002B49),
+                letterSpacing: -0.3,
+                height: 1.0,
+              ),
             ),
           ],
         );
 
       case CargoCompanyType.mng:
+        final fs = h * 0.82;
         return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Icon(
+              Icons.flutter_dash_rounded,
+              color: const Color(0xFFFF7900),
+              size: h * 0.88,
+            ),
+            SizedBox(width: h * 0.18),
+            RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: fs * 0.9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.2,
+                  height: 1.0,
+                ),
+                children: const [
+                  TextSpan(
+                    text: 'MNG',
+                    style: TextStyle(color: Color(0xFF002244)),
+                  ),
+                  TextSpan(
+                    text: 'kargo',
+                    style: TextStyle(color: Color(0xFFFF7900), fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+
+      case CargoCompanyType.ups:
+        final fs = h * 0.8;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: fs * 0.22, vertical: fs * 0.08),
+              decoration: BoxDecoration(
+                color: const Color(0xFF351C15),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(fs * 0.15),
+                  topRight: Radius.circular(fs * 0.15),
+                  bottomLeft: Radius.circular(fs * 0.4),
+                  bottomRight: Radius.circular(fs * 0.4),
+                ),
+                border: Border.all(color: const Color(0xFFFFB500), width: 1.2),
+              ),
+              child: Text(
+                'ups',
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: fs * 0.65,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFFFFB500),
+                  height: 1.0,
+                ),
+              ),
+            ),
+            SizedBox(width: h * 0.2),
             Text(
-              'MNG',
+              'UPS',
               style: TextStyle(
                 fontFamily: 'Roboto',
-                color: Colors.white,
+                fontSize: fs * 0.85,
                 fontWeight: FontWeight.w900,
-                fontSize: 10.5 * scale,
+                color: const Color(0xFF351C15),
                 letterSpacing: 0.5,
                 height: 1.0,
               ),
-            ),
-            Icon(
-              Icons.navigation_rounded,
-              color: const Color(0xFF00ADEF),
-              size: 10 * scale,
             ),
           ],
         );
 
       case CargoCompanyType.trendyol:
-        return Text(
-          'TX',
-          style: TextStyle(
-            fontFamily: 'Roboto',
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 13.0 * scale,
-            letterSpacing: 0.5,
-            height: 1.0,
-          ),
+        final fs = h * 0.8;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'trendyol',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs * 0.85,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF18181B),
+                letterSpacing: -0.3,
+                height: 1.0,
+              ),
+            ),
+            SizedBox(width: h * 0.15),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: fs * 0.2, vertical: fs * 0.06),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF27A1A),
+                borderRadius: BorderRadius.circular(fs * 0.15),
+              ),
+              child: Text(
+                'express',
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: fs * 0.58,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ],
         );
 
       case CargoCompanyType.unknown:
-        return Icon(
-          Icons.local_shipping_rounded,
-          color: AppColors.primary,
-          size: 18 * scale,
+        final title = (companyName != null && companyName!.trim().isNotEmpty)
+            ? companyName!.trim()
+            : 'Kargo';
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.local_shipping_outlined,
+              size: h * 0.85,
+              color: const Color(0xFF0F172A),
+            ),
+            SizedBox(width: h * 0.2),
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: h * 0.75,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F172A),
+                height: 1.0,
+              ),
+            ),
+          ],
         );
     }
   }
+}
+
+/// Sürat Kargo'nun kurumsal dinamik paralelkenar amblemi
+class SuratEmblemPainter extends CustomPainter {
+  final Color color;
+  const SuratEmblemPainter({this.color = const Color(0xFFE30613)});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final path = Path()
+      ..moveTo(w * 0.28, 0)
+      ..lineTo(w * 0.95, 0)
+      ..lineTo(w * 0.72, h)
+      ..lineTo(w * 0.05, h)
+      ..close();
+
+    canvas.drawPath(path, paint);
+
+    final whitePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final cut = Path()
+      ..moveTo(w * 0.44, 0)
+      ..lineTo(w * 0.54, 0)
+      ..lineTo(w * 0.34, h)
+      ..lineTo(w * 0.24, h)
+      ..close();
+
+    canvas.drawPath(cut, whitePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// PTT Kargo'nun sarı kanat & mavi posta borusu amblemi
+class PttEmblemPainter extends CustomPainter {
+  const PttEmblemPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final yellowPaint = Paint()
+      ..color = const Color(0xFFFDB913)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final yellowPath = Path()
+      ..moveTo(w * 0.15, h * 0.45)
+      ..quadraticBezierTo(w * 0.4, h * 0.05, w * 0.9, h * 0.15)
+      ..quadraticBezierTo(w * 0.5, h * 0.45, w * 0.75, h * 0.8)
+      ..quadraticBezierTo(w * 0.35, h * 0.85, w * 0.15, h * 0.45)
+      ..close();
+    canvas.drawPath(yellowPath, yellowPaint);
+
+    final bluePaint = Paint()
+      ..color = const Color(0xFF003E7E)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = h * 0.16
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    final horn = Path()
+      ..moveTo(w * 0.08, h * 0.48)
+      ..quadraticBezierTo(w * 0.35, h * 0.96, w * 0.92, h * 0.6);
+    canvas.drawPath(horn, bluePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Yurtiçi Kargo'nun 'YK' çift yönlü dinamik şerit amblemi
+class YurticiEmblemPainter extends CustomPainter {
+  const YurticiEmblemPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final bluePaint = Paint()
+      ..color = const Color(0xFF004B93)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final orangePaint = Paint()
+      ..color = const Color(0xFFF37021)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final blue = Path()
+      ..moveTo(w * 0.05, h * 0.05)
+      ..lineTo(w * 0.38, h * 0.05)
+      ..lineTo(w * 0.72, h * 0.95)
+      ..lineTo(w * 0.39, h * 0.95)
+      ..close();
+    canvas.drawPath(blue, bluePaint);
+
+    final orangeUp = Path()
+      ..moveTo(w * 0.85, h * 0.05)
+      ..lineTo(w * 0.55, h * 0.48)
+      ..lineTo(w * 0.40, h * 0.48)
+      ..lineTo(w * 0.65, h * 0.05)
+      ..close();
+    canvas.drawPath(orangeUp, orangePaint);
+
+    final orangeDown = Path()
+      ..moveTo(w * 0.55, h * 0.52)
+      ..lineTo(w * 0.88, h * 0.95)
+      ..lineTo(w * 0.68, h * 0.95)
+      ..lineTo(w * 0.42, h * 0.58)
+      ..close();
+    canvas.drawPath(orangeDown, orangePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Aras Kargo'nun kırmızı kare & dinamik kanat amblemi
+class ArasEmblemPainter extends CustomPainter {
+  const ArasEmblemPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final redPaint = Paint()
+      ..color = const Color(0xFFE30613)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final diamond = Path()
+      ..moveTo(w * 0.5, 0)
+      ..lineTo(w, h * 0.5)
+      ..lineTo(w * 0.5, h)
+      ..lineTo(0, h * 0.5)
+      ..close();
+    canvas.drawPath(diamond, redPaint);
+
+    final whitePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final plane = Path()
+      ..moveTo(w * 0.25, h * 0.5)
+      ..lineTo(w * 0.75, h * 0.28)
+      ..lineTo(w * 0.62, h * 0.72)
+      ..lineTo(w * 0.52, h * 0.55)
+      ..close();
+    canvas.drawPath(plane, whitePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

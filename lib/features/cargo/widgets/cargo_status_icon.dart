@@ -1,20 +1,61 @@
 import 'package:flutter/material.dart';
 import '../models/cargo_model.dart';
 
-/// Kargo durumunu tek bakışta anlatan, canlı renklere ve dairesel tasarıma sahip dikkat çekici durum rozeti/simgesi.
+/// Kargo durumunu tek bakışta anlatan, canlı renklere sahip durum rozeti/simgesi.
+/// [showLabel] = true olduğunda referans tasarımdaki gibi ikon yanında durum metniyle
+/// birlikte şık kapsül (pill) rozet olarak render edilir.
 class CargoStatusIcon extends StatelessWidget {
   final CargoModel cargo;
   final double size;
+  final bool showLabel;
 
   const CargoStatusIcon({
     super.key,
     required this.cargo,
     this.size = 36.0,
+    this.showLabel = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final info = _resolveStatus(cargo);
+
+    if (showLabel) {
+      return Tooltip(
+        message: info.tooltip,
+        preferBelow: false,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+          decoration: BoxDecoration(
+            color: info.pillBgColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: info.pillBorderColor, width: 0.8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                info.pillIcon,
+                size: 13.5,
+                color: info.pillTextColor,
+              ),
+              const SizedBox(width: 4.5),
+              Text(
+                info.label,
+                style: TextStyle(
+                  color: info.pillTextColor,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.1,
+                  height: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Tooltip(
       message: info.tooltip,
@@ -59,6 +100,11 @@ class CargoStatusIcon extends StatelessWidget {
       return _StatusInfo(
         color: const Color(0xFF10B981), // Canlı Yeşil (Emerald 500)
         icon: Icons.check_rounded,
+        pillBgColor: const Color(0xFFDCFCE7), // Açık Yeşil Zemin
+        pillBorderColor: const Color(0xFFBBF7D0),
+        pillTextColor: const Color(0xFF15803D), // Koyu Yeşil Metin & İkon
+        pillIcon: Icons.check_circle_rounded,
+        label: 'Teslim Edildi',
         tooltip: actionTitle.isNotEmpty ? actionTitle : 'Teslim Edildi',
       );
     }
@@ -71,6 +117,11 @@ class CargoStatusIcon extends StatelessWidget {
       return _StatusInfo(
         color: const Color(0xFF0284C7), // Canlı Açık Mavi / Turkuaz (Sky 600)
         icon: Icons.delivery_dining_rounded,
+        pillBgColor: const Color(0xFFE0F2FE), // Açık Mavi Zemin
+        pillBorderColor: const Color(0xFFBAE6FD),
+        pillTextColor: const Color(0xFF0369A1), // Mavi Metin & İkon
+        pillIcon: Icons.local_shipping_outlined,
+        label: 'Dağıtımda',
         tooltip: actionTitle.isNotEmpty ? actionTitle : 'Dağıtımda',
       );
     }
@@ -88,7 +139,12 @@ class CargoStatusIcon extends StatelessWidget {
       return _StatusInfo(
         color: const Color(0xFFF97316), // Canlı Turuncu (Orange 500)
         icon: isReturn ? Icons.assignment_return_rounded : Icons.warning_amber_rounded,
-        tooltip: actionTitle.isNotEmpty ? actionTitle : 'Sorunlu / İade',
+        pillBgColor: const Color(0xFFFEF3C7), // Açık Turuncu/Sarı Zemin
+        pillBorderColor: const Color(0xFFFDE68A),
+        pillTextColor: const Color(0xFFD97706), // Turuncu Metin & İkon
+        pillIcon: isReturn ? Icons.assignment_return_rounded : Icons.warning_amber_rounded,
+        label: isReturn ? 'İade' : 'Sorunlu',
+        tooltip: actionTitle.isNotEmpty ? actionTitle : (isReturn ? 'İade' : 'Sorunlu'),
       );
     }
 
@@ -102,6 +158,11 @@ class CargoStatusIcon extends StatelessWidget {
       return _StatusInfo(
         color: const Color(0xFF2563EB), // Canlı Mavi (Blue 600)
         icon: Icons.local_shipping_rounded,
+        pillBgColor: const Color(0xFFEFF6FF), // Açık Mavi Zemin
+        pillBorderColor: const Color(0xFFBFDBFE),
+        pillTextColor: const Color(0xFF2563EB), // Mavi Metin & İkon
+        pillIcon: Icons.local_shipping_outlined,
+        label: 'Yolda',
         tooltip: actionTitle.isNotEmpty ? actionTitle : 'Yolda',
       );
     }
@@ -111,6 +172,11 @@ class CargoStatusIcon extends StatelessWidget {
       return const _StatusInfo(
         color: Color(0xFF64748B), // Slate Gri
         icon: Icons.edit_note_rounded,
+        pillBgColor: Color(0xFFF1F5F9),
+        pillBorderColor: Color(0xFFE2E8F0),
+        pillTextColor: Color(0xFF475569),
+        pillIcon: Icons.edit_note_rounded,
+        label: 'Taslak',
         tooltip: 'Taslak',
       );
     }
@@ -119,7 +185,12 @@ class CargoStatusIcon extends StatelessWidget {
     return _StatusInfo(
       color: const Color(0xFF6366F1), // Canlı İndigo
       icon: Icons.inventory_2_rounded,
-      tooltip: actionTitle.isNotEmpty ? actionTitle : 'Kabul Bekleniyor',
+      pillBgColor: const Color(0xFFF1F5F9), // Hafif Gri/Lacivert Zemin
+      pillBorderColor: const Color(0xFFE2E8F0),
+      pillTextColor: const Color(0xFF475569), // Koyu Gri/Lacivert Metin & İkon
+      pillIcon: Icons.inventory_2_outlined,
+      label: 'Hazırlanan',
+      tooltip: actionTitle.isNotEmpty ? actionTitle : 'Hazırlanan',
     );
   }
 }
@@ -127,11 +198,21 @@ class CargoStatusIcon extends StatelessWidget {
 class _StatusInfo {
   final Color color;
   final IconData icon;
+  final Color pillBgColor;
+  final Color pillBorderColor;
+  final Color pillTextColor;
+  final IconData pillIcon;
+  final String label;
   final String tooltip;
 
   const _StatusInfo({
     required this.color,
     required this.icon,
+    required this.pillBgColor,
+    required this.pillBorderColor,
+    required this.pillTextColor,
+    required this.pillIcon,
+    required this.label,
     required this.tooltip,
   });
 }
