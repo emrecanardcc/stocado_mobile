@@ -69,8 +69,11 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
         ? (activeColor ?? AppColors.secondary).withValues(alpha: 0.3)
         : AppColors.border;
 
+    final text = extra != null ? '$label ($extra)' : label;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      constraints: const BoxConstraints(maxWidth: 250),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
@@ -85,12 +88,16 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
             color: color,
           ),
           const SizedBox(width: 4),
-          Text(
-            extra != null ? '$label ($extra)' : label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: color,
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -101,6 +108,12 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
   @override
   Widget build(BuildContext context) {
     final plan = widget.plan;
+
+    final p02 = plan.zeroTwoDesi > 0 ? plan.zeroTwoDesi : plan.calculatePrice(2);
+    final p5 = plan.fiveDesi > 0 ? plan.fiveDesi : plan.calculatePrice(5);
+    final p10 = plan.tenDesi > 0 ? plan.tenDesi : plan.calculatePrice(10);
+    final p20 = plan.twentyDesi > 0 ? plan.twentyDesi : plan.calculatePrice(20);
+    final p30 = plan.thirtyDesi > 0 ? plan.thirtyDesi : plan.calculatePrice(30);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -188,15 +201,15 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildPricePill('0-2 Desi', plan.zeroTwoDesi),
+                      _buildPricePill('0-2 Desi', p02),
                       const SizedBox(width: 6),
-                      _buildPricePill('5 Desi', plan.fiveDesi),
+                      _buildPricePill('5 Desi', p5),
                       const SizedBox(width: 6),
-                      _buildPricePill('10 Desi', plan.tenDesi),
+                      _buildPricePill('10 Desi', p10),
                       const SizedBox(width: 6),
-                      _buildPricePill('20 Desi', plan.twentyDesi),
+                      _buildPricePill('20 Desi', p20),
                       const SizedBox(width: 6),
-                      _buildPricePill('30 Desi', plan.thirtyDesi),
+                      _buildPricePill('30 Desi', p30),
                     ],
                   ),
                 ),
@@ -246,8 +259,9 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Container(width: 1, height: 26, color: AppColors.border),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       // Artan Desi (+1 Desi)
                       Expanded(
                         child: Row(

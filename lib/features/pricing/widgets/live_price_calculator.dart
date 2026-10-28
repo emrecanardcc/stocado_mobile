@@ -5,49 +5,6 @@ import '../../../core/utils/app_formatters.dart';
 import '../../cargo/widgets/cargo_company_logo.dart';
 import '../models/pricing_plan_model.dart';
 
-/// Verilen desi değeri için plan içindeki fiyat dilimlerine bakarak fiyat hesaplar.
-/// Desi kademeleri: zeroTwoDesi (0-2), fiveDesi (5), tenDesi (10), twentyDesi (20),
-/// thirtyDesi (30) ve additionalDesi (+1 ek desi).
-double _getPriceForDesi(PricingPlan plan, int desi) {
-  if (desi <= 2) return plan.zeroTwoDesi;
-  if (desi <= 5) {
-    // Lineer interpolasyon: 2 ile 5 arası
-    if (plan.fiveDesi <= 0) return plan.zeroTwoDesi;
-    final ratio = (desi - 2) / (5 - 2);
-    return plan.zeroTwoDesi + ratio * (plan.fiveDesi - plan.zeroTwoDesi);
-  }
-  if (desi <= 10) {
-    final base = plan.fiveDesi > 0 ? plan.fiveDesi : plan.zeroTwoDesi;
-    if (plan.tenDesi <= 0) return base;
-    final ratio = (desi - 5) / (10 - 5);
-    return base + ratio * (plan.tenDesi - base);
-  }
-  if (desi <= 20) {
-    final base = plan.tenDesi > 0 ? plan.tenDesi : (plan.fiveDesi > 0 ? plan.fiveDesi : plan.zeroTwoDesi);
-    if (plan.twentyDesi <= 0) return base;
-    final ratio = (desi - 10) / (20 - 10);
-    return base + ratio * (plan.twentyDesi - base);
-  }
-  if (desi <= 30) {
-    final base = plan.twentyDesi > 0
-        ? plan.twentyDesi
-        : (plan.tenDesi > 0 ? plan.tenDesi : (plan.fiveDesi > 0 ? plan.fiveDesi : plan.zeroTwoDesi));
-    if (plan.thirtyDesi <= 0) return base;
-    final ratio = (desi - 20) / (30 - 20);
-    return base + ratio * (plan.thirtyDesi - base);
-  }
-  // 30'dan büyük desi: ek desi ücreti ile hesapla
-  final base = plan.thirtyDesi > 0
-      ? plan.thirtyDesi
-      : (plan.twentyDesi > 0
-          ? plan.twentyDesi
-          : (plan.tenDesi > 0 ? plan.tenDesi : (plan.fiveDesi > 0 ? plan.fiveDesi : plan.zeroTwoDesi)));
-  if (plan.additionalDesi > 0) {
-    return base + (desi - 30) * plan.additionalDesi;
-  }
-  return base;
-}
-
 class _CalcResult {
   final PricingPlan plan;
   final double price;
@@ -76,26 +33,28 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
   }
 
   List<_CalcResult> get _results {
-    final raw = int.tryParse(_desiController.text.trim()) ?? 2;
+    final raw = int.tryParse(_desiController.text.trim()) ?? 1;
     final desi = raw.clamp(1, 999);
 
     final filtered = widget.plans.where((plan) {
       if (_filterPod && !plan.hasPod) return false;
-      if (_filterControlled) {
-        final isPtt = plan.code.toLowerCase().contains('ptt') ||
-            plan.companyName.toLowerCase().contains('ptt') ||
-            plan.hasControlledDelivery;
-        if (!isPtt) return false;
-      }
+      if (_filterControlled && !plan.isPtt) return false;
       return true;
     }).toList();
 
     final results = filtered.map((plan) {
-      final price = _getPriceForDesi(plan, desi);
+      final price = plan.calculatePrice(desi);
       return _CalcResult(plan: plan, price: price);
     }).toList();
 
-    results.sort((a, b) => a.price.compareTo(b.price));
+    // 0 veya negatif fiyata sahip geçersiz tarifeleri sona at, geçerli fiyatları küçükten büyüğe sırala
+    results.sort((a, b) {
+      if (a.price <= 0 && b.price <= 0) return 0;
+      if (a.price <= 0) return 1;
+      if (b.price <= 0) return -1;
+      return a.price.compareTo(b.price);
+    });
+
     return results;
   }
 
@@ -113,7 +72,9 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
         _sliderValue = val.clamp(1, 30).toDouble();
       });
     } else {
-      setState(() {});
+      setState(() {
+        _sliderValue = 1.0;
+      });
     }
   }
 
@@ -136,15 +97,20 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'CANLI FİYAT HESAPLA',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary,
-                  letterSpacing: 0.8,
+              const Flexible(
+                child: Text(
+                  'CANLI FİYAT HESAPLA',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
+                    letterSpacing: 0.8,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -180,15 +146,21 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Gönderi Desisi:',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textSecondary,
+                    const Flexible(
+                      child: Text(
+                        'Gönderi Desisi:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
                           width: 52,
@@ -349,60 +321,78 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
     final plan = result.plan;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          // Logo
-          CargoCompanyLogo(
-            companyId: plan.code,
-            companyName: plan.companyName,
-            height: 18,
-            width: 80,
-          ),
-          const SizedBox(width: 8),
-          // Şirket Adı
-          Expanded(
-            child: Text(
-              plan.companyName,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 320;
+          return Row(
+            children: [
+              // Logo
+              CargoCompanyLogo(
+                companyId: plan.code,
+                companyName: plan.companyName,
+                height: 18,
+                width: isNarrow ? 48 : 64,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          // EN UYGUN FİYAT Rozeti
-          if (isCheapest) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD1FAE5),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0xFF6EE7B7)),
-              ),
-              child: const Text(
-                'EN UYGUN FİYAT',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF065F46),
-                  letterSpacing: 0.3,
+              const SizedBox(width: 6),
+              // Şirket Adı
+              Expanded(
+                child: Text(
+                  plan.companyName,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-            const SizedBox(width: 6),
-          ],
-          // Fiyat
-          Text(
-            result.price > 0 ? AppFormatters.formatCurrency(result.price) : '-',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
+              const SizedBox(width: 4),
+              // EN UYGUN FİYAT Rozeti
+              if (isCheapest) ...[
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: isNarrow ? 68 : 78),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF6EE7B7)),
+                      ),
+                      child: const Text(
+                        'EN UYGUN FİYAT',
+                        style: TextStyle(
+                          fontSize: 7.5,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF065F46),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
+              // Fiyat
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: isNarrow ? 76 : 90),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    result.price > 0 ? AppFormatters.formatCurrency(result.price) : '-',
+                    style: TextStyle(
+                      fontSize: isNarrow ? 11.5 : 12.5,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

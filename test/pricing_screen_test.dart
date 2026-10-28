@@ -58,7 +58,16 @@ PricingPlan _createDummyPlan({
   bool hasDoorPickup = true,
   String returnRate = '%50',
   String notes = 'Standart teslimat kurallari gecerlidir.',
+  Map<int, double>? desiPrices,
 }) {
+  final map = desiPrices ?? {
+    2: zeroTwo,
+    5: five,
+    10: ten,
+    20: twenty,
+    30: thirty,
+  };
+
   return PricingPlan(
     companyName: companyName,
     code: code,
@@ -76,6 +85,7 @@ PricingPlan _createDummyPlan({
     hasControlledDelivery: hasControlledDelivery,
     hasDoorPickup: hasDoorPickup,
     notes: notes,
+    desiPrices: map,
   );
 }
 
@@ -126,16 +136,16 @@ void main() {
 
   final dummyPlans = [pttPlan, yurticiPlan, suratPlan];
 
-  group('PricingPlan Model Ayrıştırma Testleri', () {
-    test('PricingPlan.fromBackend boolean ve KDV hesaplamasını doğru ayrıştırır', () {
+  group('PricingPlan Model Ayrıştırma ve Hesaplama Testleri', () {
+    test('PricingPlan.fromBackend boolean, KDV ve desiPrices haritasını doğru ayrıştırır', () {
       final backendItem = {
         'id': 'plan-123',
         'name': 'PTT Anlaşmalı Tarife',
         'cargo_company_id': 'ptt-kargo',
         'cargo_company': {
           'title': 'PTT Kargo',
-          'can_pod': 1, // num olarak dönen boolean
-          'can_pod_credit_card': 'true', // string olarak dönen boolean
+          'can_pod': 1,
+          'can_pod_credit_card': 'true',
           'can_controlled_delivery': false,
           'customer_note': 'Kapıdan ücretsiz kurye alımı mevcuttur.',
         },
@@ -151,7 +161,7 @@ void main() {
         ],
         'fees': [
           {'type': 201, 'value': 20.0},
-          {'type': 202, 'value': '60'},
+          {'type': '202', 'value': '60'},
         ],
       };
 
@@ -160,14 +170,57 @@ void main() {
       expect(plan.companyName, 'PTT Kargo');
       expect(plan.hasPod, isTrue);
       expect(plan.hasPodCreditCard, isTrue);
-      // PTT olduğu için kod/isim eşleşmesinden kontrollü teslimat true olmalı
       expect(plan.hasControlledDelivery, isTrue);
       expect(plan.hasDoorPickup, isTrue);
-      // %20 KDV dahil kontrolü
+      expect(plan.isPtt, isTrue);
+      // %20 KDV dahil kontrolleri
       expect(plan.zeroTwoDesi, closeTo(120.0, 0.01));
       expect(plan.fiveDesi, closeTo(180.0, 0.01));
       expect(plan.additionalDesi, closeTo(24.0, 0.01));
       expect(plan.returnRate, '%60');
+      // desiPrices haritası kontrolü
+      expect(plan.desiPrices.length, 5);
+      expect(plan.calculatePrice(1), closeTo(120.0, 0.01));
+      expect(plan.calculatePrice(5), closeTo(180.0, 0.01));
+      // 30 desi üzeri hesaplama: 400 * 1.20 (480) + 5 * 24 = 600
+      expect(plan.calculatePrice(35), closeTo(600.0, 0.01));
+    });
+
+    test('PricingPlan.calculatePrice ara kademelerde lineer interpolasyonu hatasız yapar', () {
+      final customPlan = PricingPlan(
+        companyName: 'Özel Kargo',
+        code: 'ozel-kargo',
+        tariffName: 'Özel Tarife',
+        logo: '',
+        zeroTwoDesi: 100.0,
+        fiveDesi: 140.0,
+        tenDesi: 200.0,
+        twentyDesi: 300.0,
+        thirtyDesi: 400.0,
+        additionalDesi: 10.0,
+        returnRate: '%50',
+        hasPod: true,
+        hasPodCreditCard: false,
+        hasControlledDelivery: false,
+        hasDoorPickup: false,
+        notes: '',
+        desiPrices: {
+          1: 100.0,
+          5: 140.0,
+          20: 290.0,
+        },
+      );
+
+      // Desi 1 exact match
+      expect(customPlan.calculatePrice(1), 100.0);
+      // Desi 3 -> 1 ile 5 arası interpolasyon: 100 + (2/4)*(140-100) = 120
+      expect(customPlan.calculatePrice(3), 120.0);
+      // Desi 5 exact match
+      expect(customPlan.calculatePrice(5), 140.0);
+      // Desi 10 -> 5 ile 20 arası interpolasyon: 140 + (5/15)*(290-140) = 190
+      expect(customPlan.calculatePrice(10), 190.0);
+      // Desi 25 -> 20 üstü ek desi: 290 + 5 * 10 = 340
+      expect(customPlan.calculatePrice(25), 340.0);
     });
   });
 
@@ -235,6 +288,75 @@ void main() {
       expect(find.text('Surat Kargo'), findsNothing);
     });
 
+    testWidgets('Kontrollü Teslimat filtresi PTT harici firmada hasControlledDelivery true olsa dahi yalnızca PTT gösterir', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+
+      final testSuratWithFlag = _createDummyPlan(
+        companyName: 'Surat Kargo',
+        code: 'surat-kargo',
+        zeroTwo: 80.0,
+        five: 110.0,
+        ten: 150.0,
+        twenty: 200.0,
+        thirty: 250.0,
+        additional: 10.0,
+        hasPod: true,
+        hasControlledDelivery: true, // Hatalı biçimde true dönse dahi PTT filtresi kuralı korunmalı
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: LivePriceCalculator(plans: [pttPlan, testSuratWithFlag]),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Kontrollü Teslimat filtresine tıkla
+      await tester.tap(find.text('Kontrollü Teslimat'));
+      await tester.pumpAndSettle();
+
+      // Sadece PTT Kargo listelenmeli
+      expect(find.text('PTT Kargo'), findsOneWidget);
+      expect(find.text('Surat Kargo'), findsNothing);
+    });
+
+    testWidgets('0 veya eksik fiyatlı firmaları sona atarak geçerli en ucuz firmaya EN UYGUN FİYAT rozeti verir', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+
+      final zeroPricePlan = _createDummyPlan(
+        companyName: 'Bozuk Tarife Kargo',
+        code: 'bozuk-kargo',
+        zeroTwo: 0.0,
+        five: 0.0,
+        ten: 0.0,
+        twenty: 0.0,
+        thirty: 0.0,
+        additional: 0.0,
+        desiPrices: {},
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: LivePriceCalculator(plans: [zeroPricePlan, pttPlan]),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // PTT Kargo (90 TL) en ucuz olmalı ve EN UYGUN FİYAT rozetini almalı
+      expect(find.text('EN UYGUN FİYAT'), findsOneWidget);
+      expect(find.text('PTT Kargo'), findsOneWidget);
+      expect(find.text('Bozuk Tarife Kargo'), findsOneWidget);
+      expect(find.text('-'), findsOneWidget);
+    });
+
     testWidgets('Desi değiştiğinde fiyatlar dinamik hesaplanır', (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 800));
 
@@ -257,6 +379,27 @@ void main() {
       // PTT: 30 desi (280) + 5 * 15 = 355 TL
       final expectedPtt = AppFormatters.formatCurrency(355.0);
       expect(find.text(expectedPtt), findsOneWidget);
+    });
+
+    testWidgets('320px çok dar ekranda ve 999 desi durumunda taşmasız render edilir', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: LivePriceCalculator(plans: dummyPlans),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final desiFinder = find.byType(TextField);
+      await tester.enterText(desiFinder, '999');
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -303,6 +446,23 @@ void main() {
       expect(find.text('15,00 ₺'), findsNWidgets(2));
       expect(find.text('1.001 - 5.000 ₺'), findsOneWidget);
       expect(find.text('%1,50'), findsOneWidget);
+    });
+
+    testWidgets('320px dar ekranda kart taşmasız render edilir', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: PricingPlanCard(plan: pttPlan),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
     });
   });
 

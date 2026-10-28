@@ -30,7 +30,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
-    final initialSubIndex = ref.read(mainNavigationProvider).hubSubIndex;
+    final initialSubIndex = ref.read(mainNavigationProvider).hubSubIndex.clamp(0, 1);
     _tabController = TabController(length: 2, vsync: this, initialIndex: initialSubIndex);
     _tabController.addListener(_handleTabChange);
 
@@ -359,8 +359,8 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
   Widget build(BuildContext context) {
     // Navigasyon durumunu dinleyerek dışarıdan gelen sekme değişimlerine tepki ver
     ref.listen(mainNavigationProvider, (prev, next) {
-      if (next.tabIndex == 3 && next.hubSubIndex != _tabController.index) {
-        _tabController.animateTo(next.hubSubIndex);
+      if (next.tabIndex == 3 && next.hubSubIndex.clamp(0, 1) != _tabController.index) {
+        _tabController.animateTo(next.hubSubIndex.clamp(0, 1));
       }
     });
 
