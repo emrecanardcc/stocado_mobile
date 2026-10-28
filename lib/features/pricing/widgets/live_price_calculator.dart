@@ -17,25 +17,35 @@ double _getPriceForDesi(PricingPlan plan, int desi) {
     return plan.zeroTwoDesi + ratio * (plan.fiveDesi - plan.zeroTwoDesi);
   }
   if (desi <= 10) {
-    if (plan.tenDesi <= 0) return plan.fiveDesi;
+    final base = plan.fiveDesi > 0 ? plan.fiveDesi : plan.zeroTwoDesi;
+    if (plan.tenDesi <= 0) return base;
     final ratio = (desi - 5) / (10 - 5);
-    return plan.fiveDesi + ratio * (plan.tenDesi - plan.fiveDesi);
+    return base + ratio * (plan.tenDesi - base);
   }
   if (desi <= 20) {
-    if (plan.twentyDesi <= 0) return plan.tenDesi;
+    final base = plan.tenDesi > 0 ? plan.tenDesi : (plan.fiveDesi > 0 ? plan.fiveDesi : plan.zeroTwoDesi);
+    if (plan.twentyDesi <= 0) return base;
     final ratio = (desi - 10) / (20 - 10);
-    return plan.tenDesi + ratio * (plan.twentyDesi - plan.tenDesi);
+    return base + ratio * (plan.twentyDesi - base);
   }
   if (desi <= 30) {
-    if (plan.thirtyDesi <= 0) return plan.twentyDesi;
+    final base = plan.twentyDesi > 0
+        ? plan.twentyDesi
+        : (plan.tenDesi > 0 ? plan.tenDesi : (plan.fiveDesi > 0 ? plan.fiveDesi : plan.zeroTwoDesi));
+    if (plan.thirtyDesi <= 0) return base;
     final ratio = (desi - 20) / (30 - 20);
-    return plan.twentyDesi + ratio * (plan.thirtyDesi - plan.twentyDesi);
+    return base + ratio * (plan.thirtyDesi - base);
   }
   // 30'dan büyük desi: ek desi ücreti ile hesapla
+  final base = plan.thirtyDesi > 0
+      ? plan.thirtyDesi
+      : (plan.twentyDesi > 0
+          ? plan.twentyDesi
+          : (plan.tenDesi > 0 ? plan.tenDesi : (plan.fiveDesi > 0 ? plan.fiveDesi : plan.zeroTwoDesi)));
   if (plan.additionalDesi > 0) {
-    return plan.thirtyDesi + (desi - 30) * plan.additionalDesi;
+    return base + (desi - 30) * plan.additionalDesi;
   }
-  return plan.thirtyDesi;
+  return base;
 }
 
 class _CalcResult {
@@ -71,7 +81,12 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
 
     final filtered = widget.plans.where((plan) {
       if (_filterPod && !plan.hasPod) return false;
-      if (_filterControlled && !plan.hasControlledDelivery) return false;
+      if (_filterControlled) {
+        final isPtt = plan.code.toLowerCase().contains('ptt') ||
+            plan.companyName.toLowerCase().contains('ptt') ||
+            plan.hasControlledDelivery;
+        if (!isPtt) return false;
+      }
       return true;
     }).toList();
 
@@ -122,7 +137,7 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'CANLI FIYAT HESAPLA',
+                'CANLI FİYAT HESAPLA',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w900,
@@ -138,7 +153,7 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
                   border: Border.all(color: const Color(0xFFD8B4FE)),
                 ),
                 child: const Text(
-                  'KDV DAHIL',
+                  'KDV DAHİL',
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w900,
@@ -166,7 +181,7 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Gonderi Desisi:',
+                      'Gönderi Desisi:',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
@@ -208,7 +223,7 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
                         ),
                         const SizedBox(width: 6),
                         const Text(
-                          'DESI',
+                          'DESİ',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
@@ -254,9 +269,9 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
           // Filtre Kutuları: Kapıda Ödeme & Kontrollü Teslimat
           Row(
             children: [
-              Expanded(child: _buildFilterToggle('Kapida Odeme', _filterPod, (v) => setState(() => _filterPod = v))),
+              Expanded(child: _buildFilterToggle('Kapıda Ödeme', _filterPod, (v) => setState(() => _filterPod = v))),
               const SizedBox(width: 8),
-              Expanded(child: _buildFilterToggle('Kontrollu Teslimat', _filterControlled, (v) => setState(() => _filterControlled = v))),
+              Expanded(child: _buildFilterToggle('Kontrollü Teslimat', _filterControlled, (v) => setState(() => _filterControlled = v))),
             ],
           ),
           const SizedBox(height: 12),
@@ -360,14 +375,14 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
           // EN UYGUN FİYAT Rozeti
           if (isCheapest) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
                 color: const Color(0xFFD1FAE5),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: const Color(0xFF6EE7B7)),
               ),
               child: const Text(
-                'EN UYGUN',
+                'EN UYGUN FİYAT',
                 style: TextStyle(
                   fontSize: 8,
                   fontWeight: FontWeight.w900,
@@ -398,8 +413,8 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
           _filterPod || _filterControlled
-              ? 'Secilen filtrelerle uyumlu tarife bulunamadi.'
-              : 'Hesaplanacak tarife bulunamadi.',
+              ? 'Seçilen filtrelerle uyumlu tarife bulunamadı.'
+              : 'Hesaplanacak tarife bulunamadı.',
           style: const TextStyle(
             fontSize: 11,
             color: AppColors.textSecondary,

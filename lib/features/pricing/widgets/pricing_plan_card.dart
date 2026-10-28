@@ -118,7 +118,7 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Başlık: Logo + Şirket + Tarife
+                // Başlık: Logo + Aktif Tarife Rozeti
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -129,31 +129,31 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
                       width: 90,
                     ),
                     const Spacer(),
-                    // İade Oranı Rozeti
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.border),
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
                       ),
-                      child: Text(
-                        'Iade: ${plan.returnRate}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textSecondary,
+                      child: const Text(
+                        'AKTİF TARİFE',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1D4ED8),
+                          letterSpacing: 0.4,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   plan.companyName,
                   style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
                     color: AppColors.textPrimary,
                     height: 1.1,
                   ),
@@ -164,7 +164,7 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
                     'Tarife: ${plan.tariffName}',
                     style: const TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.textSecondary,
                     ),
                     maxLines: 1,
@@ -175,10 +175,10 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
 
                 // Desi Fiyat Kademeleri
                 const Text(
-                  'Desi Fiyatlari (KDV Dahil):',
+                  'Desi Fiyatları (KDV Dahil):',
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
                     color: AppColors.textSecondary,
                     letterSpacing: 0.3,
                   ),
@@ -197,14 +197,97 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
                       _buildPricePill('20 Desi', plan.twentyDesi),
                       const SizedBox(width: 6),
                       _buildPricePill('30 Desi', plan.thirtyDesi),
-                      if (plan.additionalDesi > 0) ...[
-                        const SizedBox(width: 6),
-                        _buildPricePill('+1 Ek Desi', plan.additionalDesi),
-                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
+
+                // Ek Ücretler Satırı (İade Bedeli, Artan Desi)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      // İade Bedeli
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Icon(Icons.replay_rounded, size: 15, color: AppColors.textSecondary),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'İADE BEDELİ',
+                                    style: TextStyle(
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.textMuted,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    plan.returnRate.isNotEmpty ? plan.returnRate : '%50',
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(width: 1, height: 26, color: AppColors.border),
+                      const SizedBox(width: 12),
+                      // Artan Desi (+1 Desi)
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_circle_outline_rounded, size: 15, color: AppColors.textSecondary),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'ARTAN DESİ (+1)',
+                                    style: TextStyle(
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.textMuted,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    plan.additionalDesi > 0
+                                        ? AppFormatters.formatCurrency(plan.additionalDesi)
+                                        : '-',
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
 
                 // Hizmet Rozetleri
                 Wrap(
@@ -212,20 +295,20 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
                   runSpacing: 6,
                   children: [
                     _buildFeatureBadge(
-                      label: 'Adresten Alim',
+                      label: 'Adresten Alım',
                       isAvailable: plan.hasDoorPickup,
                       icon: Icons.home_outlined,
                       activeColor: const Color(0xFF1D4ED8),
                       activeBg: const Color(0xFFDBEAFE),
                     ),
                     _buildFeatureBadge(
-                      label: 'Kapida Odeme',
+                      label: 'Kapıda Ödeme',
                       isAvailable: plan.hasPod,
                       icon: Icons.payments_outlined,
                       extra: plan.hasPodCreditCard ? 'Nakit + Kart' : (plan.hasPod ? 'Sadece Nakit' : null),
                     ),
                     _buildFeatureBadge(
-                      label: 'Kontrollu Teslimat',
+                      label: 'Kontrollü Teslimat',
                       isAvailable: plan.hasControlledDelivery,
                       icon: Icons.verified_outlined,
                       activeColor: const Color(0xFF7C3AED),
@@ -254,7 +337,7 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
                     const SizedBox(width: 6),
                     const Expanded(
                       child: Text(
-                        'Kapida Odeme Nakit Komisyon Tablosu',
+                        'Kapıda Ödeme Nakit Komisyon Tablosu',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -278,10 +361,37 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
     );
   }
 
+  Widget _buildPodTierRow(String range, String fee) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            range,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 1,
+          child: Text(
+            fee,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPodCommissionTable(PricingPlan plan) {
-    // Statik komisyon satırları (plan notlarından türetilmiş) — gerçek veri
-    // API'den gelen plan modelinde dinamik POD komisyon tablosu mevcut değil,
-    // bu yüzden hasPod bilgisini ve plan notlarını kullanıyoruz.
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.all(12),
@@ -299,9 +409,9 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
               Expanded(
                 flex: 2,
                 child: Text(
-                  'Tahsilat Tutari',
+                  'Tahsilat Tutarı',
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w900,
                     color: AppColors.textMuted,
                     letterSpacing: 0.3,
@@ -311,10 +421,10 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
               Expanded(
                 flex: 1,
                 child: Text(
-                  'Kesinti',
+                  'Kesinti Oranı',
                   textAlign: TextAlign.end,
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w900,
                     color: AppColors.textMuted,
                     letterSpacing: 0.3,
@@ -326,18 +436,35 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
           const SizedBox(height: 6),
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 6),
+          _buildPodTierRow('0 - 1.000 ₺', '15,00 ₺'),
+          const SizedBox(height: 4),
+          _buildPodTierRow('1.001 - 5.000 ₺', '%1,50'),
+          const SizedBox(height: 4),
+          _buildPodTierRow('5.001 ₺ ve üzeri', '%2,00'),
+          const SizedBox(height: 8),
+          const Divider(color: AppColors.border, height: 1),
+          const SizedBox(height: 8),
 
           // Plan özelliklerine göre genel bilgi notu
-          Text(
-            plan.hasPodCreditCard
-                ? 'Nakit ve kredi karti tahsilati desteklenmektedir. Kesin komisyon oranlari icin Stocado ekibiyle iletisime gecin.'
-                : 'Yalnizca nakit tahsilat desteklenmektedir. Kesin komisyon oranlari icin Stocado ekibiyle iletisime gecin.',
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-              height: 1.4,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.info_outline_rounded, size: 13, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  plan.hasPodCreditCard
+                      ? 'Nakit ve tek çekim kredi kartı tahsilatı desteklenmektedir. ${plan.notes}'
+                      : 'Yalnızca nakit tahsilat desteklenmektedir. ${plan.notes}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

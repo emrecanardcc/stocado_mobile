@@ -56,24 +56,31 @@ class PricingPlan {
     final fees = (detail?['fees'] as List<dynamic>?) ?? [];
 
     double getPrice(int desi) {
-      dynamic p = prices.firstWhere(
-        (it) =>
-            it is Map<String, dynamic> &&
-            ((it['desi_threshold'] is num && (it['desi_threshold'] as num).toInt() == desi) ||
-             it['desi_threshold']?.toString() == desi.toString()),
-        orElse: () => null,
-      );
+      dynamic p;
+      for (final it in prices) {
+        if (it is Map<String, dynamic>) {
+          final threshold = it['desi_threshold'];
+          if ((threshold is num && threshold.toInt() == desi) ||
+              threshold?.toString() == desi.toString()) {
+            p = it;
+            break;
+          }
+        }
+      }
 
       // 0-2 Desi için esnek eşleşme (bazı tarifelerde threshold 1 veya 2 tanımlıdır)
       if (p == null && desi == 0) {
-        p = prices.firstWhere(
-          (it) =>
-              it is Map<String, dynamic> &&
-              ((it['desi_threshold'] is num && (it['desi_threshold'] as num).toInt() <= 2) ||
-               it['desi_threshold']?.toString() == '1' ||
-               it['desi_threshold']?.toString() == '2'),
-          orElse: () => null,
-        );
+        for (final it in prices) {
+          if (it is Map<String, dynamic>) {
+            final threshold = it['desi_threshold'];
+            if ((threshold is num && threshold.toInt() <= 2) ||
+                threshold?.toString() == '1' ||
+                threshold?.toString() == '2') {
+              p = it;
+              break;
+            }
+          }
+        }
       }
 
       if (p != null && p is Map<String, dynamic>) {
@@ -100,10 +107,21 @@ class PricingPlan {
       }
     }
 
+    bool parseBool(dynamic val) {
+      if (val == null) return false;
+      if (val is bool) return val;
+      if (val is num) return val == 1;
+      final str = val.toString().trim().toLowerCase();
+      return str == 'true' || str == '1';
+    }
+
     final notes = company['customer_note']?.toString() ?? '';
     final bool hasDoorPickup = notes.toLowerCase().contains('ücretsiz kurye') ||
         notes.toLowerCase().contains('kapıdan') ||
-        company['can_receive_direction'] == true;
+        parseBool(company['can_receive_direction']);
+
+    final bool isPtt = code.toLowerCase().contains('ptt') || companyName.toLowerCase().contains('ptt');
+    final bool hasControlledDelivery = parseBool(company['can_controlled_delivery']) || isPtt;
 
     return PricingPlan(
       companyName: companyName,
@@ -117,9 +135,9 @@ class PricingPlan {
       thirtyDesi: getPrice(30),
       additionalDesi: additionalDesi,
       returnRate: returnRate,
-      hasPod: company['can_pod'] == true,
-      hasPodCreditCard: company['can_pod_credit_card'] == true,
-      hasControlledDelivery: company['can_controlled_delivery'] == true,
+      hasPod: parseBool(company['can_pod']),
+      hasPodCreditCard: parseBool(company['can_pod_credit_card']),
+      hasControlledDelivery: hasControlledDelivery,
       hasDoorPickup: hasDoorPickup,
       notes: notes.isNotEmpty ? notes : 'Standart gönderi ve teslimat kuralları geçerlidir.',
     );

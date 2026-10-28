@@ -139,13 +139,17 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
                 color: isSelected ? AppColors.primary : AppColors.textSecondary,
               ),
               const SizedBox(width: 6),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              Flexible(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -167,7 +171,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
             CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
             SizedBox(height: 16),
             Text(
-              'Anlasmalı kargo tarifeleri yukleniyor...',
+              'Anlaşmalı kargo tarifeleri yükleniyor...',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ],
@@ -177,7 +181,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
 
     if (pricingState.errorMessage != null && pricingState.plans.isEmpty) {
       return AppErrorState(
-        title: 'Fiyat Tarifeleri Yuklenemedi',
+        title: 'Fiyat Tarifeleri Yüklenemedi',
         message: pricingState.errorMessage!,
         onRetry: () => pricingNotifier.refresh(),
       );
@@ -205,7 +209,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'FIRMA DETAY TARiFELERi',
+                  'FİRMA DETAY TARİFELERİ',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
@@ -221,7 +225,7 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
                     border: Border.all(color: AppColors.border),
                   ),
                   child: Text(
-                    '${pricingState.plans.length} ANLASMA',
+                    '${pricingState.plans.length} ANLAŞMA',
                     style: const TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w900,
@@ -372,7 +376,12 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
               size: 20,
             ),
             const SizedBox(width: 8),
-            Text(isProductsTab ? 'Kayıtlı Ürünlerim' : 'Fiyat Tarifeleri'),
+            Expanded(
+              child: Text(
+                isProductsTab ? 'Kayıtlı Ürünlerim' : 'Fiyat Tarifeleri',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -383,21 +392,35 @@ class _PricingScreenState extends ConsumerState<PricingScreen> with SingleTicker
               if (plans.isNotEmpty) {
                 return Center(
                   child: Container(
-                    margin: const EdgeInsets.only(right: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFFD1FAE5),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: const Color(0xFF6EE7B7)),
                     ),
-                    child: const Text(
-                      'API AKTiF',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF065F46),
-                        letterSpacing: 0.3,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'API AKTİF',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF065F46),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
