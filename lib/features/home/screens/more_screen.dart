@@ -4,7 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/screens/top_up_balance_screen.dart';
 import '../../pricing/screens/pricing_screen.dart';
-import '../providers/navigation_provider.dart';
+import '../../products/screens/products_screen.dart';
 
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
@@ -219,10 +219,9 @@ class MoreScreen extends ConsumerWidget {
 
             _buildMenuItem(
               icon: Icons.receipt_long_rounded,
-              title: 'Fiyat Tarifeleri',
+              title: 'Tarifeler & Fiyatlar',
               subtitle: 'Anlaşmalı kargo firmaları ve desi fiyat listeleri',
               onTap: () {
-                ref.read(mainNavigationProvider.notifier).selectHubSubIndex(0);
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const PricingScreen()),
@@ -232,13 +231,12 @@ class MoreScreen extends ConsumerWidget {
 
             _buildMenuItem(
               icon: Icons.inventory_2_rounded,
-              title: 'Kayıtlı Ürünlerim',
+              title: 'Kayıtlı Ürünlerim (Ürün Kataloğu)',
               subtitle: 'Hızlı kargo için hazır paket ve ürün kataloğu',
               onTap: () {
-                ref.read(mainNavigationProvider.notifier).selectHubSubIndex(1);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const PricingScreen()),
+                  MaterialPageRoute(builder: (_) => const ProductsScreen()),
                 );
               },
             ),

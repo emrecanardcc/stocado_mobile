@@ -64,7 +64,9 @@ class ProductCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -81,8 +83,7 @@ class ProductCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (product.code != null && product.code!.isNotEmpty) ...[
-                            const SizedBox(width: 6),
+                          if (product.code != null && product.code!.isNotEmpty)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
@@ -98,7 +99,6 @@ class ProductCard extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          ],
                         ],
                       ),
                       if (product.barcode != null && product.barcode!.isNotEmpty) ...[
@@ -107,12 +107,16 @@ class ProductCard extends StatelessWidget {
                           children: [
                             const Icon(Icons.qr_code_2_rounded, size: 13, color: AppColors.textMuted),
                             const SizedBox(width: 4),
-                            Text(
-                              product.barcode!,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontFamily: 'monospace',
-                                color: AppColors.textSecondary,
+                            Flexible(
+                              child: Text(
+                                product.barcode!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
                           ],

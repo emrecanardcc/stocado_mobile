@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../cargo/screens/cargos_screen.dart';
 import '../../cargo/screens/create_cargo_screen.dart';
-import '../../finance/screens/finance_screen.dart';
+import '../../dashboard/screens/top_up_balance_screen.dart';
 import '../providers/navigation_provider.dart';
 import 'dashboard_screen.dart';
 import 'more_screen.dart';
@@ -30,7 +30,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       case 2:
         return const CreateCargoScreen();
       case 3:
-        return const FinanceScreen();
+        return const TopUpBalanceScreen();
       case 4:
         return const MoreScreen();
       default:
@@ -197,8 +197,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 _buildCenterActionButton(currentIndex),
                 _buildNavItem(
                   index: 3,
-                  icon: Icons.bar_chart_outlined,
-                  activeIcon: Icons.bar_chart_rounded,
+                  icon: Icons.account_balance_wallet_outlined,
+                  activeIcon: Icons.account_balance_wallet_rounded,
                   label: 'Finans',
                   currentIndex: currentIndex,
                 ),

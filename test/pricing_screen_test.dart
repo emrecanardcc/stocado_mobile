@@ -467,7 +467,7 @@ void main() {
   });
 
   group('PricingScreen Genel Entegrasyon Testleri', () {
-    testWidgets('API AKTİF rozeti ve tarife listesi başarıyla render edilir', (tester) async {
+    testWidgets('Tarife listesi render edilir, API AKTİF ve yenileme butonu kaldırılmıştır', (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 1600));
 
       final container = ProviderContainer(
@@ -500,8 +500,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // AppBar'da API AKTİF rozeti bulunmalı
-      expect(find.text('API AKTİF'), findsOneWidget);
+      // AppBar'da API AKTİF rozeti ve yenile butonu bulunmamalı
+      expect(find.text('API AKTİF'), findsNothing);
+      expect(find.byTooltip('Yenile'), findsNothing);
 
       // Firma Detay Tarifeleri Başlığı ve Sayaç
       expect(find.text('FİRMA DETAY TARİFELERİ'), findsOneWidget);

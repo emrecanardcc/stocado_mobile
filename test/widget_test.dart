@@ -25,8 +25,10 @@ import 'package:stocado_mobile/features/cargo/models/cargo_offer_model.dart';
 import 'package:stocado_mobile/features/cargo/models/location_model.dart';
 import 'package:stocado_mobile/features/cargo/providers/create_cargo_provider.dart';
 import 'package:stocado_mobile/features/cargo/screens/create_cargo_screen.dart';
+import 'package:stocado_mobile/features/home/screens/more_screen.dart';
 import 'package:stocado_mobile/features/products/models/product_model.dart';
 import 'package:stocado_mobile/features/products/providers/products_provider.dart';
+import 'package:stocado_mobile/features/products/screens/products_screen.dart';
 import 'package:stocado_mobile/main.dart';
 
 class _TestAuthNotifier extends AuthNotifier {
@@ -815,9 +817,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.share_outlined));
       await tester.pump();
 
-      // Üst bardaki yenile ikonuna basıldığında exception atılmamalı
-      await tester.tap(find.byIcon(Icons.refresh_rounded));
-      await tester.pump();
+      // Üst bardaki gereksiz yenile ikonu kaldırılmıştır, pull-to-refresh standart hareketi korunur
+      expect(find.byIcon(Icons.refresh_rounded), findsNothing);
 
       // Tekil kopyalama butonlarına basıldığında SnackBar'lar görüntülenmeli
       final copyButtons = find.byTooltip('Kopyala');
@@ -3075,6 +3076,223 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Rehberden Seçildi: Ayşe Kaya'), findsNothing);
+    });
+  });
+
+  group('Faz 4: Finans & TopUpBalanceScreen Testleri', () {
+    testWidgets('MainScreen Finans tabina basildiginda TopUpBalanceScreen aninda yuklenir', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(
+                isInitialized: true,
+                token: 'dummy-token',
+                user: UserModel(
+                  id: '1',
+                  firstName: 'Ahmet',
+                  lastName: 'Yılmaz',
+                  fullName: 'Ahmet Yılmaz',
+                  email: 'ahmet@example.com',
+                  accountId: 'acc-1',
+                  accounts: [
+                    AccountModel(
+                      id: 'acc-1',
+                      name: 'Ana Hesap',
+                      eftCode: 'ADO123456',
+                      accountCode: 'ADO123456',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(
+              const DashboardState(
+                isLoading: false,
+              ),
+            ),
+          ),
+          cargoListProvider.overrideWith(
+            () => _TestCargoListNotifier(const CargoListState(isLoading: false, cargos: [])),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: MainScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Finans sekmesine tıkla
+      await tester.tap(find.text('Finans'));
+      await tester.pumpAndSettle();
+
+      // TopUpBalanceScreen öğeleri görünür olmalı
+      expect(find.text('Bakiye Yükle'), findsOneWidget);
+      expect(find.text('KULLANILABİLİR BAKİYENİZ'), findsOneWidget);
+      expect(find.text('TR38 0020 5000 0956 8498 0000 01'), findsOneWidget);
+      expect(find.text('ADO123456'), findsWidgets);
+      expect(find.text('Nasıl Yüklenir?'), findsOneWidget);
+      expect(find.text('Tüm Hesap Bilgilerini Kopyala'), findsOneWidget);
+
+      // AppBar'da gereksiz yenile butonu bulunmamalı
+      expect(find.byTooltip('Bakiyeyi Yenile'), findsNothing);
+    });
+
+    testWidgets('TopUpBalanceScreen 360x780 ve 390x844 ekranlarda sifir tasma ile tam uyumlu render edilir', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      for (final size in [const Size(360, 780), const Size(390, 844)]) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1.0;
+
+        final container = ProviderContainer(
+          overrides: [
+            authProvider.overrideWith(
+              () => _TestAuthNotifier(
+                AuthState(
+                  isInitialized: true,
+                  token: 'dummy-token',
+                  user: UserModel(
+                    id: '1',
+                    firstName: 'Ahmet',
+                    lastName: 'Yılmaz',
+                    fullName: 'Ahmet Yılmaz',
+                    email: 'ahmet@example.com',
+                    accountId: 'acc-1',
+                    accounts: [
+                      AccountModel(
+                        id: 'acc-1',
+                        name: 'Ana Hesap',
+                        eftCode: 'ADO822716',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            dashboardProvider.overrideWith(
+              () => _TestDashboardNotifier(
+                const DashboardState(
+                  isLoading: false,
+                ),
+              ),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: TopUpBalanceScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('KULLANILABİLİR BAKİYENİZ'), findsOneWidget);
+        expect(find.text('Banka Adı'), findsNothing); // label uppercase: BANKA ADI
+        expect(find.text('BANKA ADI'), findsOneWidget);
+        expect(find.text('AÇIKLAMA KODUNUZ'), findsOneWidget);
+        expect(find.text('ZORUNLU'), findsOneWidget);
+        expect(find.text('Uyarı'), findsOneWidget);
+        expect(find.text('Nasıl Yüklenir?'), findsOneWidget);
+        expect(find.text('Tüm Hesap Bilgilerini Kopyala'), findsOneWidget);
+      }
+    });
+  });
+
+  group('Faz 5: ProductsScreen & MoreScreen Ayrım Testleri', () {
+    testWidgets('MoreScreen Tarifeler & Fiyatlar ve Kayitli Urunlerim karolarini render eder', (WidgetTester tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              const AuthState(isInitialized: true, token: 'dummy-token', user: null),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: MoreScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tarifeler & Fiyatlar'), findsOneWidget);
+      expect(find.text('Kayıtlı Ürünlerim (Ürün Kataloğu)'), findsOneWidget);
+      expect(find.text('Bakiye Yükle'), findsOneWidget);
+    });
+
+    testWidgets('ProductsScreen urun listesi, arama cubugu ve yeni urun butonunu render eder', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final dummyProduct = ProductModel(
+        id: '1',
+        name: 'Mavi Kot Pantolon',
+        code: 'PNT-01',
+        barcode: '868000111222',
+        price: 150.0,
+        desi: 2.0,
+        weight: 0.5,
+        width: 25,
+        height: 15,
+        length: 30,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(
+              ProductsState(isLoading: false, products: [dummyProduct]),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: ProductsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kayıtlı Ürünlerim'), findsOneWidget);
+      expect(find.text('Mavi Kot Pantolon'), findsOneWidget);
+      expect(find.text('Yeni Ürün'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
     });
   });
 }
