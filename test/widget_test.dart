@@ -1565,6 +1565,19 @@ void main() {
       expect(find.text('yurtiçi'), findsOneWidget);
       expect(find.byType(FittedBox), findsNWidgets(6));
     });
+
+    testWidgets('CargoCompanyLogo tanimsiz firma icin ozel baslik ile standart boyutta rozet kutusu render eder', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CargoCompanyLogo(companyName: 'Borusan'),
+          ),
+        ),
+      );
+
+      expect(find.text('BORUSAN'), findsOneWidget);
+      expect(find.byIcon(Icons.local_shipping_outlined), findsOneWidget);
+    });
   });
 
   group('CargoCard Yeni Tasarim & Etkilesim Testleri', () {
@@ -2090,6 +2103,70 @@ void main() {
       // Taslak sekmesine bas
       await tester.tap(find.text('Taslak').first);
       await tester.pump();
+
+      expect(container.read(cargoListProvider).selectedStatus, '0');
+      expect(container.read(cargoListProvider).activeTab, 'drafts');
+    });
+
+    testWidgets('CargosScreen filtre sheetinde PTT Kargo slug ve Taslak durumu secildiginde filtre ve sekme dogru guncellenir', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(
+                isInitialized: true,
+                token: 'valid_token',
+                user: UserModel(
+                  id: '1',
+                  firstName: 'Emirhan',
+                  lastName: 'Demir',
+                  fullName: 'Emirhan Demir',
+                  email: 'e@test.com',
+                  accountId: 'acc-1',
+                  accounts: [],
+                ),
+              ),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          cargoListProvider.overrideWith(
+            () => _TestCargoListNotifier(
+              const CargoListState(
+                isLoading: false,
+                selectedCargoCompany: 'ptt-kargo',
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CargosScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Firma etiketi 'Firma: PTT Kargo' olarak gorunmeli, 'Tümü' yazmamali
+      expect(find.text('Firma: PTT Kargo'), findsOneWidget);
+
+      // Filtre sheetini ac
+      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Taslak durumunu sec
+      await tester.tap(find.text('Taslak').last);
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Filtreleri uygula
+      await tester.tap(find.text('Filtreleri Uygula'));
+      await tester.pump(const Duration(seconds: 1));
 
       expect(container.read(cargoListProvider).selectedStatus, '0');
       expect(container.read(cargoListProvider).activeTab, 'drafts');

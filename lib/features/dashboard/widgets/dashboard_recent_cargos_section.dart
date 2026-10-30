@@ -76,7 +76,7 @@ class DashboardRecentCargosSection extends ConsumerWidget {
                   companyId: cargo.cargoCompany?.id?.toString() ?? cargo.cargoCompanyId,
                   companyName: cargo.cargoCompany?.title,
                   width: 76,
-                  height: 30,
+                  height: 32,
                 ),
                 const SizedBox(width: 12),
 

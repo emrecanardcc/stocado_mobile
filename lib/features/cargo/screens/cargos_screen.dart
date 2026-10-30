@@ -58,22 +58,15 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
   }
 
   String _companyLabel(String? id) {
-    switch (id) {
-      case 'hepsijet':
-        return 'HepsiJET';
-      case 'ptt':
-        return 'PTT Kargo';
-      case 'surat':
-        return 'Sürat Kargo';
-      case 'kolay-gelsin':
-        return 'Kolay Gelsin';
-      case 'ups':
-        return 'UPS Kargo';
-      case 'yurtici':
-        return 'Yurtiçi Kargo';
-      default:
-        return 'Tümü';
-    }
+    if (id == null) return 'Tümü';
+    final lower = id.toLowerCase().trim();
+    if (lower.contains('hepsijet') || lower == 'hj') return 'HepsiJET';
+    if (lower.contains('ptt')) return 'PTT Kargo';
+    if (lower.contains('surat') || lower.contains('sürat') || lower == 'sur') return 'Sürat Kargo';
+    if (lower.contains('kolay') || lower.contains('gelsin') || lower == 'kg') return 'Kolay Gelsin';
+    if (lower.contains('ups')) return 'UPS Kargo';
+    if (lower.contains('yurtici') || lower.contains('yurtiçi') || lower == 'yk') return 'Yurtiçi Kargo';
+    return 'Tümü';
   }
 
   String _statusLabel(String? status) {
@@ -374,25 +367,25 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                         ),
                         _buildFilterChipItem(
                           label: 'HepsiJET',
-                          isSelected: tempCompany == 'hepsijet',
+                          isSelected: tempCompany != null && (tempCompany == 'hepsijet' || tempCompany == 'hj'),
                           leading: const CargoCompanyLogo(companyId: 'hepsijet', width: 48, height: 20, borderRadius: 4),
                           onSelected: () => setSheetState(() => tempCompany = 'hepsijet'),
                         ),
                         _buildFilterChipItem(
                           label: 'PTT Kargo',
-                          isSelected: tempCompany == 'ptt',
+                          isSelected: tempCompany != null && (tempCompany == 'ptt' || tempCompany == 'ptt-kargo'),
                           leading: const CargoCompanyLogo(companyId: 'ptt', width: 48, height: 20, borderRadius: 4),
                           onSelected: () => setSheetState(() => tempCompany = 'ptt'),
                         ),
                         _buildFilterChipItem(
                           label: 'Sürat Kargo',
-                          isSelected: tempCompany == 'surat',
+                          isSelected: tempCompany != null && (tempCompany == 'surat' || tempCompany == 'surat-kargo'),
                           leading: const CargoCompanyLogo(companyId: 'surat', width: 48, height: 20, borderRadius: 4),
                           onSelected: () => setSheetState(() => tempCompany = 'surat'),
                         ),
                         _buildFilterChipItem(
                           label: 'Kolay Gelsin',
-                          isSelected: tempCompany == 'kolay-gelsin',
+                          isSelected: tempCompany != null && (tempCompany == 'kolay-gelsin' || tempCompany == 'kolaygelsin' || tempCompany == 'kg'),
                           leading: const CargoCompanyLogo(companyId: 'kolay-gelsin', width: 48, height: 20, borderRadius: 4),
                           onSelected: () => setSheetState(() => tempCompany = 'kolay-gelsin'),
                         ),
@@ -404,7 +397,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                         ),
                         _buildFilterChipItem(
                           label: 'Yurtiçi Kargo',
-                          isSelected: tempCompany == 'yurtici',
+                          isSelected: tempCompany != null && (tempCompany == 'yurtici' || tempCompany == 'yurtici-kargo'),
                           leading: const CargoCompanyLogo(companyId: 'yurtici', width: 48, height: 20, borderRadius: 4),
                           onSelected: () => setSheetState(() => tempCompany = 'yurtici'),
                         ),
@@ -568,7 +561,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
 
     final draftCount = isDraftsSelected
         ? (state.meta?.total ?? state.cargos.length)
-        : state.cargos.where((c) => c.status == 0).length;
+        : (state.draftCount ?? state.cargos.where((c) => c.status == 0).length);
 
     final isTabStatus = state.selectedStatus == null ||
         state.selectedStatus == 'all' ||
@@ -684,6 +677,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                             controller: _searchController,
                             focusNode: _searchFocusNode,
                             cursorColor: const Color(0xFF0E1E38),
+                            textInputAction: TextInputAction.search,
                             style: const TextStyle(
                               fontSize: 14,
                               color: Color(0xFF0F172A),

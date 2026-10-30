@@ -150,7 +150,7 @@ class CargoCompanyLogo extends StatelessWidget {
 
     if (!useContainer) {
       final h = height ?? 20.0;
-      final logo = _buildHorizontalLogo(context, type, h);
+      final logo = _buildHorizontalLogo(context, type, h, companyName: companyName);
       if (width != null) {
         return SizedBox(
           height: h,
@@ -170,12 +170,12 @@ class CargoCompanyLogo extends StatelessWidget {
     final double effectiveHeight;
     final double effectiveWidth;
 
-    if (size != null) {
-      effectiveHeight = size!;
-      effectiveWidth = size!;
-    } else if (width != null && height != null) {
+    if (width != null && height != null) {
       effectiveWidth = width!;
       effectiveHeight = height!;
+    } else if (size != null) {
+      effectiveHeight = size!;
+      effectiveWidth = (size! * 2.375).roundToDouble();
     } else if (height != null) {
       effectiveHeight = height!;
       effectiveWidth = (height! * 2.375).roundToDouble();
@@ -217,13 +217,18 @@ class CargoCompanyLogo extends StatelessWidget {
       child: Center(
         child: FittedBox(
           fit: BoxFit.contain,
-          child: _buildHorizontalLogo(context, type, logoRefHeight),
+          child: _buildHorizontalLogo(context, type, logoRefHeight, companyName: companyName),
         ),
       ),
     );
   }
 
-  Widget _buildHorizontalLogo(BuildContext context, CargoCompanyType type, double h) {
+  Widget _buildHorizontalLogo(
+    BuildContext context,
+    CargoCompanyType type,
+    double h, {
+    String? companyName,
+  }) {
     switch (type) {
       case CargoCompanyType.hepsijet:
         final fs = h * 0.88;
@@ -531,34 +536,31 @@ class CargoCompanyLogo extends StatelessWidget {
         );
 
       case CargoCompanyType.unknown:
-        return Container(
-          padding: EdgeInsets.symmetric(horizontal: h * 0.25),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.local_shipping_outlined,
-                size: h * 0.7,
+        final label = (companyName != null && companyName.trim().isNotEmpty)
+            ? companyName.trim().toUpperCase()
+            : 'KARGO';
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.local_shipping_outlined,
+              size: h * 0.72,
+              color: const Color(0xFF475569),
+            ),
+            SizedBox(width: h * 0.16),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: h * 0.5,
+                fontWeight: FontWeight.w800,
                 color: const Color(0xFF475569),
+                letterSpacing: 0.4,
+                height: 1.0,
               ),
-              SizedBox(width: h * 0.15),
-              Text(
-                'KARGO',
-                style: TextStyle(
-                  fontSize: h * 0.42,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF475569),
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
     }
   }

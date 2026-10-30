@@ -185,8 +185,8 @@ class Step4OffersWidget extends StatelessWidget {
                           CargoCompanyLogo(
                             companyId: offer.cargoCompany.id.toString(),
                             companyName: offer.cargoCompany.title,
-                            size: 44,
-                            borderRadius: 12,
+                            width: 76,
+                            height: 32,
                           ),
                           const SizedBox(width: 14),
                           Expanded(

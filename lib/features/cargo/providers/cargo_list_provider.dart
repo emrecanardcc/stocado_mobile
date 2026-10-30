@@ -16,6 +16,7 @@ class CargoListState {
   final String? selectedCargoCompany; // 'ptt', 'surat', 'yurtici', 'hepsijet', 'ups' or null
   final String? selectedStatus; // '0', '1', '2', '3', '4' or null
   final String sortDirection; // 'desc' | 'asc'
+  final int? draftCount;
 
   const CargoListState({
     this.isLoading = false,
@@ -28,6 +29,7 @@ class CargoListState {
     this.selectedCargoCompany,
     this.selectedStatus,
     this.sortDirection = 'desc',
+    this.draftCount,
   });
 
   bool get hasMore => meta?.hasMore ?? false;
@@ -48,6 +50,7 @@ class CargoListState {
     String? selectedCargoCompany,
     String? selectedStatus,
     String? sortDirection,
+    int? draftCount,
     bool clearCompany = false,
     bool clearStatus = false,
   }) {
@@ -62,6 +65,7 @@ class CargoListState {
       selectedCargoCompany: clearCompany ? null : (selectedCargoCompany ?? this.selectedCargoCompany),
       selectedStatus: clearStatus ? null : (selectedStatus ?? this.selectedStatus),
       sortDirection: sortDirection ?? this.sortDirection,
+      draftCount: draftCount ?? this.draftCount,
     );
   }
 }
@@ -172,12 +176,32 @@ class CargoListNotifier extends Notifier<CargoListState> {
     // Seçili sıralama kuralına göre sırala
     resolved.sort((a, b) => CargoModel.compareCargos(a, b, sortDirection: state.sortDirection));
 
+    int? currentDraftCount = state.draftCount;
+    if (state.activeTab == 'drafts') {
+      currentDraftCount = response.meta?.total ?? response.data.length;
+    } else {
+      final inListDrafts = resolved.where((c) => c.status == 0).length;
+      if (currentDraftCount == null && inListDrafts > 0) {
+        currentDraftCount = inListDrafts;
+      }
+    }
+
     state = state.copyWith(
       isLoading: false,
       cargos: resolved,
       meta: response.meta,
       errorMessage: response.errorMessage,
+      draftCount: currentDraftCount,
     );
+
+    // İlk yüklemede veya sekme tümüyken taslak sayısı henüz bilinmiyorsa arka planda çek
+    if (reset && state.draftCount == null && accountId != null && state.activeTab != 'drafts') {
+      _cargoService.getDraftCount(accountId).then((count) {
+        if (count != null) {
+          state = state.copyWith(draftCount: count);
+        }
+      }).catchError((_) {});
+    }
 
     // Filtreleme yapıldığında mevcut sayfada eşleşen az ürün kaldıysa otomatik sonraki sayfayı çek
     if (resolved.length < 5 && state.hasMore && (state.selectedStatus != null || state.selectedCargoCompany != null)) {
@@ -267,6 +291,8 @@ class CargoListNotifier extends Notifier<CargoListState> {
         newTab = 'yolda';
       } else if (status == '4' || status == 'failed' || status == 'problematic' || status == 'sorunlu') {
         newTab = 'sorunlu';
+      } else if (status == '0' || status == 'drafts') {
+        newTab = 'drafts';
       }
       state = state.copyWith(
         activeTab: newTab,
@@ -302,11 +328,13 @@ class CargoListNotifier extends Notifier<CargoListState> {
   /// Kargo Durumu Filtresi
   void setStatusFilter(String? status) {
     if (state.selectedStatus != status) {
-      String newTab = 'all';
+      String newTab = state.activeTab;
       if (status == '1' || status == 'active' || status == 'yolda') {
         newTab = 'yolda';
       } else if (status == '4' || status == 'failed' || status == 'problematic' || status == 'sorunlu') {
         newTab = 'sorunlu';
+      } else if (status == null || status == 'all') {
+        newTab = 'all';
       }
       state = state.copyWith(
         activeTab: newTab,

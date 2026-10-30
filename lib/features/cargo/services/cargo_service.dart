@@ -230,6 +230,37 @@ class CargoService {
     }
   }
 
+  /// Taslak durumundaki kargo sayısını hızlıca çeker
+  Future<int?> getDraftCount(String accountId) async {
+    try {
+      final response = await _apiClient.post(
+        '/accounts/$accountId/cargos/query',
+        body: {
+          "fields": [
+            {
+              "name": "status",
+              "filters": [
+                {"operator": "equals", "value": 0}
+              ]
+            }
+          ],
+          "paginate": {"page": 1, "count": 1}
+        },
+      );
+      if (response.statusCode == 200) {
+        final decoded = ApiClient.decodeResponse(response);
+        if (decoded is Map<String, dynamic>) {
+          final rawTotal = decoded['total'] ?? (decoded['paginate'] is Map ? decoded['paginate']['total'] : null);
+          if (rawTotal is num) return rawTotal.toInt();
+          if (rawTotal != null) return int.tryParse(rawTotal.toString());
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Kargoları çeker:
   /// POST /accounts/{accountId}/cargos/query veya GET /cargos
   Future<PaginatedCargosResponse> getCargos({
