@@ -70,6 +70,66 @@ class _TestCreateCargoNotifier extends CreateCargoNotifier {
   }
 
   @override
+  void setDirection(String direction) {
+    state = state.copyWith(direction: direction);
+  }
+
+  @override
+  void updateAdditionalServices({
+    bool? payOnDelivery,
+    double? payOnDeliveryAmount,
+    String? payOnDeliveryType,
+    bool? canOffsetCargoFee,
+    bool? receiverPays,
+    bool? controlledDelivery,
+    bool? isDraft,
+  }) {
+    state = state.copyWith(
+      payOnDelivery: payOnDelivery ?? state.payOnDelivery,
+      payOnDeliveryAmount: payOnDeliveryAmount ?? state.payOnDeliveryAmount,
+      payOnDeliveryType: payOnDeliveryType ?? state.payOnDeliveryType,
+      canOffsetCargoFee: canOffsetCargoFee ?? state.canOffsetCargoFee,
+      receiverPays: receiverPays ?? state.receiverPays,
+      controlledDelivery: controlledDelivery ?? state.controlledDelivery,
+      isDraft: isDraft ?? state.isDraft,
+    );
+  }
+
+  @override
+  void updatePackageDimensions({
+    double? width,
+    double? length,
+    double? height,
+    double? weight,
+    double? directDesi,
+  }) {
+    state = state.copyWith(
+      width: width ?? state.width,
+      length: length ?? state.length,
+      height: height ?? state.height,
+      weight: weight ?? state.weight,
+      desi: directDesi ?? state.desi,
+    );
+  }
+
+  @override
+  Future<void> selectRecipientAddress(AddressModel? address) async {
+    state = state.copyWith(
+      selectedRecipientAddress: address,
+      recipientName: address?.name ?? '',
+      recipientPhone: address?.phone ?? '',
+      recipientEmail: address?.email ?? '',
+      addressDetails: address?.details ?? '',
+      recipientPostalCode: address?.postalCode ?? '',
+    );
+  }
+
+  @override
+  void clearSelectedRecipientAddress() {
+    state = state.copyWith(clearSelectedRecipient: true);
+  }
+
+  @override
   void reset() {
     state = _initialState;
   }
@@ -2475,6 +2535,238 @@ void main() {
       expect(find.text('TOPLAM KARGO BEDELİ'), findsOneWidget);
       expect(find.text('1.250.000,50 ₺'), findsWidgets);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('0.00 Desi (Evrak) secildiginde boyutlar ve agirlik 0 olur ve rozette 0.00 DESI gosterilir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                cities: [City(id: 34, name: 'İstanbul')],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Desi rozetine tıkla
+      expect(find.text('2.00 DESİ'), findsOneWidget);
+      await tester.tap(find.text('2.00 DESİ'));
+      await tester.pumpAndSettle();
+
+      // 0.00 Desi (Evrak) çipine bas
+      expect(find.text('0.00 Desi (Evrak)'), findsOneWidget);
+      await tester.tap(find.text('0.00 Desi (Evrak)'));
+      await tester.pumpAndSettle();
+
+      // Uygula butonuna bas
+      await tester.tap(find.text('Uygula'));
+      await tester.pumpAndSettle();
+
+      // Rozette 0.00 DESİ gösterilmeli
+      expect(find.text('0.00 DESİ'), findsOneWidget);
+    });
+
+    testWidgets('Kontrollu Teslimat switchi ekranda gorunur ve tiklandiginda tetiklenir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                cities: [City(id: 34, name: 'İstanbul')],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kontrollü Teslimat'), findsOneWidget);
+      expect(find.text('PTT KARGO'), findsOneWidget);
+
+      // Switch'e bas
+      final switchFinder = find.byType(Switch);
+      expect(switchFinder, findsOneWidget);
+      await tester.tap(switchFinder);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('Kargo Bana Gelsin secildiginde musteri alani bosken gonderilirse Turkce gonderici uyarisi verir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockSender = AddressModel(
+        id: 'snd-1',
+        title: 'Merkez Depo',
+        name: 'Merkez Depo',
+        phone: '0532 100 20 30',
+        details: 'Kadıköy / İstanbul',
+        cityId: 34,
+        isDefault: true,
+        type: 4,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                senderAddresses: [mockSender],
+                selectedSenderAddress: mockSender,
+                cities: [City(id: 34, name: 'İstanbul')],
+                direction: 'receive',
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Kargo Oluştur'a bas
+      await tester.tap(find.text('KARGOYU OLUŞTUR'));
+      await tester.pumpAndSettle();
+
+      // Türkçe gönderici uyarısı çıkmalı
+      expect(find.text('Lütfen gönderici ad ve soyadını giriniz.'), findsOneWidget);
+    });
+
+    testWidgets('Rehberden musteri secildiginde rozet gorunur ve Serbest Duzenle tiklandiginda kalkar',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockCustomer = AddressModel(
+        id: 'rec-1',
+        title: 'Ayşe Kaya',
+        name: 'Ayşe Kaya',
+        phone: '0533 111 22 33',
+        details: 'Atatürk Cad. No:5',
+        cityId: 34,
+        type: 1,
+        isDefault: false,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                cities: [City(id: 34, name: 'İstanbul')],
+                recipientAddresses: [mockCustomer],
+                selectedRecipientAddress: mockCustomer,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rehberden Seçildi: Ayşe Kaya'), findsOneWidget);
+      expect(find.text('Serbest Düzenle'), findsOneWidget);
+
+      await tester.tap(find.text('Serbest Düzenle'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rehberden Seçildi: Ayşe Kaya'), findsNothing);
     });
   });
 }

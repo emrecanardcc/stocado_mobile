@@ -367,6 +367,10 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     );
   }
 
+  void clearSelectedRecipientAddress() {
+    state = state.copyWith(clearSelectedRecipient: true);
+  }
+
   void updateRecipientInfo({
     String? name,
     String? phone,
@@ -376,8 +380,10 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     String? details,
     String? postalCode,
     bool? saveAddress,
+    bool clearSelectedRecipient = false,
   }) {
     state = state.copyWith(
+      clearSelectedRecipient: clearSelectedRecipient,
       recipientName: name ?? state.recipientName,
       recipientPhone: phone ?? state.recipientPhone,
       recipientEmail: email ?? state.recipientEmail,
@@ -692,6 +698,22 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       offers = offers.where((o) => o.cargoCompany.id.toString().contains('ptt')).toList();
     }
 
+    // Web Portal Paritesi (Görsel 2): Kredi Kartı Kapıda Ödeme yalnızca Sürat Kargo ve UPS destekler
+    if (state.payOnDelivery && state.payOnDeliveryType == 'credit_card' && offers.isNotEmpty) {
+      offers = offers.where((o) {
+        final id = o.cargoCompany.id.toString().toLowerCase();
+        return id.contains('surat') || id.contains('ups');
+      }).toList();
+    }
+
+    // Web Portal Paritesi (Görsel 3): Nakit Kapıda Ödeme HepsiJET, Sürat Kargo, PTT Kargo ve UPS destekler
+    if (state.payOnDelivery && state.payOnDeliveryType == 'cash' && offers.isNotEmpty) {
+      offers = offers.where((o) {
+        final id = o.cargoCompany.id.toString().toLowerCase();
+        return id.contains('hepsijet') || id.contains('surat') || id.contains('ptt') || id.contains('ups');
+      }).toList();
+    }
+
     if (offers.isEmpty) {
       offers = _generateFallbackOffers(desi, state.payOnDelivery, state.controlledDelivery);
     }
@@ -802,16 +824,20 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       return false;
     }
 
+    final isSend = state.direction == 'send' || state.direction == '1';
+
     if (state.selectedSenderAddress == null) {
       state = state.copyWith(
-        errorMessage: 'Lütfen kayıtlı bir gönderici adresi seçiniz veya yeni ekleyiniz.',
+        errorMessage: isSend
+            ? 'Lütfen kayıtlı bir gönderici adresi seçiniz veya yeni ekleyiniz.'
+            : 'Lütfen kayıtlı bir varış deposu seçiniz veya yeni ekleyiniz.',
       );
       return false;
     }
 
     state = state.copyWith(isSubmitting: true, errorMessage: null, isSuccess: false);
 
-    // 1. Alıcı Adres ID'sini (foreign_id) Çöz
+    // 1. Alıcı / Karşı Taraf Adres ID'sini (foreign_id) Çöz
     String? foreignId = state.selectedRecipientAddress?.id;
 
     // Eğer manuel girilmişse veya seçili alıcı yoksa backend için adresi oluşturup ID al
@@ -819,7 +845,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       if (state.recipientName.trim().isEmpty) {
         state = state.copyWith(
           isSubmitting: false,
-          errorMessage: 'Lütfen alıcı ad ve soyadını giriniz.',
+          errorMessage: isSend ? 'Lütfen alıcı ad ve soyadını giriniz.' : 'Lütfen gönderici ad ve soyadını giriniz.',
         );
         return false;
       }
@@ -828,7 +854,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       if (phoneDigits.length < 10) {
         state = state.copyWith(
           isSubmitting: false,
-          errorMessage: 'Lütfen en az 10 haneli geçerli bir alıcı telefon numarası giriniz.',
+          errorMessage: 'Lütfen en az 10 haneli geçerli bir telefon numarası giriniz.',
         );
         return false;
       }
@@ -836,7 +862,15 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       if (state.selectedCity == null) {
         state = state.copyWith(
           isSubmitting: false,
-          errorMessage: 'Lütfen alıcı ilini seçiniz.',
+          errorMessage: isSend ? 'Lütfen teslimat yapılacak ili seçiniz.' : 'Lütfen çıkış yapılacak ili seçiniz.',
+        );
+        return false;
+      }
+
+      if (state.selectedDistrict == null) {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: isSend ? 'Lütfen teslimat yapılacak ilçeyi seçiniz.' : 'Lütfen çıkış yapılacak ilçeyi seçiniz.',
         );
         return false;
       }
@@ -850,7 +884,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
         phone: state.recipientPhone.trim(),
         email: state.recipientEmail.trim().isNotEmpty ? state.recipientEmail.trim() : null,
         cityId: state.selectedCity!.id,
-        districtId: state.selectedDistrict?.id ?? 1101,
+        districtId: state.selectedDistrict!.id,
         details: details,
         postalCode: state.recipientPostalCode.trim().isNotEmpty ? state.recipientPostalCode.trim() : null,
       );
@@ -858,7 +892,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       if (!addResult.isSuccess || addResult.address == null) {
         state = state.copyWith(
           isSubmitting: false,
-          errorMessage: 'Alıcı adresi oluşturulamadı: ${addResult.message ?? "Bilgileri kontrol ediniz."}',
+          errorMessage: '${isSend ? "Alıcı" : "Gönderici"} adresi oluşturulamadı: ${addResult.message ?? "Bilgileri kontrol ediniz."}',
         );
         return false;
       }
@@ -877,11 +911,10 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     if (cargoCompanyId == 'bilinmeyen' || cargoCompanyId.isEmpty) cargoCompanyId = 'ptt-kargo';
 
     // 3. Payload hazırla (Backend API gereksinimlerine tam uyumlu)
-    final isSend = state.direction == 'send' || state.direction == '1';
     final effectiveDesi = state.desi >= 0 ? state.desi : 0.0;
-    double effectiveLength = state.length;
-    double effectiveWidth = state.width;
-    double effectiveHeight = state.height;
+    double effectiveLength = effectiveDesi == 0 ? 0.0 : state.length;
+    double effectiveWidth = effectiveDesi == 0 ? 0.0 : state.width;
+    double effectiveHeight = effectiveDesi == 0 ? 0.0 : state.height;
 
     // Eğer manuel ölçü girilmemişse ve desi > 0 ise, desi ile tam uyumlu kübik boyut ata (kargo firması API'sinin desiyi düşürmesini engeller)
     if (effectiveDesi > 0 && (effectiveLength <= 0 || effectiveWidth <= 0 || effectiveHeight <= 0)) {
@@ -901,7 +934,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
         "length": effectiveLength,
         "width": effectiveWidth,
         "height": effectiveHeight,
-        "weight": state.weight > 0 ? double.parse((state.weight / 1000).toStringAsFixed(3)) : 1.0,
+        "weight": state.weight > 0 ? double.parse((state.weight / 1000).toStringAsFixed(3)) : (effectiveDesi == 0 ? 0.0 : 1.0),
       },
       "direction": isSend ? 1 : 2, // 1: Send, 2: Receive
       "pay_on_delivery": state.payOnDelivery,

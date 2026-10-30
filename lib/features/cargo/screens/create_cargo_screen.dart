@@ -286,7 +286,21 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 _calculatedDesi = validDesi;
               });
               _desiController.text = validDesi.toStringAsFixed(2);
-              notifier.updatePackageDimensions(directDesi: validDesi);
+              if (validDesi == 0.0) {
+                _widthController.text = '0';
+                _lengthController.text = '0';
+                _heightController.text = '0';
+                _weightController.text = '0';
+                notifier.updatePackageDimensions(
+                  width: 0,
+                  length: 0,
+                  height: 0,
+                  weight: 0,
+                  directDesi: 0.0,
+                );
+              } else {
+                notifier.updatePackageDimensions(directDesi: validDesi);
+              }
               notifier.calculateOffers();
             },
             child: const Text('Uygula'),
@@ -548,24 +562,34 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     final notifier = ref.read(createCargoProvider.notifier);
     final state = ref.read(createCargoProvider);
 
-    // 1. Gönderici Kontrolü
+    final isSend = state.direction == 'send' || state.direction == '1';
+
+    // 1. Gönderici / Varış Deposu Kontrolü
     if (state.selectedSenderAddress == null) {
       if (state.senderAddresses.isNotEmpty) {
         notifier.setSenderAddress(state.senderAddresses.first);
       } else {
-        _showWarning('Lütfen kargonun çıkış yapacağı gönderici adresini seçiniz veya yeni depo ekleyiniz.');
+        _showWarning(
+          isSend
+              ? 'Lütfen kargonun çıkış yapacağı gönderici adresini seçiniz veya yeni depo ekleyiniz.'
+              : 'Lütfen kargonun teslim alınacağı varış deposunu seçiniz veya yeni depo ekleyiniz.',
+        );
         return;
       }
     }
 
-    // 2. Alıcı Ad Soyad
+    // 2. Karşı Taraf Ad Soyad
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      _showWarning('Lütfen alıcı ad ve soyadını giriniz.');
+      _showWarning(isSend ? 'Lütfen alıcı ad ve soyadını giriniz.' : 'Lütfen gönderici ad ve soyadını giriniz.');
       return;
     }
     if (name.length < 3) {
-      _showWarning('Lütfen geçerli bir alıcı ad ve soyadı giriniz (en az 3 karakter).');
+      _showWarning(
+        isSend
+            ? 'Lütfen geçerli bir alıcı ad ve soyadı giriniz (en az 3 karakter).'
+            : 'Lütfen geçerli bir gönderici ad ve soyadı giriniz (en az 3 karakter).',
+      );
       return;
     }
 
@@ -578,14 +602,24 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
 
     // 4. İl & İlçe
     if (state.selectedCity == null) {
-      _showWarning('Lütfen teslimat yapılacak ili (şehri) seçiniz.');
+      _showWarning(
+        isSend ? 'Lütfen teslimat yapılacak ili (şehri) seçiniz.' : 'Lütfen çıkış yapılacak ili (şehri) seçiniz.',
+      );
+      return;
+    }
+    if (state.selectedDistrict == null) {
+      _showWarning(
+        isSend ? 'Lütfen teslimat yapılacak ilçeyi seçiniz.' : 'Lütfen çıkış yapılacak ilçeyi seçiniz.',
+      );
       return;
     }
 
     // 5. Açık Adres
     final address = _addressController.text.trim();
     if (address.isEmpty || address.length < 5) {
-      _showWarning('Lütfen geçerli ve detaylı bir teslimat adresi giriniz.');
+      _showWarning(
+        isSend ? 'Lütfen geçerli ve detaylı bir teslimat adresi giriniz.' : 'Lütfen geçerli ve detaylı bir çıkış adresi giriniz.',
+      );
       return;
     }
 
@@ -670,6 +704,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
 
   void _openDirectoryModal(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier) {
     _customerSearchController.clear();
+    final isSend = state.direction == 'send' || state.direction == '1';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -718,9 +754,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'KAYITLI ALICI REHBERİ',
-                        style: TextStyle(
+                      Text(
+                        isSend ? 'KAYITLI ALICI REHBERİ' : 'KAYITLI MÜŞTERİ REHBERİ',
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
                           color: Color(0xFF0F172A),
@@ -739,7 +775,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                     controller: _customerSearchController,
                     onChanged: (_) => setModalState(() {}),
                     decoration: InputDecoration(
-                      hintText: 'Müşteri adı veya telefon ara...',
+                      hintText: isSend ? 'Müşteri adı veya telefon ara...' : 'Gönderici adı veya telefon ara...',
                       hintStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
                       prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
                       filled: true,
@@ -763,8 +799,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                             alignment: Alignment.center,
                             child: Text(
                               state.recipientAddresses.isEmpty
-                                  ? 'Henüz kayıtlı alıcı bulunmuyor.'
-                                  : 'Arama kriterine uygun alıcı bulunamadı.',
+                                  ? 'Henüz kayıtlı müşteri bulunmuyor.'
+                                  : 'Arama kriterine uygun kayıt bulunamadı.',
                               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
                             ),
                           )
@@ -782,15 +818,17 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                                 ),
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(14),
-                                  onTap: () {
+                                  onTap: () async {
                                     _nameController.text = addr.name;
                                     _phoneController.text = addr.phone;
                                     _emailController.text = addr.email ?? '';
                                     _addressController.text = addr.details;
                                     _postalCodeController.text = addr.postalCode ?? '';
-                                    notifier.selectRecipientAddress(addr);
-                                    notifier.calculateOffers();
-                                    Navigator.pop(ctx);
+                                    await notifier.selectRecipientAddress(addr);
+                                    await notifier.calculateOffers();
+                                    if (ctx.mounted) {
+                                      Navigator.pop(ctx);
+                                    }
                                   },
                                   child: Padding(
                                     padding: const EdgeInsets.all(12),
@@ -832,6 +870,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
   }
 
   void _openSenderModal(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier) {
+    final isSend = state.direction == 'send' || state.direction == '1';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -864,9 +904,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'GÖNDERİCİ DEPO SEÇİN',
-                    style: TextStyle(
+                  Text(
+                    isSend ? 'GÖNDERİCİ DEPO SEÇİN' : 'VARIŞ DEPOSU SEÇİN',
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: Color(0xFF0F172A),
@@ -883,10 +923,10 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               const SizedBox(height: 12),
               Flexible(
                 child: state.senderAddresses.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
-                          'Kayıtlı gönderici depo adresi bulunamadı.',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                          isSend ? 'Kayıtlı gönderici depo adresi bulunamadı.' : 'Kayıtlı varış depo adresi bulunamadı.',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
                         ),
                       )
                     : ListView.separated(
@@ -1389,6 +1429,89 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               ),
             ),
           ],
+
+          // Ek Hizmet: Kontrollü Teslimat (Yalnızca PTT Kargo)
+          const SizedBox(height: 10),
+          Material(
+            color: const Color(0xFFF8FAFC),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: state.controlledDelivery ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                width: 1.5,
+              ),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                notifier.updateAdditionalServices(controlledDelivery: !state.controlledDelivery);
+                notifier.calculateOffers();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                'Kontrollü Teslimat',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  color: state.controlledDelivery ? const Color(0xFF1E40AF) : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'PTT KARGO',
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF2563EB),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Alıcı kargoyu teslim almadan önce açıp içeriği kontrol edebilir.',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Switch(
+                      value: state.controlledDelivery,
+                      activeTrackColor: const Color(0xFF2563EB),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onChanged: (val) {
+                        notifier.updateAdditionalServices(controlledDelivery: val);
+                        notifier.calculateOffers();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -2115,6 +2238,50 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (state.selectedRecipientAddress != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFBFDBFE), width: 1),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF2563EB)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Rehberden Seçildi: ${state.selectedRecipientAddress!.name}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E40AF),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    notifier.clearSelectedRecipientAddress();
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      'Serbest Düzenle',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF2563EB),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         Row(
           children: [
             Expanded(
@@ -2147,7 +2314,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                         borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
                       ),
                     ),
-                    onChanged: (val) => notifier.updateRecipientInfo(name: val),
+                    onChanged: (val) => notifier.updateRecipientInfo(name: val, clearSelectedRecipient: true),
                   ),
                 ],
               ),
@@ -2184,7 +2351,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                         borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
                       ),
                     ),
-                    onChanged: (val) => notifier.updateRecipientInfo(phone: val),
+                    onChanged: (val) => notifier.updateRecipientInfo(phone: val, clearSelectedRecipient: true),
                   ),
                 ],
               ),
@@ -2325,7 +2492,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
                 ),
               ),
-              onChanged: (val) => notifier.updateRecipientInfo(details: val),
+              onChanged: (val) => notifier.updateRecipientInfo(details: val, clearSelectedRecipient: true),
             ),
           ],
         ),
@@ -2962,9 +3129,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
+                  flex: 5,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -2983,7 +3150,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w900,
                           color: Color(0xFF0F172A),
                         ),
@@ -2992,29 +3159,38 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Text(
-                      'TOPLAM KARGO BEDELİ',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF64748B),
-                        letterSpacing: 0.6,
+                Expanded(
+                  flex: 6,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'TOPLAM KARGO BEDELİ',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF64748B),
+                          letterSpacing: 0.4,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      AppFormatters.formatCurrency(totalPrice),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                        letterSpacing: -0.5,
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          AppFormatters.formatCurrency(totalPrice),
+                          style: const TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
