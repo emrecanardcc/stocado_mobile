@@ -635,7 +635,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
   Future<void> calculateOffers() async {
     final auth = ref.read(authProvider);
     final accountId = auth.accountId ?? auth.user?.accounts.firstOrNull?.id;
-    final desi = state.desi > 0 ? state.desi : 1.0;
+    final desi = state.desi >= 0 ? state.desi : 0.0;
 
     if (accountId == null || accountId.isEmpty) {
       final fallback = _generateFallbackOffers(desi, state.payOnDelivery, state.controlledDelivery);
@@ -667,7 +667,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       localId: state.selectedSenderAddress?.id,
       foreignId: foreignId,
       package: PackageData(
-        desi: double.parse((desi > 0 ? desi : 1.0).toStringAsFixed(2)),
+        desi: double.parse((desi >= 0 ? desi : 0.0).toStringAsFixed(2)),
         width: state.width > 0 ? double.parse(state.width.toStringAsFixed(2)) : null,
         length: state.length > 0 ? double.parse(state.length.toStringAsFixed(2)) : null,
         height: state.height > 0 ? double.parse(state.height.toStringAsFixed(2)) : null,
@@ -677,8 +677,8 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       payOnDeliveryAmount: state.payOnDelivery ? state.payOnDeliveryAmount : 0,
       payOnDeliveryType: state.payOnDelivery ? state.payOnDeliveryType : null,
       pastPayOnDelivery: state.payOnDelivery ? state.canOffsetCargoFee : false,
-      podReceiverPays: state.payOnDelivery ? state.receiverPays : false,
-      receiverPays: state.payOnDelivery ? false : state.receiverPays,
+      podReceiverPays: state.receiverPays,
+      receiverPays: state.receiverPays,
       controlledDelivery: state.controlledDelivery,
       status: state.isDraft ? 0 : 1,
       direction: state.direction,
@@ -717,13 +717,47 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
   }
 
   List<CargoOffer> _generateFallbackOffers(double desi, bool isPod, [bool isControlled = false]) {
-    final effectiveDesi = desi <= 2 ? 2.0 : desi;
+    final effectiveDesi = desi;
     final podFee = isPod ? 15.0 : 0.0;
     if (isControlled) {
       return [
         CargoOffer(
           cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
           price: (96.14 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
+        ),
+      ];
+    }
+    // Web Portal Paritesi (Görsel 2): Kredi Kartı Kapıda Ödeme yalnızca Sürat Kargo ve UPS destekler
+    if (isPod && state.payOnDeliveryType == 'credit_card') {
+      return [
+        CargoOffer(
+          cargoCompany: CargoCompany(id: 'surat-kargo', title: 'Sürat Kargo'),
+          price: (201.30 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 17.0 : 0.0)),
+        ),
+        CargoOffer(
+          cargoCompany: CargoCompany(id: 'ups', title: 'UPS Kargo'),
+          price: (469.44 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.67 : 0.0)),
+        ),
+      ];
+    }
+    // Web Portal Paritesi (Görsel 3): Nakit Kapıda Ödeme HepsiJET, Sürat Kargo, PTT Kargo ve UPS destekler
+    if (isPod && state.payOnDeliveryType == 'cash') {
+      return [
+        CargoOffer(
+          cargoCompany: CargoCompany(id: 'hepsijet', title: 'HepsiJET'),
+          price: (190.08 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.0 : 0.0)),
+        ),
+        CargoOffer(
+          cargoCompany: CargoCompany(id: 'surat-kargo', title: 'Sürat Kargo'),
+          price: (201.30 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 17.0 : 0.0)),
+        ),
+        CargoOffer(
+          cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
+          price: (234.00 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
+        ),
+        CargoOffer(
+          cargoCompany: CargoCompany(id: 'ups', title: 'UPS Kargo'),
+          price: (469.44 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.67 : 0.0)),
         ),
       ];
     }
@@ -835,21 +869,22 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     // 2. Kargo Şirketi Belirle
     var cargoCompanyId = state.selectedOffer?.cargoCompany.id?.toString().toLowerCase().trim() ?? 'ptt-kargo';
     if (cargoCompanyId == 'ptt' || cargoCompanyId == 'ptt-kargo') cargoCompanyId = 'ptt-kargo';
-    if (cargoCompanyId == 'surat' || cargoCompanyId == 'sur' || cargoCompanyId == 'surat-kargo') cargoCompanyId = 'surat-kargo';
-    if (cargoCompanyId == 'yurtici' || cargoCompanyId == 'yk' || cargoCompanyId == 'yurtici-kargo') cargoCompanyId = 'yurtici-kargo';
-    if (cargoCompanyId == 'hepsijet' || cargoCompanyId == 'hj') cargoCompanyId = 'hepsijet';
+    if (cargoCompanyId == 'surat' || cargoCompanyId == 'sur' || cargoCompanyId == 'surat-kargo' || cargoCompanyId == 'surat_kargo') cargoCompanyId = 'surat-kargo';
+    if (cargoCompanyId == 'yurtici' || cargoCompanyId == 'yk' || cargoCompanyId == 'yurtici-kargo' || cargoCompanyId == 'yurtici_kargo') cargoCompanyId = 'yurtici-kargo';
+    if (cargoCompanyId == 'hepsijet' || cargoCompanyId == 'hj' || cargoCompanyId == 'hepsi-jet') cargoCompanyId = 'hepsijet';
     if (cargoCompanyId == 'kolay-gelsin' || cargoCompanyId == 'kolaygelsin' || cargoCompanyId == 'kg') cargoCompanyId = 'kolay-gelsin';
+    if (cargoCompanyId == 'ups' || cargoCompanyId == 'ups-kargo') cargoCompanyId = 'ups';
     if (cargoCompanyId == 'bilinmeyen' || cargoCompanyId.isEmpty) cargoCompanyId = 'ptt-kargo';
 
     // 3. Payload hazırla (Backend API gereksinimlerine tam uyumlu)
-    final isSend = state.direction == 'send';
-    final effectiveDesi = state.desi > 0 ? state.desi : 1.0;
+    final isSend = state.direction == 'send' || state.direction == '1';
+    final effectiveDesi = state.desi >= 0 ? state.desi : 0.0;
     double effectiveLength = state.length;
     double effectiveWidth = state.width;
     double effectiveHeight = state.height;
 
-    // Eğer manuel ölçü girilmemişse, desi ile tam uyumlu kübik boyut ata (kargo firması API'sinin desiyi düşürmesini engeller)
-    if (effectiveLength <= 0 || effectiveWidth <= 0 || effectiveHeight <= 0) {
+    // Eğer manuel ölçü girilmemişse ve desi > 0 ise, desi ile tam uyumlu kübik boyut ata (kargo firması API'sinin desiyi düşürmesini engeller)
+    if (effectiveDesi > 0 && (effectiveLength <= 0 || effectiveWidth <= 0 || effectiveHeight <= 0)) {
       final side = math.pow(effectiveDesi * 3000, 1 / 3).toDouble();
       effectiveLength = double.parse(side.toStringAsFixed(2));
       effectiveWidth = double.parse(side.toStringAsFixed(2));
@@ -873,8 +908,8 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       "pay_on_delivery_amount": state.payOnDelivery ? state.payOnDeliveryAmount : 0,
       "pay_on_delivery_type": state.payOnDelivery ? (state.payOnDeliveryType == 'cash' ? 1 : 2) : 1,
       "past_pay_on_delivery": state.payOnDelivery ? state.canOffsetCargoFee : false,
-      "pod_receiver_pays": state.payOnDelivery ? state.receiverPays : false,
-      "receiver_pays": state.payOnDelivery ? false : state.receiverPays,
+      "pod_receiver_pays": state.receiverPays,
+      "receiver_pays": state.receiverPays,
       "controlled_delivery": state.controlledDelivery,
       "status": state.isDraft ? 0 : 1, // 0 = Taslak, 1 = Aktif
       if (state.orderNumber.trim().isNotEmpty) "order_number": state.orderNumber.trim(),

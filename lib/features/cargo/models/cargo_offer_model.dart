@@ -11,7 +11,7 @@ class CargoCompany {
 
   factory CargoCompany.fromJson(Map<String, dynamic> json) {
     return CargoCompany(
-      id: json['id'] ?? '',
+      id: json['id'] ?? json['code'] ?? json['company_id'] ?? '',
       title: json['title']?.toString() ?? json['name']?.toString() ?? '',
       logo: json['logo']?.toString(),
     );
@@ -110,10 +110,10 @@ class CargoCalculateRequest {
         'package': package.toJson(),
         'pay_on_delivery': payOnDelivery,
         if (payOnDelivery && payOnDeliveryAmount != null) 'pay_on_delivery_amount': payOnDeliveryAmount,
-        if (payOnDelivery) 'pay_on_delivery_type': payOnDeliveryType == 'credit_card' ? 2 : 1,
+        if (payOnDelivery) 'pay_on_delivery_type': (payOnDeliveryType == 'credit_card' || payOnDeliveryType == '2') ? 2 : 1,
         'past_pay_on_delivery': pastPayOnDelivery,
-        'pod_receiver_pays': payOnDelivery ? podReceiverPays : false,
-        'receiver_pays': payOnDelivery ? false : receiverPays,
+        'pod_receiver_pays': receiverPays || podReceiverPays,
+        'receiver_pays': receiverPays,
         'controlled_delivery': controlledDelivery,
         'status': status,
         'direction': (direction == 'receive' || direction == '2') ? 2 : 1,

@@ -1916,10 +1916,12 @@ void main() {
 
       await tester.pump();
 
-      // 1. Üst Bar
+      // 1. Üst Bar: Temizlenmiş sade AppBar ve Yön Seçici
       expect(find.text('Yeni Kargo Oluştur'), findsOneWidget);
-      expect(find.text('Dikey Hızlı Gönderi Formu'), findsOneWidget);
-      expect(find.text('SIFIRLA'), findsOneWidget);
+      expect(find.text('Dikey Hızlı Gönderi Formu'), findsNothing);
+      expect(find.text('SIFIRLA'), findsNothing);
+      expect(find.text('Kargo Gönder'), findsOneWidget);
+      expect(find.text('Kargo Bana Gelsin'), findsOneWidget);
 
       // 2. Bölüm 1: Gönderi ve Ödeme Türü
       expect(find.text('1. GÖNDERİ VE ÖDEME TÜRÜ'), findsOneWidget);
@@ -2230,11 +2232,22 @@ void main() {
       expect(find.widgetWithText(TextField, 'Moda Cad. No:12 D:4'), findsOneWidget);
     });
 
-    testWidgets('SIFIRLA butonuna basildiginda onay modali cikar ve temizleme formu basariyla sifirlar',
+    testWidgets('Kargo Bana Gelsin secildiginde roller yer degistirir ve Kargo Gonder tiklandiginda geri doner',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 2000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockSender = AddressModel(
+        id: 'snd-1',
+        title: 'Merkez Depo',
+        name: 'Merkez Depo',
+        phone: '0532 100 20 30',
+        details: 'Kadıköy / İstanbul',
+        cityId: 34,
+        isDefault: true,
+        type: 4,
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -2252,6 +2265,8 @@ void main() {
           createCargoProvider.overrideWith(
             () => _TestCreateCargoNotifier(
               CreateCargoState(
+                senderAddresses: [mockSender],
+                selectedSenderAddress: mockSender,
                 cities: [City(id: 34, name: 'İstanbul')],
               ),
             ),
@@ -2270,19 +2285,76 @@ void main() {
 
       await tester.pump();
 
-      // SIFIRLA butonuna bas
-      await tester.tap(find.text('SIFIRLA'));
+      // Başlangıçta Kargo Gönder seçilidir
+      expect(find.text('Kargo Gönder'), findsOneWidget);
+      expect(find.text('Kargo Bana Gelsin'), findsOneWidget);
+
+      // Kargo Bana Gelsin'e bas
+      await tester.tap(find.text('Kargo Bana Gelsin'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Formu Temizle'), findsOneWidget);
-      expect(find.text('Girdiğiniz tüm kargo ve alıcı bilgileri sıfırlanacaktır. Devam etmek istiyor musunuz?'), findsOneWidget);
+      // Rollerin yer değiştirdiği görülür: Alıcı artık Varış Deposu'dur
+      expect(find.text('Merkez Depo'), findsOneWidget);
 
-      // Temizle butonuna bas
-      await tester.tap(find.text('Temizle'));
+      // Tekrar Kargo Gönder'e bas
+      await tester.tap(find.text('Kargo Gönder'));
       await tester.pumpAndSettle();
 
-      // Modal kapanmış olmalı
-      expect(find.text('Formu Temizle'), findsNothing);
+      expect(find.text('Merkez Depo'), findsOneWidget);
+    });
+
+    testWidgets('Alici Oder secildiginde tekliflerde orijinal ucret ustu cizili ve 0,00 TL odenecek tutar gosterilir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final offer = CargoOffer(
+        cargoCompany: CargoCompany(id: 'surat-kargo', title: 'Sürat Kargo'),
+        price: 245.46,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                cities: [City(id: 34, name: 'İstanbul')],
+                offers: [offer],
+                selectedOffer: offer,
+                receiverPays: true,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Teklifte 245,46 ₺ üstü çizili ve 0,00 ₺ gösterilmeli
+      expect(find.text('245,46 ₺'), findsOneWidget);
+      expect(find.text('0,00 ₺'), findsWidgets);
+      expect(find.text('ALICI ÖDER'), findsOneWidget);
     });
 
     testWidgets('Katalogdan urun secildiginde desi ve boyutlar aktarilir ve form temizlendiginde sifirlanir',
