@@ -91,8 +91,8 @@ class CargoCard extends StatelessWidget {
                           CargoCompanyLogo(
                             companyId: cargo.cargoCompany?.id?.toString() ?? cargo.cargoCompanyId,
                             companyName: cargo.cargoCompany?.title,
-                            height: 20,
-                            isHorizontal: true,
+                            width: 76,
+                            height: 30,
                           ),
                           const SizedBox(width: 8),
                           if (trackingCode.isNotEmpty) ...[

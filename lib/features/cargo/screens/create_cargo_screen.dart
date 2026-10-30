@@ -2963,9 +2963,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                           CargoCompanyLogo(
                             companyId: offer.cargoCompany.id.toString(),
                             companyName: offer.cargoCompany.title,
-                            height: 28,
-                            width: 52,
-                            isHorizontal: true,
+                            width: 76,
+                            height: 32,
                           ),
                           const SizedBox(width: 10),
                           Expanded(

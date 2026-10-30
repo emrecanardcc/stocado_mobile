@@ -117,6 +117,10 @@ class CargoCompanyLogo extends StatelessWidget {
   final double borderRadius;
   final bool showBorder;
   final bool? isHorizontal;
+  final Color? backgroundColor;
+  final EdgeInsetsGeometry? padding;
+  final bool showShadow;
+  final bool useContainer;
 
   const CargoCompanyLogo({
     super.key,
@@ -128,6 +132,10 @@ class CargoCompanyLogo extends StatelessWidget {
     this.borderRadius = 8.0,
     this.showBorder = true,
     this.isHorizontal,
+    this.backgroundColor,
+    this.padding,
+    this.showShadow = false,
+    this.useContainer = true,
   });
 
   CargoCompanyType get _type {
@@ -136,19 +144,11 @@ class CargoCompanyLogo extends StatelessWidget {
     return CargoCompanyType.fromString(companyName);
   }
 
-  bool get _resolvedIsHorizontal {
-    if (isHorizontal != null) return isHorizontal!;
-    if (height != null) return true;
-    if (size != null) return false;
-    return true; // Varsayılan olarak yatay, net okunan logo
-  }
-
   @override
   Widget build(BuildContext context) {
     final type = _type;
-    final isHoriz = _resolvedIsHorizontal;
 
-    if (isHoriz) {
+    if (!useContainer) {
       final h = height ?? 20.0;
       final logo = _buildHorizontalLogo(context, type, h);
       if (width != null) {
@@ -156,8 +156,7 @@ class CargoCompanyLogo extends StatelessWidget {
           height: h,
           width: width,
           child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
+            fit: BoxFit.contain,
             child: logo,
           ),
         );
@@ -168,31 +167,57 @@ class CargoCompanyLogo extends StatelessWidget {
       );
     }
 
-    final effSize = size ?? 38.0;
-    return _buildBadgeContainer(context, type, effSize);
-  }
+    final double effectiveHeight;
+    final double effectiveWidth;
 
-  Widget _buildBadgeContainer(BuildContext context, CargoCompanyType type, double effSize) {
+    if (size != null) {
+      effectiveHeight = size!;
+      effectiveWidth = size!;
+    } else if (width != null && height != null) {
+      effectiveWidth = width!;
+      effectiveHeight = height!;
+    } else if (height != null) {
+      effectiveHeight = height!;
+      effectiveWidth = (height! * 2.375).roundToDouble();
+    } else if (width != null) {
+      effectiveWidth = width!;
+      effectiveHeight = (width! / 2.375).roundToDouble();
+    } else {
+      effectiveWidth = 76.0;
+      effectiveHeight = 32.0;
+    }
+
+    final innerPadding = padding ??
+        EdgeInsets.symmetric(
+          horizontal: (effectiveWidth * 0.08).clamp(4.0, 10.0),
+          vertical: (effectiveHeight * 0.12).clamp(2.0, 6.0),
+        );
+    final logoRefHeight = (effectiveHeight - (effectiveHeight * 0.24)).clamp(10.0, 40.0);
+
     return Container(
-      width: effSize,
-      height: effSize,
+      width: effectiveWidth,
+      height: effectiveHeight,
+      padding: innerPadding,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundColor ?? Colors.white,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: showBorder ? Border.all(color: const Color(0xFFE2E8F0), width: 1.0) : null,
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 1.5),
-          ),
-        ],
+        border: showBorder
+            ? Border.all(color: const Color(0xFFE2E8F0), width: 1.0)
+            : null,
+        boxShadow: showShadow
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1.5),
+                ),
+              ]
+            : null,
       ),
-      padding: EdgeInsets.all(effSize * 0.12),
       child: Center(
         child: FittedBox(
           fit: BoxFit.contain,
-          child: _buildHorizontalLogo(context, type, effSize * 0.65),
+          child: _buildHorizontalLogo(context, type, logoRefHeight),
         ),
       ),
     );

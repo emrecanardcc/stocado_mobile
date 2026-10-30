@@ -330,8 +330,9 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
               CargoCompanyLogo(
                 companyId: plan.code,
                 companyName: plan.companyName,
-                height: 18,
-                width: isNarrow ? 48 : 64,
+                width: isNarrow ? 56 : 68,
+                height: 24,
+                borderRadius: 6,
               ),
               const SizedBox(width: 6),
               // Şirket Adı

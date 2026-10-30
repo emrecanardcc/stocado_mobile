@@ -190,7 +190,8 @@ class _CargoDetailModalState extends ConsumerState<CargoDetailModal> {
                     CargoCompanyLogo(
                       companyId: _cargo.cargoCompany?.id?.toString() ?? _cargo.cargoCompanyId,
                       companyName: _cargo.cargoCompany?.title,
-                      size: 36,
+                      width: 76,
+                      height: 32,
                       borderRadius: 8,
                     ),
                     const SizedBox(width: 10),

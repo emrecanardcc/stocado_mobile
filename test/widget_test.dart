@@ -1536,6 +1536,35 @@ void main() {
       expect(find.text('kolay gelsin'), findsOneWidget);
       expect(find.byType(CustomPaint), findsWidgets);
     });
+
+    testWidgets('CargoCompanyLogo tum 6 anlasmali kargo firmasini standart rozet kutusu ile render eder', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  CargoCompanyLogo(companyId: 'hepsijet', width: 76, height: 32),
+                  CargoCompanyLogo(companyId: 'ptt', width: 76, height: 32),
+                  CargoCompanyLogo(companyId: 'surat', width: 76, height: 32),
+                  CargoCompanyLogo(companyId: 'kolay-gelsin', width: 76, height: 32),
+                  CargoCompanyLogo(companyId: 'ups', width: 76, height: 32),
+                  CargoCompanyLogo(companyId: 'yurtici', width: 76, height: 32),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('hepsi'), findsOneWidget);
+      expect(find.text('Ptt'), findsOneWidget);
+      expect(find.text('SURAT'), findsOneWidget);
+      expect(find.text('kolay gelsin'), findsOneWidget);
+      expect(find.text('UPS'), findsOneWidget);
+      expect(find.text('yurtiçi'), findsOneWidget);
+      expect(find.byType(FittedBox), findsNWidgets(6));
+    });
   });
 
   group('CargoCard Yeni Tasarim & Etkilesim Testleri', () {
@@ -1715,13 +1744,14 @@ void main() {
       // 2. Arama Kutusu
       expect(find.text('Ad, telefon veya barkod ara'), findsOneWidget);
 
-      // 3. 3 Kompakt Pill Tab ve Sayaclar (Mockup uyumu: Tumu 252, Yolda 28, Sorunlu 3)
+      // 3. 4 Kompakt Pill Tab ve Sayaclar (Mockup uyumu: Tumu 252, Yolda 28, Sorunlu 3, Taslak 0)
       expect(find.text('Tümü'), findsOneWidget);
       expect(find.text('252'), findsOneWidget);
       expect(find.text('Yolda'), findsNWidgets(2)); // Üst filtre sekmesinde ve kargo kartı rozetinde
       expect(find.text('28'), findsOneWidget);
       expect(find.text('Sorunlu'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
+      expect(find.text('Taslak'), findsOneWidget);
 
       // 4. Kargo Kartlari
       expect(find.text('Ayşe Yılmaz'), findsOneWidget);
@@ -1736,6 +1766,10 @@ void main() {
       await tester.tap(find.text('Sorunlu'));
       await tester.pump();
       expect(container.read(cargoListProvider).selectedStatus, '4');
+
+      await tester.tap(find.text('Taslak'));
+      await tester.pump();
+      expect(container.read(cargoListProvider).selectedStatus, '0');
 
       await tester.tap(find.text('Tümü'));
       await tester.pump();
@@ -1862,6 +1896,203 @@ void main() {
 
       expect(find.text('1.250,00 ₺'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CargosScreen arama kutusu modern tasarim, yazildiginda temizle butonu ve 320px responsive uyum saglar', (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(
+                isInitialized: true,
+                token: 'valid_token',
+                user: UserModel(
+                  id: '1',
+                  firstName: 'Emirhan',
+                  lastName: 'Demir',
+                  fullName: 'Emirhan Demir',
+                  email: 'e@test.com',
+                  accountId: 'acc-1',
+                  accounts: [],
+                ),
+              ),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          cargoListProvider.overrideWith(
+            () => _TestCargoListNotifier(const CargoListState(isLoading: false)),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CargosScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byIcon(Icons.search_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.cancel_rounded), findsNothing);
+
+      // Metin yaz
+      await tester.enterText(find.byType(TextField), 'HJV123');
+      await tester.pump();
+
+      // 'X' temizle butonu gorunmeli
+      expect(find.byIcon(Icons.cancel_rounded), findsOneWidget);
+
+      // 'X' butonuna bas
+      await tester.tap(find.byIcon(Icons.cancel_rounded));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.cancel_rounded), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CargosScreen filtre sheetinde sadece 6 anlasmali firma listelenir, gereksiz firmalar bulunmaz', (tester) async {
+      tester.view.physicalSize = const Size(800, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(
+                isInitialized: true,
+                token: 'valid_token',
+                user: UserModel(
+                  id: '1',
+                  firstName: 'Emirhan',
+                  lastName: 'Demir',
+                  fullName: 'Emirhan Demir',
+                  email: 'e@test.com',
+                  accountId: 'acc-1',
+                  accounts: [],
+                ),
+              ),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          cargoListProvider.overrideWith(
+            () => _TestCargoListNotifier(const CargoListState(isLoading: false)),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CargosScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Filtre ikonuna bas
+      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Sadece 6 anlasmali firma gorunmeli
+      expect(find.text('HepsiJET'), findsOneWidget);
+      expect(find.text('PTT Kargo'), findsOneWidget);
+      expect(find.text('Sürat Kargo'), findsOneWidget);
+      expect(find.text('Kolay Gelsin'), findsOneWidget);
+      expect(find.text('UPS Kargo'), findsOneWidget);
+      expect(find.text('Yurtiçi Kargo'), findsOneWidget);
+
+      // Gereksiz/desteklenmeyen firmalar bulunmamali
+      expect(find.text('Aras Kargo'), findsNothing);
+      expect(find.text('MNG Kargo'), findsNothing);
+      expect(find.text('Trendyol Express'), findsNothing);
+
+      // HepsiJET sec ve Filtreleri Uygula bas
+      await tester.tap(find.text('HepsiJET'));
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.tap(find.text('Filtreleri Uygula'));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(container.read(cargoListProvider).selectedCargoCompany, 'hepsijet');
+    });
+
+    testWidgets('CargosScreen Taslak sekmesi secildiginde status 0 kargolar filtrelenir ve sayac rozeti gorunur', (tester) async {
+      final draftCargo = CargoModel(
+        id: 88,
+        processNumber: 'DRAFT-X',
+        outTrackingCode: 'TRK-DRAFT-X',
+        status: 0,
+        payOnDelivery: false,
+        receiver: CargoParty(id: 'r88', name: 'Taslak Alıcı', phone: '05551112233'),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(
+                isInitialized: true,
+                token: 'valid_token',
+                user: UserModel(
+                  id: '1',
+                  firstName: 'Emirhan',
+                  lastName: 'Demir',
+                  fullName: 'Emirhan Demir',
+                  email: 'e@test.com',
+                  accountId: 'acc-1',
+                  accounts: [],
+                ),
+              ),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          cargoListProvider.overrideWith(
+            () => _TestCargoListNotifier(
+              CargoListState(
+                isLoading: false,
+                cargos: [draftCargo],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CargosScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Taslak sekmesi (sekmede ve kargo karti rozetinde) ve sayaci gorunmeli
+      expect(find.text('Taslak'), findsNWidgets(2));
+      expect(find.descendant(of: find.widgetWithText(AnimatedContainer, 'Taslak'), matching: find.text('1')), findsOneWidget);
+
+      // Taslak sekmesine bas
+      await tester.tap(find.text('Taslak').first);
+      await tester.pump();
+
+      expect(container.read(cargoListProvider).selectedStatus, '0');
+      expect(container.read(cargoListProvider).activeTab, 'drafts');
     });
   });
 

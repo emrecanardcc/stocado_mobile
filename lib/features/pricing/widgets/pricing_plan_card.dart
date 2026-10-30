@@ -138,8 +138,8 @@ class _PricingPlanCardState extends State<PricingPlanCard> {
                     CargoCompanyLogo(
                       companyId: plan.code,
                       companyName: plan.companyName,
-                      height: 22,
-                      width: 90,
+                      width: 76,
+                      height: 32,
                     ),
                     const Spacer(),
                     Container(

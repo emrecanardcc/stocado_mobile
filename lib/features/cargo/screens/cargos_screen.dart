@@ -28,11 +28,16 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_handleScroll);
+    _searchFocusNode.addListener(_onSearchFocusChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && ref.read(dashboardProvider).stats == null) {
         ref.read(dashboardProvider.notifier).loadDashboard();
       }
     });
+  }
+
+  void _onSearchFocusChanged() {
+    if (mounted) setState(() {});
   }
 
   void _handleScroll() {
@@ -45,6 +50,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _searchFocusNode.removeListener(_onSearchFocusChanged);
     _scrollController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -53,24 +59,18 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
 
   String _companyLabel(String? id) {
     switch (id) {
+      case 'hepsijet':
+        return 'HepsiJET';
       case 'ptt':
         return 'PTT Kargo';
       case 'surat':
         return 'Sürat Kargo';
-      case 'yurtici':
-        return 'Yurtiçi Kargo';
-      case 'hepsijet':
-        return 'HepsiJET';
-      case 'ups':
-        return 'UPS Kargo';
       case 'kolay-gelsin':
         return 'Kolay Gelsin';
-      case 'aras':
-        return 'Aras Kargo';
-      case 'mng':
-        return 'MNG Kargo';
-      case 'trendyol':
-        return 'Trendyol Express';
+      case 'ups':
+        return 'UPS Kargo';
+      case 'yurtici':
+        return 'Yurtiçi Kargo';
       default:
         return 'Tümü';
     }
@@ -222,7 +222,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(12),
@@ -244,7 +244,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                     color: textColor,
                   ),
@@ -252,17 +252,17 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                 decoration: BoxDecoration(
                   color: badgeBg,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(7),
                 ),
                 child: Text(
                   countStr,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     color: badgeText,
                   ),
@@ -292,7 +292,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return SafeArea(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -373,58 +373,40 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                           onSelected: () => setSheetState(() => tempCompany = null),
                         ),
                         _buildFilterChipItem(
+                          label: 'HepsiJET',
+                          isSelected: tempCompany == 'hepsijet',
+                          leading: const CargoCompanyLogo(companyId: 'hepsijet', width: 48, height: 20, borderRadius: 4),
+                          onSelected: () => setSheetState(() => tempCompany = 'hepsijet'),
+                        ),
+                        _buildFilterChipItem(
                           label: 'PTT Kargo',
                           isSelected: tempCompany == 'ptt',
-                          leading: const CargoCompanyLogo(companyId: 'ptt', height: 16, isHorizontal: true),
+                          leading: const CargoCompanyLogo(companyId: 'ptt', width: 48, height: 20, borderRadius: 4),
                           onSelected: () => setSheetState(() => tempCompany = 'ptt'),
                         ),
                         _buildFilterChipItem(
                           label: 'Sürat Kargo',
                           isSelected: tempCompany == 'surat',
-                          leading: const CargoCompanyLogo(companyId: 'surat', height: 16, isHorizontal: true),
+                          leading: const CargoCompanyLogo(companyId: 'surat', width: 48, height: 20, borderRadius: 4),
                           onSelected: () => setSheetState(() => tempCompany = 'surat'),
-                        ),
-                        _buildFilterChipItem(
-                          label: 'Yurtiçi Kargo',
-                          isSelected: tempCompany == 'yurtici',
-                          leading: const CargoCompanyLogo(companyId: 'yurtici', height: 16, isHorizontal: true),
-                          onSelected: () => setSheetState(() => tempCompany = 'yurtici'),
-                        ),
-                        _buildFilterChipItem(
-                          label: 'HepsiJET',
-                          isSelected: tempCompany == 'hepsijet',
-                          leading: const CargoCompanyLogo(companyId: 'hepsijet', height: 16, isHorizontal: true),
-                          onSelected: () => setSheetState(() => tempCompany = 'hepsijet'),
-                        ),
-                        _buildFilterChipItem(
-                          label: 'UPS Kargo',
-                          isSelected: tempCompany == 'ups',
-                          leading: const CargoCompanyLogo(companyId: 'ups', height: 16, isHorizontal: true),
-                          onSelected: () => setSheetState(() => tempCompany = 'ups'),
                         ),
                         _buildFilterChipItem(
                           label: 'Kolay Gelsin',
                           isSelected: tempCompany == 'kolay-gelsin',
-                          leading: const CargoCompanyLogo(companyId: 'kolay-gelsin', height: 16, isHorizontal: true),
+                          leading: const CargoCompanyLogo(companyId: 'kolay-gelsin', width: 48, height: 20, borderRadius: 4),
                           onSelected: () => setSheetState(() => tempCompany = 'kolay-gelsin'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Aras Kargo',
-                          isSelected: tempCompany == 'aras',
-                          leading: const CargoCompanyLogo(companyId: 'aras', height: 16, isHorizontal: true),
-                          onSelected: () => setSheetState(() => tempCompany = 'aras'),
+                          label: 'UPS Kargo',
+                          isSelected: tempCompany == 'ups',
+                          leading: const CargoCompanyLogo(companyId: 'ups', width: 48, height: 20, borderRadius: 4),
+                          onSelected: () => setSheetState(() => tempCompany = 'ups'),
                         ),
                         _buildFilterChipItem(
-                          label: 'MNG Kargo',
-                          isSelected: tempCompany == 'mng',
-                          leading: const CargoCompanyLogo(companyId: 'mng', height: 16, isHorizontal: true),
-                          onSelected: () => setSheetState(() => tempCompany = 'mng'),
-                        ),
-                        _buildFilterChipItem(
-                          label: 'Trendyol Express',
-                          isSelected: tempCompany == 'trendyol',
-                          leading: const CargoCompanyLogo(companyId: 'trendyol', height: 16, isHorizontal: true),
-                          onSelected: () => setSheetState(() => tempCompany = 'trendyol'),
+                          label: 'Yurtiçi Kargo',
+                          isSelected: tempCompany == 'yurtici',
+                          leading: const CargoCompanyLogo(companyId: 'yurtici', width: 48, height: 20, borderRadius: 4),
+                          onSelected: () => setSheetState(() => tempCompany = 'yurtici'),
                         ),
                       ],
                     ),
@@ -569,12 +551,39 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
         }).length;
 
     // Aktif sekme kontrolü
-    final isAllSelected = state.selectedStatus == null || state.selectedStatus == 'all';
-    final isInTransitSelected = state.selectedStatus == '1' || state.selectedStatus == 'active' || state.selectedStatus == 'yolda';
-    final isProblematicSelected = state.selectedStatus == '4' || state.selectedStatus == 'failed' || state.selectedStatus == 'problematic' || state.selectedStatus == 'sorunlu';
+    final isDraftsSelected = state.activeTab == 'drafts' ||
+        state.selectedStatus == '0' ||
+        state.selectedStatus == 'drafts';
+    final isAllSelected = (state.selectedStatus == null || state.selectedStatus == 'all') &&
+        (state.activeTab == 'all' || !isDraftsSelected);
+    final isInTransitSelected = state.activeTab == 'yolda' ||
+        state.selectedStatus == '1' ||
+        state.selectedStatus == 'active' ||
+        state.selectedStatus == 'yolda';
+    final isProblematicSelected = state.activeTab == 'sorunlu' ||
+        state.selectedStatus == '4' ||
+        state.selectedStatus == 'failed' ||
+        state.selectedStatus == 'problematic' ||
+        state.selectedStatus == 'sorunlu';
+
+    final draftCount = isDraftsSelected
+        ? (state.meta?.total ?? state.cargos.length)
+        : state.cargos.where((c) => c.status == 0).length;
+
+    final isTabStatus = state.selectedStatus == null ||
+        state.selectedStatus == 'all' ||
+        state.selectedStatus == '1' ||
+        state.selectedStatus == 'active' ||
+        state.selectedStatus == 'yolda' ||
+        state.selectedStatus == '4' ||
+        state.selectedStatus == 'failed' ||
+        state.selectedStatus == 'problematic' ||
+        state.selectedStatus == 'sorunlu' ||
+        state.selectedStatus == '0' ||
+        state.selectedStatus == 'drafts';
 
     final hasCustomFilters = (state.selectedCargoCompany != null && state.selectedCargoCompany!.isNotEmpty) ||
-        (state.selectedStatus != null && state.selectedStatus != 'all' && state.selectedStatus != '1' && state.selectedStatus != '4') ||
+        (state.selectedStatus != null && !isTabStatus) ||
         state.sortDirection != 'desc';
 
     return PopScope(
@@ -601,16 +610,21 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Kargolarım',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0E1E38),
-                        letterSpacing: -0.5,
+                    const Expanded(
+                      child: Text(
+                        'Kargolarım',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0E1E38),
+                          letterSpacing: -0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.search, size: 24, color: Color(0xFF0E1E38)),
@@ -638,72 +652,95 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: GestureDetector(
                   onTap: () => _searchFocusNode.requestFocus(),
-                  child: Container(
-                    height: 44,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 48,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _searchFocusNode.hasFocus ? const Color(0xFF0E1E38) : const Color(0xFFE2E8F0),
+                        width: _searchFocusNode.hasFocus ? 1.5 : 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: _searchFocusNode.hasFocus ? 0.08 : 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
-                      const Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          focusNode: _searchFocusNode,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF0F172A),
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: const InputDecoration(
-                            hintText: 'Ad, telefon veya barkod ara',
-                            hintStyle: TextStyle(
+                        Icon(
+                          Icons.search_rounded,
+                          color: _searchFocusNode.hasFocus ? const Color(0xFF0E1E38) : const Color(0xFF64748B),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            cursorColor: const Color(0xFF0E1E38),
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF94A3B8),
-                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF0F172A),
+                              fontWeight: FontWeight.w600,
                             ),
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          onChanged: (val) {
-                            _debounceTimer?.cancel();
-                            _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+                            decoration: const InputDecoration(
+                              hintText: 'Ad, telefon veya barkod ara',
+                              hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF94A3B8),
+                                fontWeight: FontWeight.w400,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (val) {
+                              _debounceTimer?.cancel();
+                              _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+                                notifier.setSearch(val.trim());
+                              });
+                              setState(() {});
+                            },
+                            onSubmitted: (val) {
+                              _debounceTimer?.cancel();
                               notifier.setSearch(val.trim());
-                            });
-                            setState(() {});
-                          },
-                          onSubmitted: (val) {
-                            _debounceTimer?.cancel();
-                            notifier.setSearch(val.trim());
-                          },
-                        ),
-                      ),
-                      if (_searchController.text.isNotEmpty)
-                        GestureDetector(
-                          onTap: () {
-                            _debounceTimer?.cancel();
-                            _searchController.clear();
-                            notifier.setSearch('');
-                            setState(() {});
-                          },
-                          child: const Icon(
-                            Icons.cancel_rounded,
-                            size: 18,
-                            color: Color(0xFF94A3B8),
+                            },
                           ),
                         ),
-                    ],
+                        if (_searchController.text.isNotEmpty)
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                _debounceTimer?.cancel();
+                                _searchController.clear();
+                                notifier.setSearch('');
+                                setState(() {});
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.cancel_rounded,
+                                  size: 19,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
 
-              // 3. Kompakt Filtre Çipleri (Pill Tabs)
+              // 3. Kompakt Filtre Çipleri (Pill Tabs: Tümü, Yolda, Sorunlu, Taslak)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
                 child: Row(
@@ -714,20 +751,27 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                       isSelected: isAllSelected,
                       onTap: () => notifier.setTab('all'),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     _buildPillTab(
                       label: 'Yolda',
                       count: inTransitCount,
                       isSelected: isInTransitSelected,
                       onTap: () => notifier.setTab('yolda'),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     _buildPillTab(
                       label: 'Sorunlu',
                       count: problematicCount,
                       isSelected: isProblematicSelected,
                       isHighlight: true,
                       onTap: () => notifier.setTab('sorunlu'),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildPillTab(
+                      label: 'Taslak',
+                      count: draftCount,
+                      isSelected: isDraftsSelected,
+                      onTap: () => notifier.setTab('drafts'),
                     ),
                   ],
                 ),
@@ -749,10 +793,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                           ),
                           const SizedBox(width: 8),
                         ],
-                        if (state.selectedStatus != null &&
-                            state.selectedStatus != 'all' &&
-                            state.selectedStatus != '1' &&
-                            state.selectedStatus != '4') ...[
+                        if (state.selectedStatus != null && !isTabStatus) ...[
                           _buildActiveFilterTag(
                             label: 'Durum: ${_statusLabel(state.selectedStatus)}',
                             onDeleted: () => notifier.setStatusFilter(null),
