@@ -72,18 +72,18 @@ class PackageData {
 
 class CargoCalculateRequest {
   final dynamic accountId;
-  final String? localId;
-  final String? foreignId;
+  final dynamic localId;
+  final dynamic foreignId;
   final PackageData package;
   final bool payOnDelivery;
   final double? payOnDeliveryAmount;
-  final String? payOnDeliveryType; // cash, credit_card
+  final dynamic payOnDeliveryType; // 'cash', 'credit_card', or int
   final bool pastPayOnDelivery;
   final bool podReceiverPays;
   final bool receiverPays;
   final bool controlledDelivery;
   final int status;
-  final String direction; // send, receive
+  final dynamic direction; // 'send', 'receive', or int
   final bool printBarcode;
 
   CargoCalculateRequest({
@@ -103,20 +103,46 @@ class CargoCalculateRequest {
     this.printBarcode = false,
   });
 
-  Map<String, dynamic> toJson() => {
-        'account_id': accountId,
-        if (localId != null && localId!.isNotEmpty) 'local_id': localId,
-        if (foreignId != null && foreignId!.isNotEmpty) 'foreign_id': foreignId,
-        'package': package.toJson(),
-        'pay_on_delivery': payOnDelivery,
-        if (payOnDelivery && payOnDeliveryAmount != null) 'pay_on_delivery_amount': payOnDeliveryAmount,
-        if (payOnDelivery) 'pay_on_delivery_type': (payOnDeliveryType == 'credit_card' || payOnDeliveryType == '2') ? 2 : 1,
-        'past_pay_on_delivery': pastPayOnDelivery,
-        'pod_receiver_pays': receiverPays || podReceiverPays,
-        'receiver_pays': receiverPays,
-        'controlled_delivery': controlledDelivery,
-        'status': status,
-        'direction': (direction == 'receive' || direction == '2') ? 2 : 1,
-        'print_barcode': printBarcode,
-      };
+  Map<String, dynamic> toJson({bool useIntegerEnums = false}) {
+    final isReceive = direction == 'receive' || direction == '2' || direction == 2;
+    final isCreditCard = payOnDeliveryType == 'credit_card' || payOnDeliveryType == '2' || payOnDeliveryType == 2;
+
+    dynamic accId = accountId;
+    if (accId is String) {
+      final parsed = int.tryParse(accId);
+      if (parsed != null) accId = parsed;
+    }
+
+    dynamic lId = localId;
+    if (lId is String && lId.isNotEmpty) {
+      final parsed = int.tryParse(lId);
+      if (parsed != null) lId = parsed;
+    }
+
+    dynamic fId = foreignId;
+    if (fId is String && fId.isNotEmpty) {
+      final parsed = int.tryParse(fId);
+      if (parsed != null) fId = parsed;
+    }
+
+    return {
+      'account_id': accId,
+      if (lId != null && (lId is! String || lId.isNotEmpty)) 'local_id': lId,
+      if (fId != null && (fId is! String || fId.isNotEmpty)) 'foreign_id': fId,
+      'package': package.toJson(),
+      'pay_on_delivery': payOnDelivery,
+      if (payOnDelivery && payOnDeliveryAmount != null) 'pay_on_delivery_amount': payOnDeliveryAmount,
+      if (payOnDelivery)
+        'pay_on_delivery_type': useIntegerEnums
+            ? (isCreditCard ? 2 : 1)
+            : (isCreditCard ? 'credit_card' : 'cash'),
+      'past_pay_on_delivery': pastPayOnDelivery,
+      'pod_receiver_pays': receiverPays || podReceiverPays,
+      'receiver_pays': receiverPays,
+      'controlled_delivery': controlledDelivery,
+      'status': status,
+      'direction': useIntegerEnums ? (isReceive ? 2 : 1) : (isReceive ? 'receive' : 'send'),
+      'print_barcode': printBarcode,
+    };
+  }
 }

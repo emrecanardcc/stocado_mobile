@@ -8,6 +8,7 @@ import '../services/cargo_service.dart';
 import '../services/location_service.dart';
 import 'cargo_list_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../pricing/models/cargo_tariff_engine.dart';
 import '../../products/models/product_model.dart';
 
 class CreateCargoState {
@@ -739,78 +740,15 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
   }
 
   List<CargoOffer> _generateFallbackOffers(double desi, bool isPod, [bool isControlled = false]) {
-    final effectiveDesi = desi;
-    final podFee = isPod ? 15.0 : 0.0;
-    if (isControlled) {
-      return [
-        CargoOffer(
-          cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
-          price: (96.14 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
-        ),
-      ];
-    }
-    // Web Portal Paritesi (Görsel 2): Kredi Kartı Kapıda Ödeme yalnızca Sürat Kargo ve UPS destekler
-    if (isPod && state.payOnDeliveryType == 'credit_card') {
-      return [
-        CargoOffer(
-          cargoCompany: CargoCompany(id: 'surat-kargo', title: 'Sürat Kargo'),
-          price: (201.30 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 17.0 : 0.0)),
-        ),
-        CargoOffer(
-          cargoCompany: CargoCompany(id: 'ups', title: 'UPS Kargo'),
-          price: (469.44 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.67 : 0.0)),
-        ),
-      ];
-    }
-    // Web Portal Paritesi (Görsel 3): Nakit Kapıda Ödeme HepsiJET, Sürat Kargo, PTT Kargo ve UPS destekler
-    if (isPod && state.payOnDeliveryType == 'cash') {
-      return [
-        CargoOffer(
-          cargoCompany: CargoCompany(id: 'hepsijet', title: 'HepsiJET'),
-          price: (190.08 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.0 : 0.0)),
-        ),
-        CargoOffer(
-          cargoCompany: CargoCompany(id: 'surat-kargo', title: 'Sürat Kargo'),
-          price: (201.30 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 17.0 : 0.0)),
-        ),
-        CargoOffer(
-          cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
-          price: (234.00 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
-        ),
-        CargoOffer(
-          cargoCompany: CargoCompany(id: 'ups', title: 'UPS Kargo'),
-          price: (469.44 + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.67 : 0.0)),
-        ),
-      ];
-    }
-    final list = [
-      CargoOffer(
-        cargoCompany: CargoCompany(id: 'ptt-kargo', title: 'PTT Kargo'),
-        price: (96.14 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 15.0 : 0.0)),
-      ),
-      CargoOffer(
-        cargoCompany: CargoCompany(id: 'hepsijet', title: 'HepsiJET'),
-        price: (104.40 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.0 : 0.0)),
-      ),
-      CargoOffer(
-        cargoCompany: CargoCompany(id: 'surat-kargo', title: 'Sürat Kargo'),
-        price: (136.21 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 17.0 : 0.0)),
-      ),
-      CargoOffer(
-        cargoCompany: CargoCompany(id: 'kolay-gelsin', title: 'Kolay Gelsin'),
-        price: (145.00 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.5 : 0.0)),
-      ),
-      CargoOffer(
-        cargoCompany: CargoCompany(id: 'ups', title: 'UPS Kargo'),
-        price: (176.10 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 16.67 : 0.0)),
-      ),
-      CargoOffer(
-        cargoCompany: CargoCompany(id: 'yurtici-kargo', title: 'Yurtiçi Kargo'),
-        price: (233.99 + podFee + (effectiveDesi > 2 ? (effectiveDesi - 2) * 18.0 : 0.0)),
-      ),
-    ];
-    list.sort((a, b) => a.price.compareTo(b.price));
-    return list;
+    final bool isReceiverPays = state.receiverPays || state.direction == 'receive' || state.direction == '2';
+    return CargoTariffEngine.generateFallbackOffers(
+      desi: desi >= 0 ? desi : 0.0,
+      isPod: isPod,
+      podAmount: isPod ? state.payOnDeliveryAmount : 0.0,
+      podType: state.payOnDeliveryType,
+      isControlled: isControlled,
+      isReceiverPays: isReceiverPays,
+    );
   }
 
   /// Kargo Oluşturma İsteği (POST /cargos)

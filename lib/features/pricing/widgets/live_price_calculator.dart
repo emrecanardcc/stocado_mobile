@@ -33,8 +33,9 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
   }
 
   List<_CalcResult> get _results {
-    final raw = int.tryParse(_desiController.text.trim()) ?? 1;
-    final desi = raw.clamp(1, 999);
+    final text = _desiController.text.trim();
+    final raw = int.tryParse(text) ?? 0;
+    final desi = raw.clamp(0, 999);
 
     final filtered = widget.plans.where((plan) {
       if (_filterPod && !plan.hasPod) return false;
@@ -43,7 +44,11 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
     }).toList();
 
     final results = filtered.map((plan) {
-      final price = plan.calculatePrice(desi);
+      final price = plan.calculatePrice(
+        desi,
+        isPod: _filterPod,
+        isControlled: _filterControlled,
+      );
       return _CalcResult(plan: plan, price: price);
     }).toList();
 
@@ -69,11 +74,11 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
     final val = int.tryParse(text.trim());
     if (val != null) {
       setState(() {
-        _sliderValue = val.clamp(1, 30).toDouble();
+        _sliderValue = val.clamp(0, 30).toDouble();
       });
     } else {
       setState(() {
-        _sliderValue = 1.0;
+        _sliderValue = 0.0;
       });
     }
   }
@@ -218,16 +223,16 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
                     trackHeight: 3,
                   ),
                   child: Slider(
-                    min: 1,
+                    min: 0,
                     max: 30,
-                    value: _sliderValue,
+                    value: _sliderValue.clamp(0.0, 30.0),
                     onChanged: _onSliderChanged,
                   ),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: const [
-                    Text('1 Desi', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+                    Text('0 Desi', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
                     Text('10 Desi', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
                     Text('20 Desi', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
                     Text('30 Desi', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
