@@ -148,15 +148,20 @@ class DashboardRecentCargosSection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Son Gönderiler',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF0E1E38),
-                letterSpacing: -0.2,
+            const Expanded(
+              child: Text(
+                'Son Gönderiler',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0E1E38),
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             InkWell(
               onTap: onSeeAllTap,
               borderRadius: BorderRadius.circular(8),

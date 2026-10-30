@@ -3081,7 +3081,7 @@ void main() {
 
   group('Faz 4: Finans & TopUpBalanceScreen Testleri', () {
     testWidgets('MainScreen Finans tabina basildiginda TopUpBalanceScreen aninda yuklenir', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.physicalSize = const Size(360, 780);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
         tester.view.resetPhysicalSize();
@@ -3149,6 +3149,10 @@ void main() {
       expect(find.text('Nasıl Yüklenir?'), findsOneWidget);
       expect(find.text('Tüm Hesap Bilgilerini Kopyala'), findsOneWidget);
 
+      // 360x780 ekranda MainScreen alt barına rağmen buton ekranda tam görünür olmalı (dy <= 780)
+      final buttonRect = tester.getRect(find.text('Tüm Hesap Bilgilerini Kopyala'));
+      expect(buttonRect.bottom, lessThanOrEqualTo(780.0));
+
       // AppBar'da gereksiz yenile butonu bulunmamalı
       expect(find.byTooltip('Bakiyeyi Yenile'), findsNothing);
     });
@@ -3159,7 +3163,7 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      for (final size in [const Size(360, 780), const Size(390, 844)]) {
+      for (final size in [const Size(360, 780), const Size(390, 844), const Size(320, 640)]) {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1.0;
 
@@ -3217,6 +3221,12 @@ void main() {
         expect(find.text('Uyarı'), findsOneWidget);
         expect(find.text('Nasıl Yüklenir?'), findsOneWidget);
         expect(find.text('Tüm Hesap Bilgilerini Kopyala'), findsOneWidget);
+
+        // Standart ekranlarda (360x780 ve 390x844) kaydırmaya gerek kalmadan kopyalama butonu görünür olmalı
+        if (size.height >= 780) {
+          final buttonRect = tester.getRect(find.text('Tüm Hesap Bilgilerini Kopyala'));
+          expect(buttonRect.bottom, lessThanOrEqualTo(size.height));
+        }
       }
     });
   });

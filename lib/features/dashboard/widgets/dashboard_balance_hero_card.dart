@@ -87,13 +87,17 @@ class _DashboardBalanceHeroCardState extends State<DashboardBalanceHeroCard> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'Kullanılabilir Bakiye',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.82),
-                        letterSpacing: 0.2,
+                    Flexible(
+                      child: Text(
+                        'Kullanılabilir Bakiye',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.82),
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
