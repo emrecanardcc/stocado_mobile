@@ -274,7 +274,7 @@ class Step3ServicesWidget extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.textPrimary),
                 ),
                 subtitle: const Text(
-                  'Alıcı paketi açarak kontrol edebilir (Yalnızca PTT Kargo)',
+                  'Alıcı paketi açarak kontrol edebilir (PTT ve UPS Kargo)',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
                 value: state.controlledDelivery,
@@ -297,7 +297,7 @@ class Step3ServicesWidget extends StatelessWidget {
                       SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Kontrollü teslimat hizmeti yalnızca PTT Kargo ile sunulmaktadır. Teklif adımında PTT Kargo filtrelenecektir.',
+                          'Kontrollü teslimat hizmeti PTT Kargo ve UPS Kargo ile sunulmaktadır. Teklif adımında uygun firmalar listelenecektir.',
                           style: TextStyle(fontSize: 12, color: Color(0xFF6B21A8), fontWeight: FontWeight.w500),
                         ),
                       ),

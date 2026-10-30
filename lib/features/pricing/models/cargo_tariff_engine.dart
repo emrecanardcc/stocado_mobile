@@ -693,93 +693,6 @@ class CargoTariffEngine {
   }) {
     final List<CargoOffer> list = [];
 
-    // 1. Kontrollü Teslimat: Yalnızca PTT Kargo destekler
-    if (isControlled) {
-      final price = calculatePrice(
-        companyCode: codePtt,
-        desi: desi,
-        isReceiverPays: isReceiverPays,
-        isPod: isPod,
-        podAmount: podAmount,
-        podType: podType,
-        isControlled: true,
-      );
-      if (price > 0) {
-        list.add(CargoOffer(
-          cargoCompany: CargoCompany(id: codePtt, title: 'PTT Kargo'),
-          price: price,
-        ));
-      }
-      return list;
-    }
-
-    // 2. Kredi Kartı Kapıda Ödeme: Yalnızca Sürat Kargo ve UPS Kargo destekler
-    if (isPod && podType == 'credit_card') {
-      final suratPrice = calculatePrice(
-        companyCode: codeSurat,
-        desi: desi,
-        isReceiverPays: isReceiverPays,
-        isPod: true,
-        podAmount: podAmount,
-        podType: 'credit_card',
-      );
-      if (suratPrice > 0) {
-        list.add(CargoOffer(
-          cargoCompany: CargoCompany(id: codeSurat, title: 'Sürat Kargo'),
-          price: suratPrice,
-        ));
-      }
-
-      final upsPrice = calculatePrice(
-        companyCode: codeUps,
-        desi: desi,
-        isReceiverPays: isReceiverPays,
-        isPod: true,
-        podAmount: podAmount,
-        podType: 'credit_card',
-      );
-      if (upsPrice > 0) {
-        list.add(CargoOffer(
-          cargoCompany: CargoCompany(id: codeUps, title: 'UPS Kargo'),
-          price: upsPrice,
-        ));
-      }
-
-      list.sort((a, b) => a.price.compareTo(b.price));
-      return list;
-    }
-
-    // 3. Nakit Kapıda Ödeme: HepsiJET, Sürat Kargo, PTT Kargo, UPS Kargo destekler
-    if (isPod && podType == 'cash') {
-      final companies = [
-        (codeHepsiJet, 'HepsiJET'),
-        (codePtt, 'PTT Kargo'),
-        (codeSurat, 'Sürat Kargo'),
-        (codeUps, 'UPS Kargo'),
-      ];
-
-      for (final comp in companies) {
-        final price = calculatePrice(
-          companyCode: comp.$1,
-          desi: desi,
-          isReceiverPays: isReceiverPays,
-          isPod: true,
-          podAmount: podAmount,
-          podType: 'cash',
-        );
-        if (price > 0) {
-          list.add(CargoOffer(
-            cargoCompany: CargoCompany(id: comp.$1, title: comp.$2),
-            price: price,
-          ));
-        }
-      }
-
-      list.sort((a, b) => a.price.compareTo(b.price));
-      return list;
-    }
-
-    // 4. Standart Gönderi (POD yok, Kontrollü yok): Tüm 6 firma
     final allCompanies = [
       (codeHepsiJet, 'HepsiJET'),
       (codePtt, 'PTT Kargo'),
@@ -790,15 +703,31 @@ class CargoTariffEngine {
     ];
 
     for (final comp in allCompanies) {
+      final code = comp.$1;
+
+      // Kontrollü Teslimat kısıtlaması (kargo.txt: PTT ve UPS)
+      if (isControlled && !isControlledDeliverySupported(code)) {
+        continue;
+      }
+
+      // Kapıda Ödeme (POD) kısıtlaması
+      if (isPod && !isPodSupported(code, isCreditCard: podType == 'credit_card')) {
+        continue;
+      }
+
       final price = calculatePrice(
-        companyCode: comp.$1,
+        companyCode: code,
         desi: desi,
         isReceiverPays: isReceiverPays,
-        isPod: false,
+        isPod: isPod,
+        podAmount: podAmount,
+        podType: podType,
+        isControlled: isControlled,
       );
+
       if (price > 0) {
         list.add(CargoOffer(
-          cargoCompany: CargoCompany(id: comp.$1, title: comp.$2),
+          cargoCompany: CargoCompany(id: code, title: comp.$2),
           price: price,
         ));
       }

@@ -34,11 +34,17 @@ class CargoOffer {
   });
 
   factory CargoOffer.fromJson(Map<String, dynamic> json) {
-    final rawPrice = json['total'] ?? json['price'];
+    final rawPrice = json['total'] ?? json['price'] ?? json['total_price'] ?? json['amount'];
+    final companyMap = json['cargo_company'] is Map<String, dynamic>
+        ? json['cargo_company'] as Map<String, dynamic>
+        : (json['company'] is Map<String, dynamic> ? json['company'] as Map<String, dynamic> : null);
     return CargoOffer(
-      cargoCompany: json['cargo_company'] is Map<String, dynamic>
-          ? CargoCompany.fromJson(json['cargo_company'])
-          : CargoCompany(id: 'bilinmeyen', title: 'Kargo Firması'),
+      cargoCompany: companyMap != null
+          ? CargoCompany.fromJson(companyMap)
+          : CargoCompany(
+              id: json['cargo_company_id'] ?? json['company_id'] ?? json['id'] ?? 'bilinmeyen',
+              title: json['cargo_company_title'] ?? json['company_title'] ?? json['title'] ?? 'Kargo Firması',
+            ),
       price: (rawPrice is num)
           ? rawPrice.toDouble()
           : double.tryParse(rawPrice?.toString() ?? '') ?? 0.0,
@@ -131,7 +137,7 @@ class CargoCalculateRequest {
       if (fId != null && (fId is! String || fId.isNotEmpty)) 'foreign_id': fId,
       'package': package.toJson(),
       'pay_on_delivery': payOnDelivery,
-      if (payOnDelivery && payOnDeliveryAmount != null) 'pay_on_delivery_amount': payOnDeliveryAmount,
+      'pay_on_delivery_amount': payOnDelivery ? (payOnDeliveryAmount ?? 0) : 0,
       if (payOnDelivery)
         'pay_on_delivery_type': useIntegerEnums
             ? (isCreditCard ? 2 : 1)

@@ -694,24 +694,27 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     final offerResult = await _cargoService.calculateOffers(request);
     var offers = offerResult.offers;
 
-    // Eğer kontrollü teslimat seçilmişse, yalnızca PTT Kargo destekler
+    // Eğer kontrollü teslimat seçilmişse, kontrollü teslimat destekleyen firmalar kalır (kargo.txt: PTT ve UPS)
     if (state.controlledDelivery && offers.isNotEmpty) {
-      offers = offers.where((o) => o.cargoCompany.id.toString().contains('ptt')).toList();
+      offers = offers.where((o) {
+        final id = o.cargoCompany.id.toString();
+        return CargoTariffEngine.isControlledDeliverySupported(id);
+      }).toList();
     }
 
     // Web Portal Paritesi (Görsel 2): Kredi Kartı Kapıda Ödeme yalnızca Sürat Kargo ve UPS destekler
     if (state.payOnDelivery && state.payOnDeliveryType == 'credit_card' && offers.isNotEmpty) {
       offers = offers.where((o) {
-        final id = o.cargoCompany.id.toString().toLowerCase();
-        return id.contains('surat') || id.contains('ups');
+        final id = o.cargoCompany.id.toString();
+        return CargoTariffEngine.isPodSupported(id, isCreditCard: true);
       }).toList();
     }
 
     // Web Portal Paritesi (Görsel 3): Nakit Kapıda Ödeme HepsiJET, Sürat Kargo, PTT Kargo ve UPS destekler
     if (state.payOnDelivery && state.payOnDeliveryType == 'cash' && offers.isNotEmpty) {
       offers = offers.where((o) {
-        final id = o.cargoCompany.id.toString().toLowerCase();
-        return id.contains('hepsijet') || id.contains('surat') || id.contains('ptt') || id.contains('ups');
+        final id = o.cargoCompany.id.toString();
+        return CargoTariffEngine.isPodSupported(id, isCreditCard: false);
       }).toList();
     }
 

@@ -207,18 +207,38 @@ void main() {
       expect(json['account_id'], 123);
     });
 
-    test('CargoCalculateRequest useIntegerEnums: true ile integer fallback üretir', () {
+    test('CargoCalculateRequest pay_on_delivery: false iken pay_on_delivery_amount 0 olarak serialize edilir', () {
       final req = CargoCalculateRequest(
         accountId: 456,
-        package: PackageData(desi: 3.0),
-        payOnDelivery: true,
-        payOnDeliveryType: 'credit_card',
-        direction: 'receive',
+        package: PackageData(desi: 1.0),
+        payOnDelivery: false,
       );
 
-      final json = req.toJson(useIntegerEnums: true);
-      expect(json['direction'], 2);
-      expect(json['pay_on_delivery_type'], 2);
+      final json = req.toJson();
+      expect(json['pay_on_delivery'], isFalse);
+      expect(json['pay_on_delivery_amount'], 0);
+      expect(json['controlled_delivery'], isFalse);
+    });
+
+    test('CargoOffer.fromJson hem nested cargo_company hem de duz propertyleri cozer', () {
+      // 1. Nested schema (OpenAPI)
+      final offer1 = CargoOffer.fromJson({
+        'cargo_company': {'id': 'ptt-kargo', 'title': 'PTT Kargo', 'logo': 'ptt.png'},
+        'price': 104.0,
+      });
+      expect(offer1.cargoCompany.id, 'ptt-kargo');
+      expect(offer1.cargoCompany.title, 'PTT Kargo');
+      expect(offer1.price, 104.0);
+
+      // 2. Total ve düz company_title alternatifi
+      final offer2 = CargoOffer.fromJson({
+        'company_id': 'ups',
+        'company_title': 'UPS Kargo',
+        'total': '196.00',
+      });
+      expect(offer2.cargoCompany.id, 'ups');
+      expect(offer2.cargoCompany.title, 'UPS Kargo');
+      expect(offer2.price, 196.00);
     });
   });
 
@@ -267,19 +287,72 @@ void main() {
       await tester.pumpAndSettle();
 
       // Varsayılan desi 2
-      // Kontrollü Teslimat tıkla (Yalnızca PTT Kargo kalır, taban 124.00 ₺ + 49.99 ₺ = 173.99 ₺)
+      // Kontrollü Teslimat tıkla (kargo.txt: PTT 124.00 + 49.99 = 173.99 ₺, UPS 196.00 + 60.84 = 256.84 ₺)
       await tester.tap(find.text('Kontrollü Teslimat'));
       await tester.pumpAndSettle();
 
       expect(find.text('PTT Kargo'), findsOneWidget);
       expect(find.text(AppFormatters.formatCurrency(173.99)), findsOneWidget);
+      expect(find.text('UPS Kargo'), findsOneWidget);
+      expect(find.text(AppFormatters.formatCurrency(256.84)), findsOneWidget);
 
-      // Kapıda Ödeme de ekle: + 12.00 ₺ (0-500 TL nakit kesintisi) -> 173.99 + 12.00 = 185.99 ₺
+      // Kapıda Ödeme de ekle: PTT (173.99 + 12.00 = 185.99 ₺), UPS (256.84 + 47.40 = 304.24 ₺)
       await tester.tap(find.text('Kapıda Ödeme'));
       await tester.pumpAndSettle();
 
       expect(find.text('PTT Kargo'), findsOneWidget);
       expect(find.text(AppFormatters.formatCurrency(185.99)), findsOneWidget);
+      expect(find.text('UPS Kargo'), findsOneWidget);
+      expect(find.text(AppFormatters.formatCurrency(304.24)), findsOneWidget);
+    });
+  });
+
+  group('PricingPlan.calculatePrice Parite ve Kısıtlama Testleri', () {
+    final officialPlans = CargoTariffEngine.getOfficialPricingPlans();
+    final hepsiPlan = officialPlans.firstWhere((p) => p.code == 'hepsijet');
+    final pttPlan = officialPlans.firstWhere((p) => p.code == 'ptt-kargo');
+    final suratPlan = officialPlans.firstWhere((p) => p.code == 'surat-kargo');
+    final kolayPlan = officialPlans.firstWhere((p) => p.code == 'kolay-gelsin');
+    final upsPlan = officialPlans.firstWhere((p) => p.code == 'ups');
+
+    test('isReceiverPays: true olduğunda resmi Alıcı Ödemeli tarifesi uygulanır', () {
+      // HepsiJET: Standart 116 ₺, Alıcı Ödemeli 167 ₺
+      expect(hepsiPlan.calculatePrice(1, isReceiverPays: false), 116.00);
+      expect(hepsiPlan.calculatePrice(1, isReceiverPays: true), 167.00);
+      expect(hepsiPlan.calculatePrice(21, isReceiverPays: true), 465.00);
+      expect(hepsiPlan.calculatePrice(22, isReceiverPays: true), 525.00);
+
+      // Sürat Kargo: Standart 117 ₺, Alıcı Ödemeli 202 ₺
+      expect(suratPlan.calculatePrice(1, isReceiverPays: false), 117.00);
+      expect(suratPlan.calculatePrice(1, isReceiverPays: true), 202.00);
+      expect(suratPlan.calculatePrice(4, isReceiverPays: true), 238.00);
+
+      // UPS Kargo: Standart 196 ₺, Alıcı Ödemeli 426 ₺
+      expect(upsPlan.calculatePrice(1, isReceiverPays: false), 196.00);
+      expect(upsPlan.calculatePrice(1, isReceiverPays: true), 426.00);
+      expect(upsPlan.calculatePrice(41, isReceiverPays: true), 1014.00);
+      expect(upsPlan.calculatePrice(45, isReceiverPays: true), 1161.00);
+    });
+
+    test('Desteklenmeyen ek hizmetler istendiğinde 0.0 döner', () {
+      // HepsiJET Kontrollü Teslimat desteklemez
+      expect(hepsiPlan.calculatePrice(2, isControlled: true), 0.0);
+      // Kolay Gelsin Kapıda Ödeme desteklemez
+      expect(kolayPlan.calculatePrice(2, isPod: true), 0.0);
+      // PTT Kredi Kartı ile Kapıda Ödeme desteklemez (yalnızca nakit)
+      expect(pttPlan.calculatePrice(2, isPod: true, podType: 'credit_card'), 0.0);
+      expect(pttPlan.calculatePrice(2, isPod: true, podType: 'cash'), 124.00 + 12.00);
+
+      // UPS hem Kontrollü Teslimat hem de Kredi Kartı POD destekler
+      final upsTotal = upsPlan.calculatePrice(
+        2,
+        isPod: true,
+        podType: 'credit_card',
+        podAmount: 500,
+        isControlled: true,
+      );
+      // 196 (base) + 47.40 (nakit POD) + 29.80 (%5.96 erken ödeme) + 60.84 (kontrollü) = 334.04
+      expect(upsTotal, closeTo(196.00 + 47.40 + 29.80 + 60.84, 0.01));
     });
   });
 
@@ -308,14 +381,28 @@ void main() {
       expect(ccOffers.length, 2);
       expect(ccOffers.map((o) => o.cargoCompany.id).toList(), containsAll(['surat-kargo', 'ups']));
 
-      // Kontrollü Teslimat: Yalnızca PTT Kargo
+      // Kontrollü Teslimat: PTT Kargo ve UPS Kargo (kargo.txt)
       final controlledOffers = CargoTariffEngine.generateFallbackOffers(
         desi: 2.0,
         isControlled: true,
       );
-      expect(controlledOffers.length, 1);
-      expect(controlledOffers.first.cargoCompany.id, 'ptt-kargo');
-      expect(controlledOffers.first.price, 124.00 + 49.99);
+      expect(controlledOffers.length, 2);
+      expect(controlledOffers[0].cargoCompany.id, 'ptt-kargo');
+      expect(controlledOffers[0].price, 124.00 + 49.99);
+      expect(controlledOffers[1].cargoCompany.id, 'ups');
+      expect(controlledOffers[1].price, 196.00 + 60.84);
+
+      // Kontrollü Teslimat + Kredi Kartı Kapıda Ödeme: Yalnızca UPS destekler
+      final controlledCcOffers = CargoTariffEngine.generateFallbackOffers(
+        desi: 2.0,
+        isControlled: true,
+        isPod: true,
+        podAmount: 500.0,
+        podType: 'credit_card',
+      );
+      expect(controlledCcOffers.length, 1);
+      expect(controlledCcOffers.first.cargoCompany.id, 'ups');
+      expect(controlledCcOffers.first.price, closeTo(196.00 + 47.40 + 29.80 + 60.84, 0.01));
     });
   });
 }

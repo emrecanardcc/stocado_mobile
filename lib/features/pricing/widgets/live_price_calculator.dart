@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/app_formatters.dart';
 import '../../cargo/widgets/cargo_company_logo.dart';
+import '../models/cargo_tariff_engine.dart';
 import '../models/pricing_plan_model.dart';
 
 class _CalcResult {
@@ -39,7 +40,20 @@ class _LivePriceCalculatorState extends State<LivePriceCalculator> {
 
     final filtered = widget.plans.where((plan) {
       if (_filterPod && !plan.hasPod) return false;
-      if (_filterControlled && !plan.isPtt) return false;
+      if (_filterControlled) {
+        final normCode = CargoTariffEngine.normalizeCompanyCode(plan.code);
+        final isOfficial = normCode == CargoTariffEngine.codePtt ||
+            normCode == CargoTariffEngine.codeHepsiJet ||
+            normCode == CargoTariffEngine.codeSurat ||
+            normCode == CargoTariffEngine.codeKolayGelsin ||
+            normCode == CargoTariffEngine.codeYurtici ||
+            normCode == CargoTariffEngine.codeUps;
+        if (isOfficial) {
+          if (!CargoTariffEngine.isControlledDeliverySupported(normCode)) return false;
+        } else {
+          if (!plan.hasControlledDelivery && !plan.isPtt) return false;
+        }
+      }
       return true;
     }).toList();
 

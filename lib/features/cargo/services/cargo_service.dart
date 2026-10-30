@@ -242,8 +242,20 @@ class CargoService {
 
       if (response.statusCode == 200) {
         final decoded = ApiClient.decodeResponse(response);
+        List? rawList;
         if (decoded is List) {
-          final offers = decoded.map((item) => CargoOffer.fromJson(item as Map<String, dynamic>)).toList();
+          rawList = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          if (decoded['data'] is List) {
+            rawList = decoded['data'] as List;
+          } else if (decoded['offers'] is List) {
+            rawList = decoded['offers'] as List;
+          } else if (decoded['items'] is List) {
+            rawList = decoded['items'] as List;
+          }
+        }
+        if (rawList != null) {
+          final offers = rawList.map((item) => CargoOffer.fromJson(item as Map<String, dynamic>)).toList();
           return OfferCalculationResult(isSuccess: true, offers: offers);
         }
       }

@@ -283,7 +283,7 @@ class Step4OffersWidget extends StatelessWidget {
               if (state.receiverPays)
                 _buildSummaryRow('Ödeme Şekli', 'Kapıda Alıcı Ödemeli', isHighlight: true),
               if (state.controlledDelivery)
-                _buildSummaryRow('Özel Hizmet', 'Kontrollü Teslimat (PTT)', isHighlight: true),
+                _buildSummaryRow('Özel Hizmet', 'Kontrollü Teslimat', isHighlight: true),
               if (state.selectedOffer != null)
                 _buildSummaryRow(
                   'Seçili Firma',
