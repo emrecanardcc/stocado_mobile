@@ -216,118 +216,16 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     _setInitialDefaults();
   }
 
-  void _showDesiInputDialog(CreateCargoNotifier notifier) {
-    final customDesiController = TextEditingController(text: _calculatedDesi.toStringAsFixed(2));
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Desi Değerini Belirleyin',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Evrak, dosya veya özel kargolar için 0.00 dahil olmak üzere doğrudan desi belirleyebilirsiniz:',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: customDesiController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'Desi',
-                suffixText: 'DESİ',
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                ActionChip(
-                  label: const Text('0.00 Desi (Evrak)'),
-                  onPressed: () => customDesiController.text = '0.00',
-                ),
-                ActionChip(
-                  label: const Text('1.00 Desi'),
-                  onPressed: () => customDesiController.text = '1.00',
-                ),
-                ActionChip(
-                  label: const Text('2.00 Desi'),
-                  onPressed: () => customDesiController.text = '2.00',
-                ),
-                ActionChip(
-                  label: const Text('3.00 Desi'),
-                  onPressed: () => customDesiController.text = '3.00',
-                ),
-                ActionChip(
-                  label: const Text('5.00 Desi'),
-                  onPressed: () => customDesiController.text = '5.00',
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0F172A),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              final parsed = double.tryParse(customDesiController.text.replaceAll(',', '.')) ?? 0.0;
-              final validDesi = parsed >= 0 ? parsed : 0.0;
-              Navigator.pop(ctx);
-              setState(() {
-                _calculatedDesi = validDesi;
-              });
-              _desiController.text = validDesi.toStringAsFixed(2);
-              if (validDesi == 0.0) {
-                _widthController.text = '0';
-                _lengthController.text = '0';
-                _heightController.text = '0';
-                _weightController.text = '0';
-                notifier.updatePackageDimensions(
-                  width: 0,
-                  length: 0,
-                  height: 0,
-                  weight: 0,
-                  directDesi: 0.0,
-                );
-              } else {
-                final side = math.pow(validDesi * 3000, 1 / 3).toDouble();
-                final sideStr = side.toStringAsFixed(1);
-                _widthController.text = sideStr;
-                _lengthController.text = sideStr;
-                _heightController.text = sideStr;
-                _weightController.text = '1';
-                notifier.updatePackageDimensions(
-                  width: side,
-                  length: side,
-                  height: side,
-                  weight: 1000,
-                  directDesi: validDesi,
-                );
-              }
-              notifier.calculateOffers();
-            },
-            child: const Text('Uygula'),
-          ),
-        ],
-      ),
+  void _onDirectDesiChanged(String val) {
+    final parsed = AppFormatters.parseDouble(val);
+    setState(() {
+      _calculatedDesi = parsed >= 0 ? parsed : 0.0;
+    });
+    final notifier = ref.read(createCargoProvider.notifier);
+    notifier.updatePackageDimensions(
+      directDesi: _calculatedDesi,
     );
+    notifier.calculateOffers();
   }
 
   void _showWarning(String message, {bool isError = false}) {
@@ -2624,15 +2522,17 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF059669) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
             width: 1.5,
           ),
         ),
+        alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
@@ -2677,77 +2577,41 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF059669),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        '3',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'PAKET & SİPARİŞ DETAYLARI',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                  ],
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  '3',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white),
                 ),
               ),
               const SizedBox(width: 8),
-              InkWell(
-                onTap: () => _showDesiInputDialog(notifier),
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD1FAE5),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF6EE7B7), width: 1.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${_calculatedDesi.toStringAsFixed(2)} DESİ',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF065F46),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      const Icon(Icons.edit_outlined, size: 14, color: Color(0xFF065F46)),
-                    ],
+              const Expanded(
+                child: Text(
+                  'PAKET & SİPARİŞ DETAYLARI',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: 0.8,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // 1. Paket Ölçüleri (En, Boy, Yükseklik ve Ağırlık) - Birincil ve Kolay Giriş
+          // 1. DESİ (KG) Doğrudan Giriş Alanı + Hızlı Evrak Seçimi
           const Text(
-            'PAKET ÖLÇÜLERİ VE AĞIRLIK:',
+            'DESİ (KG) *',
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w900,
@@ -2755,13 +2619,63 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               letterSpacing: 0.4,
             ),
           ),
-          const SizedBox(height: 3),
-          const Text(
-            'Ölçüleri giriniz; desi hacim formülüyle ((En x Boy x Yükseklik) / 3000) otomatik hesaplanır.',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF64748B),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: TextField(
+                    controller: _desiController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Örn: 2.0',
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF94A3B8),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      prefixIcon: const Icon(Icons.scale_outlined, size: 18, color: Color(0xFF64748B)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+                      ),
+                    ),
+                    onChanged: _onDirectDesiChanged,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildQuickDesiChip('Evrak (0 Desi)', 0.0, notifier),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Center(
+            child: Text(
+              'ya da ölçüleri giriniz',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
+                letterSpacing: 0.2,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -2781,43 +2695,6 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               const SizedBox(width: 10),
               _buildDimensionInput('AĞIRLIK (KG)', _weightController, 'Örn: 1.0'),
             ],
-          ),
-          const SizedBox(height: 10),
-
-          // Otomatik Hesaplanan Desi & Hızlı Evrak Seçimi
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFBBF7D0), width: 1.2),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calculate_outlined, size: 18, color: Color(0xFF16A34A)),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          'Hesaplanan Desi: ${_calculatedDesi.toStringAsFixed(2)} Desi',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF15803D),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                _buildQuickDesiChip('Evrak (0 Desi)', 0.0, notifier),
-              ],
-            ),
           ),
           const SizedBox(height: 14),
 

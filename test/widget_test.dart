@@ -1049,6 +1049,60 @@ void main() {
       expect(find.textContaining('Ankara'), findsOneWidget);
       expect(find.textContaining('12 Mar 2025'), findsOneWidget);
     });
+
+    testWidgets('Kargolarim sekmesinde veya filtre kutularinda filtre uygulansa bile Son Gonderiler her zaman gercek son gonderileri gosterir', (WidgetTester tester) async {
+      final unfilteredCargo = CargoModel(
+        id: 'recent-10',
+        processNumber: 'PR-RECENT',
+        outTrackingCode: 'HJ999888',
+        status: 1,
+        receiver: CargoParty(id: 'rec-10', name: 'Mustafa Demir', phone: '05551112233', city: LocationRef(id: '34', name: 'İstanbul')),
+        cargoCompanyId: 'hepsijet',
+        createdAt: DateTime(2025, 3, 15),
+        payOnDelivery: false,
+      );
+
+      final filteredCargo = CargoModel(
+        id: 'problem-1',
+        processNumber: 'PR-PROB',
+        outTrackingCode: 'PTT111222',
+        status: 4,
+        receiver: CargoParty(id: 'rec-11', name: 'Filtrelenmis Alici', phone: '05554445566', city: LocationRef(id: '6', name: 'Ankara')),
+        cargoCompanyId: 'ptt-kargo',
+        createdAt: DateTime(2025, 3, 10),
+        payOnDelivery: false,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            cargoListProvider.overrideWith(() => _TestCargoListNotifier(
+              CargoListState(
+                isLoading: false,
+                activeTab: 'sorunlu',
+                selectedStatus: '4',
+                cargos: [filteredCargo],
+                recentCargos: [unfilteredCargo],
+              ),
+            )),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: DashboardRecentCargosSection(
+                onSeeAllTap: () {},
+                onNewCargoTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Dashboard "Son Gönderiler" filtresiz gerçek son kargoyu göstermelidir
+      expect(find.text('Son Gönderiler'), findsOneWidget);
+      expect(find.text('Mustafa Demir'), findsOneWidget);
+      // Kargolarım sayfasının filtrelenmiş öğesi burada görünmemelidir
+      expect(find.text('Filtrelenmis Alici'), findsNothing);
+    });
   });
 
   group('DashboardScreen Tum Etkilesimler Testi', () {
@@ -2309,7 +2363,8 @@ void main() {
       // 4. Bölüm 3: Paket & Sipariş Detayları
       expect(find.text('3'), findsOneWidget);
       expect(find.text('PAKET & SİPARİŞ DETAYLARI'), findsOneWidget);
-      expect(find.text('2.00 DESİ'), findsOneWidget);
+      expect(find.text('DESİ (KG) *'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '2.00'), findsOneWidget);
       expect(find.text('EN (CM)'), findsOneWidget);
       expect(find.text('BOY (CM)'), findsOneWidget);
 
@@ -2442,7 +2497,7 @@ void main() {
       await tester.pump();
 
       // Başlangıç: 20x30x10 / 3000 = 2.00 Desi
-      expect(find.text('2.00 DESİ'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '2.00'), findsOneWidget);
 
       // Boy (cm) '30' -> '40', En (cm) '20' -> '30', Yükseklik (cm) '10' -> '20' -> (30*40*20)/3000 = 8.00 Desi
       final lengthField = find.widgetWithText(TextField, '30');
@@ -2460,8 +2515,15 @@ void main() {
       await tester.enterText(heightField, '20');
       await tester.pump();
 
-      // Desi rozeti 8.00 DESİ olmalıdır
-      expect(find.text('8.00 DESİ'), findsOneWidget);
+      // Desi alanında otomatik hesaplanan 8.00 Desi görünmelidir
+      expect(find.widgetWithText(TextField, '8.00'), findsOneWidget);
+
+      // Doğrudan manuel Desi girişi testi: kullanıcı kendisi desi yazabilir (örn: '5.50')
+      final desiField = find.widgetWithText(TextField, '8.00');
+      expect(desiField, findsOneWidget);
+      await tester.enterText(desiField, '5.50');
+      await tester.pump();
+      expect(find.widgetWithText(TextField, '5.50'), findsOneWidget);
     });
 
     testWidgets('Farkli teklife tiklandiginda secilen firma ve toplam tutar sabit alt barda aninda guncellenir',
@@ -2778,7 +2840,7 @@ void main() {
       await tester.pump();
 
       // Başlangıçta 2.00 Desi
-      expect(find.text('2.00 DESİ'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '2.00'), findsOneWidget);
 
       // Ürün dropdown'ını aç
       await tester.tap(find.text('Özel / Manuel Paket Boyutu'));
@@ -2788,8 +2850,8 @@ void main() {
       await tester.tap(find.textContaining('Kışlık Kaban').last);
       await tester.pumpAndSettle();
 
-      // Desi 10.00 DESİ olmalıdır: (40*50*15)/3000 = 10.0 Desi
-      expect(find.text('10.00 DESİ'), findsOneWidget);
+      // Desi 10.00 olmalıdır: (40*50*15)/3000 = 10.0 Desi
+      expect(find.widgetWithText(TextField, '10.00'), findsOneWidget);
       expect(find.widgetWithText(TextField, 'Kışlık Kaban'), findsOneWidget);
     });
 
@@ -2886,22 +2948,16 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Desi rozetine tıkla
-      expect(find.text('2.00 DESİ'), findsOneWidget);
-      await tester.tap(find.text('2.00 DESİ'));
+      // Başlangıçta 2.00 Desi
+      expect(find.widgetWithText(TextField, '2.00'), findsOneWidget);
+
+      // Ekranda doğrudan Evrak (0 Desi) butonuna tıkla (diyalogsuz, anında seçim)
+      expect(find.text('Evrak (0 Desi)'), findsOneWidget);
+      await tester.tap(find.text('Evrak (0 Desi)'));
       await tester.pumpAndSettle();
 
-      // 0.00 Desi (Evrak) çipine bas
-      expect(find.text('0.00 Desi (Evrak)'), findsOneWidget);
-      await tester.tap(find.text('0.00 Desi (Evrak)'));
-      await tester.pumpAndSettle();
-
-      // Uygula butonuna bas
-      await tester.tap(find.text('Uygula'));
-      await tester.pumpAndSettle();
-
-      // Rozette 0.00 DESİ gösterilmeli
-      expect(find.text('0.00 DESİ'), findsOneWidget);
+      // Desi alanında 0.00 gösterilmeli
+      expect(find.widgetWithText(TextField, '0.00'), findsOneWidget);
     });
 
     testWidgets('Kontrollu Teslimat switchi ekranda gorunur ve tiklandiginda tetiklenir',

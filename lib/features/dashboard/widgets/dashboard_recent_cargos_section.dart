@@ -138,8 +138,17 @@ class DashboardRecentCargosSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cargoListState = ref.watch(cargoListProvider);
-    final cargos = cargoListState.cargos;
-    final recentItems = cargos.take(4).toList();
+    // Son Gönderiler her zaman filtrelenmemiş en son kargoları gösterir (Kargolarım filtrelerinden etkilenmez)
+    final displayItems = cargoListState.recentCargos.isNotEmpty
+        ? cargoListState.recentCargos
+        : (!cargoListState.hasActiveFilters && cargoListState.activeTab == 'all'
+            ? cargoListState.cargos
+            : const <CargoModel>[]);
+    final recentItems = displayItems.take(4).toList();
+
+    if (cargoListState.recentCargos.isEmpty && !cargoListState.isLoading) {
+      Future.microtask(() => ref.read(cargoListProvider.notifier).loadRecentCargos());
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,7 +201,7 @@ class DashboardRecentCargosSection extends ConsumerWidget {
         const SizedBox(height: 12),
 
         // Yüklenme veya İçerik Durumu
-        if (cargoListState.isLoading && cargos.isEmpty)
+        if (cargoListState.isLoading && recentItems.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24.0),
             child: Center(
@@ -203,7 +212,7 @@ class DashboardRecentCargosSection extends ConsumerWidget {
               ),
             ),
           )
-        else if (cargos.isEmpty)
+        else if (recentItems.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),

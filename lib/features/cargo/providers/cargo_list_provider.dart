@@ -9,6 +9,7 @@ class CargoListState {
   final bool isLoading;
   final bool isLoadingMore;
   final List<CargoModel> cargos;
+  final List<CargoModel> recentCargos;
   final PaginationMeta? meta;
   final String activeTab; // 'all', 'pod', 'drafts'
   final String searchQuery;
@@ -22,6 +23,7 @@ class CargoListState {
     this.isLoading = false,
     this.isLoadingMore = false,
     this.cargos = const [],
+    this.recentCargos = const [],
     this.meta,
     this.activeTab = 'all',
     this.searchQuery = '',
@@ -43,6 +45,7 @@ class CargoListState {
     bool? isLoading,
     bool? isLoadingMore,
     List<CargoModel>? cargos,
+    List<CargoModel>? recentCargos,
     PaginationMeta? meta,
     String? activeTab,
     String? searchQuery,
@@ -58,6 +61,7 @@ class CargoListState {
       isLoading: isLoading ?? this.isLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       cargos: cargos ?? this.cargos,
+      recentCargos: recentCargos ?? this.recentCargos,
       meta: meta ?? this.meta,
       activeTab: activeTab ?? this.activeTab,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -186,9 +190,18 @@ class CargoListNotifier extends Notifier<CargoListState> {
       }
     }
 
+    final bool isUnfiltered = state.activeTab == 'all' &&
+        state.searchQuery.isEmpty &&
+        state.selectedCargoCompany == null &&
+        (state.selectedStatus == null || state.selectedStatus == 'all') &&
+        state.sortDirection == 'desc';
+
     state = state.copyWith(
       isLoading: false,
       cargos: resolved,
+      recentCargos: isUnfiltered
+          ? resolved
+          : (state.recentCargos.isNotEmpty ? state.recentCargos : resolved),
       meta: response.meta,
       errorMessage: response.errorMessage,
       draftCount: currentDraftCount,
@@ -366,9 +379,28 @@ class CargoListNotifier extends Notifier<CargoListState> {
     }
   }
 
+  /// Dashboard "Son Gönderiler" için her zaman filtrelenmemiş en son kargoları çeker
+  Future<void> loadRecentCargos() async {
+    final auth = ref.read(authProvider);
+    final accountId = auth.accountId ?? auth.user?.accounts.firstOrNull?.id;
+    if (accountId == null) return;
+    try {
+      final response = await _cargoService.getCargos(
+        accountId: accountId,
+        page: 1,
+        perPage: 10,
+        sortDirection: 'desc',
+      );
+      final resolved = await _resolveCargoParties(accountId, response.data);
+      resolved.sort((a, b) => CargoModel.compareCargos(a, b, sortDirection: 'desc'));
+      state = state.copyWith(recentCargos: resolved);
+    } catch (_) {}
+  }
+
   Future<void> refresh() async {
     _addressMap.clear();
     await loadCargos(reset: true);
+    await loadRecentCargos();
   }
 }
 
