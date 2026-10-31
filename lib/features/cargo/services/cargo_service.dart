@@ -204,40 +204,21 @@ class CargoService {
     }
   }
 
-  /// POST /cargos/calculate (Alias: POST /cargos/offer) - Fiyat teklifi al
+  /// POST /cargos/offer (Web Portalı Birebir Eşdeğeri) - Fiyat tekliflerini hesapla
   Future<OfferCalculationResult> calculateOffers(CargoCalculateRequest request) async {
     try {
-      // 1. Resmi OpenAPI standardı: string enum (send/receive, cash/credit_card) ile /cargos/calculate dene
+      // 1. Web portalı ile %100 birebir: POST /cargos/offer (Tamsayı enumlar: direction: 1/2, pay_on_delivery_type: 1/2)
       var response = await _apiClient.post(
-        '/cargos/calculate',
-        body: request.toJson(useIntegerEnums: false),
+        '/cargos/offer',
+        body: request.toJson(useIntegerEnums: true),
       );
 
-      // Alias uç: Eğer /cargos/calculate 404 ise /cargos/offer dene
+      // Alias uç: Eğer /cargos/offer 404 ise alternatif /cargos/calculate dene
       if (response.statusCode == 404) {
         response = await _apiClient.post(
-          '/cargos/offer',
-          body: request.toJson(useIntegerEnums: false),
-        );
-      }
-
-      // Validasyon hatası (422/400) durumunda integer fallback ile geriye dönük uyumluluğu sağla
-      if (response.statusCode == 422 || response.statusCode == 400) {
-        final fallbackRes = await _apiClient.post(
           '/cargos/calculate',
           body: request.toJson(useIntegerEnums: true),
         );
-        if (fallbackRes.statusCode == 200) {
-          response = fallbackRes;
-        } else if (fallbackRes.statusCode == 404) {
-          final fallbackOfferRes = await _apiClient.post(
-            '/cargos/offer',
-            body: request.toJson(useIntegerEnums: true),
-          );
-          if (fallbackOfferRes.statusCode == 200) {
-            response = fallbackOfferRes;
-          }
-        }
       }
 
       if (response.statusCode == 200) {

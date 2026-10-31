@@ -3105,7 +3105,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  _getCarrierDeliverySubtitle(offer.cargoCompany.id.toString()),
+                                  offer.estimatedDeliveryDays != null
+                                      ? 'Tahmini ${offer.estimatedDeliveryDays} gün'
+                                      : _getCarrierDeliverySubtitle(offer.cargoCompany.id.toString()),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -3114,6 +3116,40 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                                     color: Color(0xFF64748B),
                                   ),
                                 ),
+                                if (offer.returnFee > 0) ...[
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    'İade Ücreti: ${AppFormatters.formatCurrency(offer.returnFee)}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                                if (state.payOnDelivery && offer.podFee > 0) ...[
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    'Kapıda Ödeme Kesintisi: ${AppFormatters.formatCurrency(offer.podFee)}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                                if (offer.warnings.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  for (final w in offer.warnings)
+                                    Text(
+                                      w,
+                                      style: const TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFFD97706),
+                                      ),
+                                    ),
+                                ],
                               ],
                             ),
                           ),

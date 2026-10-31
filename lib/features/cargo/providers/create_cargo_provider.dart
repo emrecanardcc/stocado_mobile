@@ -673,42 +673,19 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       ),
       payOnDelivery: state.payOnDelivery,
       payOnDeliveryAmount: state.payOnDelivery ? state.payOnDeliveryAmount : 0,
-      payOnDeliveryType: state.payOnDelivery ? state.payOnDeliveryType : null,
+      payOnDeliveryType: state.payOnDelivery ? state.payOnDeliveryType : 1,
       pastPayOnDelivery: state.payOnDelivery ? state.canOffsetCargoFee : false,
       podReceiverPays: state.receiverPays,
-      receiverPays: state.receiverPays,
+      receiverPays: false, // Web Paritesi: Kapıda Alıcı Ödemeli için yalnızca pod_receiver_pays true gönderilir
       controlledDelivery: state.controlledDelivery,
       status: state.isDraft ? 0 : 1,
-      direction: state.direction,
+      direction: state.direction == 'receive' || state.direction == '2' ? 2 : 1,
     );
 
     final offerResult = await _cargoService.calculateOffers(request);
     var offers = offerResult.offers;
 
-    // Eğer kontrollü teslimat seçilmişse, kontrollü teslimat destekleyen firmalar kalır (kargo.txt: PTT ve UPS)
-    if (state.controlledDelivery && offers.isNotEmpty) {
-      offers = offers.where((o) {
-        final id = o.cargoCompany.id.toString();
-        return CargoTariffEngine.isControlledDeliverySupported(id);
-      }).toList();
-    }
-
-    // Web Portal Paritesi (Görsel 2): Kredi Kartı Kapıda Ödeme yalnızca Sürat Kargo ve UPS destekler
-    if (state.payOnDelivery && state.payOnDeliveryType == 'credit_card' && offers.isNotEmpty) {
-      offers = offers.where((o) {
-        final id = o.cargoCompany.id.toString();
-        return CargoTariffEngine.isPodSupported(id, isCreditCard: true);
-      }).toList();
-    }
-
-    // Web Portal Paritesi (Görsel 3): Nakit Kapıda Ödeme HepsiJET, Sürat Kargo, PTT Kargo ve UPS destekler
-    if (state.payOnDelivery && state.payOnDeliveryType == 'cash' && offers.isNotEmpty) {
-      offers = offers.where((o) {
-        final id = o.cargoCompany.id.toString();
-        return CargoTariffEngine.isPodSupported(id, isCreditCard: false);
-      }).toList();
-    }
-
+    // Yalnızca API'den teklif dönmediyse (ağ kopukluğu veya hata) fallback tekliflerini devreye al
     if (offers.isEmpty) {
       offers = _generateFallbackOffers(desi, state.payOnDelivery, state.controlledDelivery);
     }

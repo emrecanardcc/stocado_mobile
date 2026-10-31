@@ -654,10 +654,15 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                   decoration: InputDecoration(
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: _searchFocusNode.hasFocus ? const Color(0xFF0E1E38) : const Color(0xFF64748B),
-                      size: 22,
+                    isDense: true,
+                    prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 8),
+                      child: Icon(
+                        Icons.search_rounded,
+                        color: _searchFocusNode.hasFocus ? const Color(0xFF0E1E38) : const Color(0xFF64748B),
+                        size: 20,
+                      ),
                     ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
@@ -682,17 +687,17 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                     ),
                     filled: true,
                     fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFF0E1E38), width: 1.5),
                     ),
                   ),

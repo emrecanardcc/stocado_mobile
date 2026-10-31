@@ -183,12 +183,17 @@ void main() {
       );
 
       final json = req.toJson();
-      expect(json['direction'], 'send');
-      expect(json['pay_on_delivery_type'], 'cash');
+      expect(json['direction'], 1);
+      expect(json['pay_on_delivery_type'], 1);
       expect(json['account_id'], 456);
       expect(json['local_id'], 10);
       expect(json['foreign_id'], 25);
       expect(json['package']['desi'], 0.0);
+
+      // useIntegerEnums: false desteği
+      final strJson = req.toJson(useIntegerEnums: false);
+      expect(strJson['direction'], 'send');
+      expect(strJson['pay_on_delivery_type'], 'cash');
     });
 
     test('CargoCalculateRequest direction receive ve credit_card doğru serialize edilir', () {
@@ -202,9 +207,13 @@ void main() {
       );
 
       final json = req.toJson();
-      expect(json['direction'], 'receive');
-      expect(json['pay_on_delivery_type'], 'credit_card');
+      expect(json['direction'], 2);
+      expect(json['pay_on_delivery_type'], 2);
       expect(json['account_id'], 123);
+
+      final strJson = req.toJson(useIntegerEnums: false);
+      expect(strJson['direction'], 'receive');
+      expect(strJson['pay_on_delivery_type'], 'credit_card');
     });
 
     test('CargoCalculateRequest pay_on_delivery: false iken pay_on_delivery_amount 0 olarak serialize edilir', () {

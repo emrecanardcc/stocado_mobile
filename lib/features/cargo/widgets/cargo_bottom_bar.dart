@@ -223,8 +223,8 @@ class CargoBottomBar extends ConsumerWidget {
 
                           // 2. ADIM VALIDASYONU (Paket Bilgileri & Boyutlar)
                           if (state.currentStep == 1) {
-                            if (state.desi <= 0 && state.weight <= 0 && state.width <= 0 && state.length <= 0) {
-                              _showWarning(context, 'Lütfen paket desi, ağırlık veya boyut bilgilerini giriniz.');
+                            if (state.desi < 0) {
+                              _showWarning(context, 'Lütfen geçerli bir paket desi veya boyut bilgisi giriniz.');
                               return;
                             }
 
