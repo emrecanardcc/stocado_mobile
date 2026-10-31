@@ -3427,14 +3427,11 @@ void main() {
       await tester.tap(find.text('Kargo Bana Gelsin'));
       await tester.pumpAndSettle();
 
-      // 4. Kargo Bana Gelsin modunda Kapıda Ödeme, Alıcı Öder ve Kontrollü Teslimat bulunmamalıdır
+      // 4. Kargo Bana Gelsin modunda Kapıda Ödeme, Alıcı Öder ve Kontrollü Teslimat bulunmamalıdır; sadece Standart pill butonu yer alır, gereksiz bilgilendirme kutusu bulunmaz
       expect(find.text('Kapıda Ödeme'), findsNothing);
       expect(find.text('Kontrollü Teslimat'), findsNothing);
-      expect(find.text('Standart Taşıma'), findsOneWidget);
-      expect(
-        find.text('Kargo Bana Gelsin gönderilerinde standart taşıma geçerlidir. Kapıda ödeme, alıcı öder ve kontrollü teslimat seçenekleri sunulmamaktadır.'),
-        findsOneWidget,
-      );
+      expect(find.text('Standart'), findsOneWidget);
+      expect(find.textContaining('seçenekleri sunulmamaktadır'), findsNothing);
     });
   });
 

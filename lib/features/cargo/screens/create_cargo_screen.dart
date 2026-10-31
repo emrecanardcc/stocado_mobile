@@ -1151,9 +1151,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           ),
           const SizedBox(height: 12),
 
-          if (isSend) ...[
-            // 3'lü Kalın Pill Butonlar
-            Container(
+          // Kalın Pill Butonlar (Kargo Bana Gelsin modunda yalnızca Standart mevcuttur)
+          Container(
             padding: const EdgeInsets.all(3.5),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
@@ -1164,30 +1163,32 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               children: [
                 _buildPillButton(
                   title: 'Standart',
-                  isSelected: _deliveryType == 'standard',
+                  isSelected: _deliveryType == 'standard' || !isSend,
                   selectedColor: const Color(0xFF0F172A),
                   onTap: () => _setDeliveryType('standard'),
                 ),
-                const SizedBox(width: 4),
-                _buildPillButton(
-                  title: 'Kapıda Ödeme',
-                  isSelected: _deliveryType == 'pod',
-                  selectedColor: const Color(0xFFE11D48),
-                  onTap: () => _setDeliveryType('pod'),
-                ),
-                const SizedBox(width: 4),
-                _buildPillButton(
-                  title: 'Alıcı Öder',
-                  isSelected: _deliveryType == 'receiver',
-                  selectedColor: const Color(0xFF4F46E5),
-                  onTap: () => _setDeliveryType('receiver'),
-                ),
+                if (isSend) ...[
+                  const SizedBox(width: 4),
+                  _buildPillButton(
+                    title: 'Kapıda Ödeme',
+                    isSelected: _deliveryType == 'pod',
+                    selectedColor: const Color(0xFFE11D48),
+                    onTap: () => _setDeliveryType('pod'),
+                  ),
+                  const SizedBox(width: 4),
+                  _buildPillButton(
+                    title: 'Alıcı Öder',
+                    isSelected: _deliveryType == 'receiver',
+                    selectedColor: const Color(0xFF4F46E5),
+                    onTap: () => _setDeliveryType('receiver'),
+                  ),
+                ],
               ],
             ),
           ),
 
           // Kapıda Ödeme Dinamik Açılan Detay Alanı
-          if (_deliveryType == 'pod') ...[
+          if (isSend && _deliveryType == 'pod') ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.only(top: 12),
@@ -1388,134 +1389,94 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
             ),
           ],
 
-          // Ek Hizmet: Kontrollü Teslimat (Yalnızca PTT Kargo)
-          const SizedBox(height: 10),
-          Material(
-            color: const Color(0xFFF8FAFC),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: state.controlledDelivery ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
-                width: 1.5,
+          // Ek Hizmet: Kontrollü Teslimat (Yalnızca Giden Kargo & PTT Kargo)
+          if (isSend) ...[
+            const SizedBox(height: 10),
+            Material(
+              color: const Color(0xFFF8FAFC),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: state.controlledDelivery ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                  width: 1.5,
+                ),
               ),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                notifier.updateAdditionalServices(controlledDelivery: !state.controlledDelivery);
-                _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 2,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                'Kontrollü Teslimat',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w900,
-                                  color: state.controlledDelivery ? const Color(0xFF1E40AF) : const Color(0xFF0F172A),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEFF6FF),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'PTT KARGO',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  notifier.updateAdditionalServices(controlledDelivery: !state.controlledDelivery);
+                  _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 2,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'Kontrollü Teslimat',
                                   style: TextStyle(
-                                    fontSize: 8.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w900,
-                                    color: Color(0xFF2563EB),
+                                    color: state.controlledDelivery ? const Color(0xFF1E40AF) : const Color(0xFF0F172A),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Alıcı kargoyu teslim almadan önce açıp içeriği kontrol edebilir.',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF64748B),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'PTT KARGO',
+                                    style: TextStyle(
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Alıcı kargoyu teslim almadan önce açıp içeriği kontrol edebilir.',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Switch(
-                      value: state.controlledDelivery,
-                      activeTrackColor: const Color(0xFF2563EB),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      onChanged: (val) {
-                        notifier.updateAdditionalServices(controlledDelivery: val);
-                        _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
-                      },
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Switch(
+                        value: state.controlledDelivery,
+                        activeTrackColor: const Color(0xFF2563EB),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        onChanged: (val) {
+                          notifier.updateAdditionalServices(controlledDelivery: val);
+                          _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ] else ...[
-          // Kargo Bana Gelsin: Yalnızca Standart Taşıma
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Standart Taşıma',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Kargo Bana Gelsin gönderilerinde standart taşıma geçerlidir. Kapıda ödeme, alıcı öder ve kontrollü teslimat seçenekleri sunulmamaktadır.',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ],
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
 
   Widget _buildPillButton({
     required String title,
