@@ -643,94 +643,70 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
               // 2. Arama Kutusu ("Ad, telefon veya barkod ara")
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: GestureDetector(
-                  onTap: () => _searchFocusNode.requestFocus(),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: _searchFocusNode.hasFocus ? const Color(0xFF0E1E38) : const Color(0xFFE2E8F0),
-                        width: _searchFocusNode.hasFocus ? 1.5 : 1.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: _searchFocusNode.hasFocus ? 0.08 : 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                child: TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  cursorColor: const Color(0xFF0E1E38),
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF0F172A),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: _searchFocusNode.hasFocus ? const Color(0xFF0E1E38) : const Color(0xFF64748B),
+                      size: 22,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.search_rounded,
-                          color: _searchFocusNode.hasFocus ? const Color(0xFF0E1E38) : const Color(0xFF64748B),
-                          size: 22,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            focusNode: _searchFocusNode,
-                            cursorColor: const Color(0xFF0E1E38),
-                            textInputAction: TextInputAction.search,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF0F172A),
-                              fontWeight: FontWeight.w600,
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.cancel_rounded,
+                              size: 19,
+                              color: Color(0xFF94A3B8),
                             ),
-                            decoration: const InputDecoration(
-                              hintText: 'Ad, telefon veya barkod ara',
-                              hintStyle: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF94A3B8),
-                                fontWeight: FontWeight.w400,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            onChanged: (val) {
+                            onPressed: () {
                               _debounceTimer?.cancel();
-                              _debounceTimer = Timer(const Duration(milliseconds: 350), () {
-                                notifier.setSearch(val.trim());
-                              });
+                              _searchController.clear();
+                              notifier.setSearch('');
                               setState(() {});
                             },
-                            onSubmitted: (val) {
-                              _debounceTimer?.cancel();
-                              notifier.setSearch(val.trim());
-                            },
-                          ),
-                        ),
-                        if (_searchController.text.isNotEmpty)
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                _debounceTimer?.cancel();
-                                _searchController.clear();
-                                notifier.setSearch('');
-                                setState(() {});
-                              },
-                              borderRadius: BorderRadius.circular(16),
-                              child: const Padding(
-                                padding: EdgeInsets.all(4),
-                                child: Icon(
-                                  Icons.cancel_rounded,
-                                  size: 19,
-                                  color: Color(0xFF94A3B8),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                          )
+                        : null,
+                    hintText: 'Ad, telefon veya barkod ara',
+                    hintStyle: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w400,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFF0E1E38), width: 1.5),
                     ),
                   ),
+                  onChanged: (val) {
+                    _debounceTimer?.cancel();
+                    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+                      notifier.setSearch(val.trim());
+                    });
+                    setState(() {});
+                  },
+                  onSubmitted: (val) {
+                    _debounceTimer?.cancel();
+                    notifier.setSearch(val.trim());
+                  },
                 ),
               ),
 

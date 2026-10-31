@@ -92,7 +92,7 @@ class TopUpBalanceScreen extends ConsumerWidget {
     int? maxLines,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5.0),
       decoration: BoxDecoration(
         color: isHighlight ? AppColors.warningLight.withValues(alpha: 0.35) : AppColors.surface,
         border: Border(
@@ -109,21 +109,22 @@ class TopUpBalanceScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
                   children: [
                     Text(
                       label,
                       style: TextStyle(
-                        fontSize: 9.0,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 10.0,
+                        fontWeight: FontWeight.w800,
                         color: isHighlight ? const Color(0xFF92400E) : AppColors.textSecondary,
                         letterSpacing: 0.3,
                       ),
                     ),
-                    if (badgeText != null) ...[
-                      const SizedBox(width: 4),
+                    if (badgeText != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.0),
                         decoration: BoxDecoration(
                           color: AppColors.warning.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
@@ -131,23 +132,22 @@ class TopUpBalanceScreen extends ConsumerWidget {
                         child: Text(
                           badgeText,
                           style: const TextStyle(
-                            fontSize: 8.0,
+                            fontSize: 8.5,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF92400E),
                           ),
                         ),
                       ),
-                    ],
                   ],
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   maxLines: maxLines,
                   overflow: maxLines != null ? TextOverflow.ellipsis : null,
                   style: TextStyle(
-                    fontSize: isHighlight ? 12.5 : 11.5,
-                    fontWeight: isHighlight ? FontWeight.w800 : FontWeight.w600,
+                    fontSize: isHighlight ? 14.0 : 13.0,
+                    fontWeight: isHighlight ? FontWeight.w900 : FontWeight.w700,
                     fontFamily: isMonospace ? 'monospace' : null,
                     color: isHighlight ? const Color(0xFF78350F) : AppColors.textPrimary,
                     letterSpacing: isMonospace ? 0.3 : 0,
@@ -156,12 +156,12 @@ class TopUpBalanceScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           IconButton(
             onPressed: onCopy,
             icon: Icon(
               Icons.copy_rounded,
-              size: 14,
+              size: 16,
               color: isHighlight ? const Color(0xFFB45309) : AppColors.primary,
             ),
             tooltip: 'Kopyala',
@@ -169,8 +169,8 @@ class TopUpBalanceScreen extends ConsumerWidget {
               backgroundColor: isHighlight
                   ? AppColors.warning.withValues(alpha: 0.15)
                   : AppColors.surfaceSecondary,
-              padding: const EdgeInsets.all(4),
-              minimumSize: const Size(26, 26),
+              padding: const EdgeInsets.all(5),
+              minimumSize: const Size(28, 28),
             ),
           ),
         ],
@@ -233,32 +233,32 @@ class TopUpBalanceScreen extends ConsumerWidget {
         },
         color: AppColors.primary,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(10.0, 3.0, 10.0, 3.0),
+          padding: const EdgeInsets.fromLTRB(12.0, 6.0, 12.0, 8.0),
           physics: const ClampingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 1. Mevcut Bakiye & Bilgi Kartı
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
                   boxShadow: AppColors.softShadow,
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 30,
-                      height: 30,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(7),
+                        borderRadius: BorderRadius.circular(9),
                       ),
-                      child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 16),
+                      child: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 18),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,20 +266,21 @@ class TopUpBalanceScreen extends ConsumerWidget {
                           const Text(
                             'KULLANILABİLİR BAKİYENİZ',
                             style: TextStyle(
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 10.0,
+                              fontWeight: FontWeight.w800,
                               color: AppColors.textSecondary,
                               letterSpacing: 0.4,
                             ),
                           ),
+                          const SizedBox(height: 1),
                           FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
                             child: Text(
                               AppFormatters.formatCurrency(currentBalance),
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
                                 color: currentBalance < 0 ? AppColors.error : AppColors.textPrimary,
                               ),
                             ),
@@ -288,20 +289,20 @@ class TopUpBalanceScreen extends ConsumerWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                       decoration: BoxDecoration(
                         color: AppColors.secondaryLight,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(5),
                       ),
                       child: const Text(
                         '7/24 FAST',
-                        style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w800, color: Color(0xFF065F46)),
+                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: Color(0xFF065F46)),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
 
               // 2. Banka Hesap Bilgileri Kartı
               Container(
@@ -346,14 +347,14 @@ class TopUpBalanceScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
 
-              // 3. Nasıl Yüklenir & Önemli Uyarı Kartı (Kompakt ve Tek Parça)
+              // 3. Nasıl Yüklenir & Önemli Uyarı Kartı
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.border),
                   boxShadow: AppColors.softShadow,
                 ),
@@ -365,12 +366,12 @@ class TopUpBalanceScreen extends ConsumerWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.help_outline_rounded, size: 14, color: AppColors.primary),
+                            Icon(Icons.help_outline_rounded, size: 15, color: AppColors.primary),
                             SizedBox(width: 5),
                             Text(
                               'Nasıl Yüklenir?',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.textPrimary,
                               ),
@@ -381,18 +382,18 @@ class TopUpBalanceScreen extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(5),
                             border: Border.all(color: const Color(0xFFF59E0B), width: 0.8),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.warning_amber_rounded, size: 10, color: Color(0xFFB45309)),
+                              Icon(Icons.warning_amber_rounded, size: 11, color: Color(0xFFB45309)),
                               SizedBox(width: 3),
                               Text(
                                 'Uyarı',
                                 style: TextStyle(
-                                  fontSize: 8.5,
+                                  fontSize: 9.0,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFFB45309),
                                 ),
@@ -402,18 +403,18 @@ class TopUpBalanceScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 6),
                     _buildStepItem(
                       stepNumber: '1',
                       text: 'Banka uygulamanızdan Para Transferi / FAST / EFT adımına girip yukarıdaki IBAN\'ı yapıştırın.',
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     _buildStepItem(
                       stepNumber: '2',
                       text: 'Açıklama alanına SADECE "$eftCode" kodunuzu yazınız (otomatik eşleşme için şarttır).',
                       isBold: true,
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     _buildStepItem(
                       stepNumber: '3',
                       text: 'FAST yüklemeleri 7/24 birkaç dakika içinde otomatik olarak cüzdanınıza yansır.',
@@ -421,25 +422,25 @@ class TopUpBalanceScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 8),
 
               // 4. Tümünü Kopyala Butonu
               ElevatedButton.icon(
                 onPressed: () => _copyAll(context, eftCode),
-                icon: const Icon(Icons.copy_all_rounded, size: 15),
+                icon: const Icon(Icons.copy_all_rounded, size: 16),
                 label: const Text(
                   'Tüm Hesap Bilgilerini Kopyala',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
             ],
           ),
         ),
@@ -456,8 +457,8 @@ class TopUpBalanceScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 15,
-          height: 15,
+          width: 16,
+          height: 16,
           decoration: BoxDecoration(
             color: AppColors.primary.withValues(alpha: 0.1),
             shape: BoxShape.circle,
@@ -466,20 +467,20 @@ class TopUpBalanceScreen extends ConsumerWidget {
             child: Text(
               stepNumber,
               style: const TextStyle(
-                fontSize: 8.5,
+                fontSize: 9.0,
                 fontWeight: FontWeight.w800,
                 color: AppColors.primary,
               ),
             ),
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 7),
         Expanded(
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+              fontSize: 11.0,
+              fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
               color: isBold ? AppColors.textPrimary : AppColors.textSecondary,
               height: 1.25,
             ),

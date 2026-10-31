@@ -2745,39 +2745,83 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Hızlı Desi Seçim Çipleri
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // 1. Paket Ölçüleri (En, Boy, Yükseklik ve Ağırlık) - Birincil ve Kolay Giriş
+          const Text(
+            'PAKET ÖLÇÜLERİ VE AĞIRLIK:',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF475569),
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 3),
+          const Text(
+            'Ölçüleri giriniz; desi hacim formülüyle ((En x Boy x Yükseklik) / 3000) otomatik hesaplanır.',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 2x2 Temiz, Ferah ve Anlaşılır Boyut Grid'i (En, Boy / Yükseklik, Ağırlık)
+          Row(
             children: [
-              const Text(
-                'HIZLI DESİ SEÇİMİ:',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF475569), letterSpacing: 0.4),
-              ),
-              const SizedBox(height: 6),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    _buildQuickDesiChip('Evrak (0 Desi)', 0.0, notifier),
-                    const SizedBox(width: 6),
-                    _buildQuickDesiChip('1 Desi', 1.0, notifier),
-                    const SizedBox(width: 6),
-                    _buildQuickDesiChip('2 Desi', 2.0, notifier),
-                    const SizedBox(width: 6),
-                    _buildQuickDesiChip('3 Desi', 3.0, notifier),
-                    const SizedBox(width: 6),
-                    _buildQuickDesiChip('5 Desi', 5.0, notifier),
-                    const SizedBox(width: 6),
-                    _buildQuickDesiChip('10 Desi', 10.0, notifier),
-                  ],
-                ),
-              ),
+              _buildDimensionInput('EN (CM)', _widthController, 'Örn: 20'),
+              const SizedBox(width: 10),
+              _buildDimensionInput('BOY (CM)', _lengthController, 'Örn: 30'),
             ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildDimensionInput('YÜKSEKLİK (CM)', _heightController, 'Örn: 10'),
+              const SizedBox(width: 10),
+              _buildDimensionInput('AĞIRLIK (KG)', _weightController, 'Örn: 1.0'),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Otomatik Hesaplanan Desi & Hızlı Evrak Seçimi
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBBF7D0), width: 1.2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calculate_outlined, size: 18, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Hesaplanan Desi: ${_calculatedDesi.toStringAsFixed(2)} Desi',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF15803D),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                _buildQuickDesiChip('Evrak (0 Desi)', 0.0, notifier),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
 
-          // Hızlı Kayıtlı Ürün Seçimi
+          // 2. Hızlı Kayıtlı Ürün Seçimi
           const Text(
             'KAYITLI ÜRÜNLERDEN SEÇ (İSTEĞE BAĞLI):',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
@@ -2844,24 +2888,6 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   onPressed: () => AddEditProductModal.show(context, ref),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // 2x2 Temiz, Ferah ve Anlaşılır Boyut Grid'i (En, Boy / Yükseklik, Ağırlık)
-          Row(
-            children: [
-              _buildDimensionInput('EN (CM)', _widthController, 'Örn: 20'),
-              const SizedBox(width: 10),
-              _buildDimensionInput('BOY (CM)', _lengthController, 'Örn: 30'),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _buildDimensionInput('YÜKSEKLİK (CM)', _heightController, 'Örn: 10'),
-              const SizedBox(width: 10),
-              _buildDimensionInput('AĞIRLIK (KG)', _weightController, 'Örn: 1.0'),
             ],
           ),
           const SizedBox(height: 14),
