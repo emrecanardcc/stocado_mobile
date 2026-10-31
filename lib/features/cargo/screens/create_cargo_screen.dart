@@ -263,6 +263,14 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   label: const Text('2.00 Desi'),
                   onPressed: () => customDesiController.text = '2.00',
                 ),
+                ActionChip(
+                  label: const Text('3.00 Desi'),
+                  onPressed: () => customDesiController.text = '3.00',
+                ),
+                ActionChip(
+                  label: const Text('5.00 Desi'),
+                  onPressed: () => customDesiController.text = '5.00',
+                ),
               ],
             ),
           ],
@@ -299,7 +307,19 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   directDesi: 0.0,
                 );
               } else {
-                notifier.updatePackageDimensions(directDesi: validDesi);
+                final side = math.pow(validDesi * 3000, 1 / 3).toDouble();
+                final sideStr = side.toStringAsFixed(1);
+                _widthController.text = sideStr;
+                _lengthController.text = sideStr;
+                _heightController.text = sideStr;
+                _weightController.text = '1';
+                notifier.updatePackageDimensions(
+                  width: side,
+                  length: side,
+                  height: side,
+                  weight: 1000,
+                  directDesi: validDesi,
+                );
               }
               notifier.calculateOffers();
             },
@@ -566,16 +586,12 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
 
     // 1. Gönderici / Varış Deposu Kontrolü
     if (state.selectedSenderAddress == null) {
-      if (state.senderAddresses.isNotEmpty) {
-        notifier.setSenderAddress(state.senderAddresses.first);
-      } else {
-        _showWarning(
-          isSend
-              ? 'Lütfen kargonun çıkış yapacağı gönderici adresini seçiniz veya yeni depo ekleyiniz.'
-              : 'Lütfen kargonun teslim alınacağı varış deposunu seçiniz veya yeni depo ekleyiniz.',
-        );
-        return;
-      }
+      _showWarning(
+        isSend
+            ? 'Lütfen kargonun çıkış yapacağı gönderici deposunu seçiniz.'
+            : 'Lütfen kargonun teslim alınacağı varış deposunu seçiniz.',
+      );
+      return;
     }
 
     // 2. Karşı Taraf Ad Soyad
@@ -1795,12 +1811,240 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     );
   }
 
+  Widget _buildWarehouseEmptyCard(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier, bool isSend) {
+    final title = isSend ? 'Gönderici Deposu Seçiniz' : 'Varış Deposu Seçiniz';
+    final subtitle = isSend ? 'Kargonuzun çıkış yapacağı deponuzu seçin' : 'Kargonuzun teslim alınacağı deponuzu seçin';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFBFDBFE), width: 1.5),
+            ),
+            child: const Icon(
+              Icons.warehouse_rounded,
+              color: Color(0xFF2563EB),
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: () => _openSenderModal(context, state, notifier),
+              icon: const Icon(Icons.warehouse_rounded, size: 20),
+              label: const Text(
+                'Depo Seç',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () => AddSenderAddressModal.show(context, state.cities, notifier),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: Text(
+                '+ Yeni Depo Ekle',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF2563EB),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWarehouseSelectedCard(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier, bool isSend) {
+    final senderName = state.selectedSenderAddress!.name;
+    final senderLocation = '${state.selectedSenderAddress!.district?.name ?? state.selectedSenderAddress!.city?.name ?? ""}'
+        '${state.selectedSenderAddress!.phone.isNotEmpty ? " • ${state.selectedSenderAddress!.phone}" : ""}';
+    final details = state.selectedSenderAddress!.details;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2563EB), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDBEAFE),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.warehouse_rounded,
+              color: Color(0xFF1E40AF),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        senderName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (state.selectedSenderAddress!.isDefault) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'VARSAYILAN',
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  senderLocation,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF475569),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    details,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: const Size(0, 34),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => _openSenderModal(context, state, notifier),
+                child: const Text(
+                  'Değiştir',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: () {
+                  notifier.setSenderAddress(null);
+                  notifier.calculateOffers();
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'Kaldır',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFEF4444),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSenderAddressCard(CreateCargoState state, CreateCargoNotifier notifier, bool isSend) {
     if (isSend) {
       // Standart Mod: Gönderici = Kullanıcının Deposu
-      final senderName = state.selectedSenderAddress?.name ?? 'Merkez Depo';
-      final senderLocation = '${state.selectedSenderAddress?.district?.name ?? state.selectedSenderAddress?.city?.name ?? "Kadıköy / İstanbul"} • ${state.selectedSenderAddress?.phone ?? "0532 100 20 30"}';
-
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -1817,30 +2061,28 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 const Expanded(
                   child: Row(
                     children: [
-                      Icon(Icons.storefront_outlined, size: 16, color: Color(0xFF2563EB)),
+                      Icon(Icons.storefront_outlined, size: 18, color: Color(0xFF2563EB)),
                       SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           'Gönderici Bilgileri',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF0F172A),
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
                 InkWell(
                   onTap: () => AddSenderAddressModal.show(context, state.cities, notifier),
                   child: const Text(
                     '+ Yeni Depo',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF2563EB),
                     ),
@@ -1849,104 +2091,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDBEAFE),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'DEP',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1E40AF),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 6,
-                          runSpacing: 2,
-                          children: [
-                            Text(
-                              senderName,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF0F172A),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE2E8F0),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'VARSAYILAN',
-                                style: TextStyle(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF1E293B),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          senderLocation,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF64748B),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () => _openSenderModal(context, state, notifier),
-                    child: const Text(
-                      'Değiştir',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF2563EB),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            state.selectedSenderAddress == null
+                ? _buildWarehouseEmptyCard(context, state, notifier, true)
+                : _buildWarehouseSelectedCard(context, state, notifier, true),
           ],
         ),
       );
@@ -1962,56 +2109,19 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const Row(
               children: [
-                const Expanded(
-                  child: Row(
-                    children: [
-                      Icon(Icons.person_pin_circle_outlined, size: 16, color: Color(0xFF2563EB)),
-                      SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          'Gönderici Bilgileri',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                InkWell(
-                  onTap: () => _openDirectoryModal(context, state, notifier),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFBFDBFE), width: 1),
+                Icon(Icons.person_pin_circle_outlined, size: 18, color: Color(0xFF2563EB)),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Gönderici Müşteri Bilgileri',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.contacts_outlined, size: 13, color: Color(0xFF2563EB)),
-                        SizedBox(width: 4),
-                        Text(
-                          'REHBERDEN SEÇ',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF2563EB),
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ],
-                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -2037,56 +2147,19 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const Row(
               children: [
-                const Expanded(
-                  child: Row(
-                    children: [
-                      Icon(Icons.person_pin_circle_outlined, size: 16, color: Color(0xFF2563EB)),
-                      SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          'Alıcı Müşteri Bilgileri',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                InkWell(
-                  onTap: () => _openDirectoryModal(context, state, notifier),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFBFDBFE), width: 1),
+                Icon(Icons.person_pin_circle_outlined, size: 18, color: Color(0xFF2563EB)),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Alıcı Müşteri Bilgileri',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.contacts_outlined, size: 13, color: Color(0xFF2563EB)),
-                        SizedBox(width: 4),
-                        Text(
-                          'REHBERDEN SEÇ',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF2563EB),
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ],
-                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -2098,9 +2171,6 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       );
     } else {
       // Tersine Lojistik: Alıcı = Kullanıcının Deposu (Varış Deposu)
-      final warehouseName = state.selectedSenderAddress?.name ?? 'Merkez Depo';
-      final warehouseLocation = '${state.selectedSenderAddress?.district?.name ?? state.selectedSenderAddress?.city?.name ?? "Kadıköy / İstanbul"} • ${state.selectedSenderAddress?.phone ?? "0532 100 20 30"}';
-
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -2117,30 +2187,28 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 const Expanded(
                   child: Row(
                     children: [
-                      Icon(Icons.warehouse_outlined, size: 16, color: Color(0xFF2563EB)),
+                      Icon(Icons.warehouse_outlined, size: 18, color: Color(0xFF2563EB)),
                       SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          'Alıcı Bilgileri',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          'Varış Deposu Bilgileri',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF0F172A),
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 6),
                 InkWell(
                   onTap: () => AddSenderAddressModal.show(context, state.cities, notifier),
                   child: const Text(
                     '+ Yeni Depo',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF2563EB),
                     ),
@@ -2149,82 +2217,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDBEAFE),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'DEP',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1E40AF),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          warehouseName,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          warehouseLocation,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF64748B),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () => _openSenderModal(context, state, notifier),
-                    child: const Text(
-                      'Değiştir',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF2563EB),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            state.selectedSenderAddress == null
+                ? _buildWarehouseEmptyCard(context, state, notifier, false)
+                : _buildWarehouseSelectedCard(context, state, notifier, false),
           ],
         ),
       );
@@ -2238,50 +2233,133 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Kayıtlı Rehberden Seç Butonu (Büyük, Şık, Kolay Tıklanabilir)
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton.icon(
+            onPressed: () => _openDirectoryModal(context, state, notifier),
+            icon: const Icon(Icons.contacts_rounded, size: 20, color: Colors.white),
+            label: Text(
+              isSenderMode ? 'Kayıtlı Gönderici Rehberinden Seç' : 'Kayıtlı Alıcı Rehberinden Seç',
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: 0.2,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+
         if (state.selectedRecipientAddress != null) ...[
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFBFDBFE), width: 1),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF93C5FD), width: 1.5),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF2563EB)),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Rehberden Seçildi: ${state.selectedRecipientAddress!.name}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1E40AF),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                InkWell(
-                  onTap: () {
-                    notifier.clearSelectedRecipientAddress();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      'Serbest Düzenle',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
+                Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
                         color: Color(0xFF2563EB),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Rehberden Seçildi: ${state.selectedRecipientAddress!.name}',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1E40AF),
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                  ],
+                ),
+                if (state.selectedRecipientAddress!.phone.isNotEmpty || state.selectedRecipientAddress!.city != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '${state.selectedRecipientAddress!.phone} • ${state.selectedRecipientAddress!.district?.name ?? ''}, ${state.selectedRecipientAddress!.city?.name ?? ''}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF475569),
+                    ),
                   ),
+                ],
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          backgroundColor: Colors.white,
+                        ),
+                        onPressed: () => _openDirectoryModal(context, state, notifier),
+                        icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: Color(0xFF2563EB)),
+                        label: const Text(
+                          'Farklı Kişi Seç',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          backgroundColor: Colors.white,
+                        ),
+                        onPressed: () => notifier.clearSelectedRecipientAddress(),
+                        icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF475569)),
+                        label: const Text(
+                          'Manuel Düzenle',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
         ],
+
         Row(
           children: [
             Expanded(
@@ -2290,24 +2368,25 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 children: [
                   Text(
                     nameLabel,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   TextField(
                     controller: _nameController,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                     decoration: InputDecoration(
                       hintText: 'Ad Soyad',
+                      hintStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -2319,32 +2398,33 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'TELEFON NO *',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   TextField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                     decoration: InputDecoration(
                       hintText: '05xx xxx xx xx',
+                      hintStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -2358,7 +2438,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
 
         Row(
           children: [
@@ -2368,28 +2448,28 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 children: [
                   const Text(
                     'İL (ŞEHİR) *',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   DropdownButtonFormField<City>(
                     key: ValueKey('city_${state.selectedCity?.id}'),
                     menuMaxHeight: 250,
                     isExpanded: true,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       ),
                     ),
-                    hint: const Text('Şehir Seçiniz', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    hint: const Text('Şehir Seçiniz', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
                     initialValue: state.cities.any((c) => c.id == state.selectedCity?.id)
                         ? state.cities.firstWhere((c) => c.id == state.selectedCity?.id)
                         : null,
@@ -2407,37 +2487,37 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'İLÇE *',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   DropdownButtonFormField<District>(
                     key: ValueKey('district_${state.selectedCity?.id}_${state.selectedDistrict?.id}'),
                     menuMaxHeight: 250,
                     isExpanded: true,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                       ),
                     ),
                     hint: Text(
                       state.isLoadingDistricts ? 'Yükleniyor...' : 'İlçe Seçiniz',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
                     ),
                     initialValue: state.districts.any((d) => d.id == state.selectedDistrict?.id)
                         ? state.districts.firstWhere((d) => d.id == state.selectedDistrict?.id)
@@ -2460,32 +2540,33 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
 
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               addressLabel,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             TextField(
               controller: _addressController,
               maxLines: 2,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
               decoration: InputDecoration(
                 hintText: 'Cadde, sokak, bina no, daire, tarif...',
+                hintStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.all(10),
+                contentPadding: const EdgeInsets.all(12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -2497,6 +2578,70 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildQuickDesiChip(String label, double desi, CreateCargoNotifier notifier) {
+    final isSelected = (_calculatedDesi - desi).abs() < 0.01;
+    return GestureDetector(
+      onTap: () {
+        if (desi == 0.0) {
+          _widthController.text = '0';
+          _lengthController.text = '0';
+          _heightController.text = '0';
+          _weightController.text = '0';
+          _desiController.text = '0.00';
+          setState(() {
+            _calculatedDesi = 0.0;
+          });
+          notifier.updatePackageDimensions(
+            width: 0,
+            length: 0,
+            height: 0,
+            weight: 0,
+            directDesi: 0.0,
+          );
+        } else {
+          final side = math.pow(desi * 3000, 1 / 3).toDouble();
+          final sideStr = side.toStringAsFixed(1);
+          _widthController.text = sideStr;
+          _lengthController.text = sideStr;
+          _heightController.text = sideStr;
+          _weightController.text = '1';
+          _desiController.text = desi.toStringAsFixed(2);
+          setState(() {
+            _calculatedDesi = desi;
+          });
+          notifier.updatePackageDimensions(
+            width: side,
+            length: side,
+            height: side,
+            weight: 1000,
+            directDesi: desi,
+          );
+        }
+        notifier.calculateOffers();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF059669) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF059669) : const Color(0xFFCBD5E1),
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+            color: isSelected ? Colors.white : const Color(0xFF334155),
+          ),
+        ),
+      ),
     );
   }
 
@@ -2570,13 +2715,13 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               const SizedBox(width: 8),
               InkWell(
                 onTap: () => _showDesiInputDialog(notifier),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: const Color(0xFFD1FAE5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF6EE7B7), width: 1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF6EE7B7), width: 1.5),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -2584,14 +2729,14 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                       Text(
                         '${_calculatedDesi.toStringAsFixed(2)} DESİ',
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w900,
                           color: Color(0xFF065F46),
                           letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.edit_outlined, size: 12, color: Color(0xFF065F46)),
+                      const SizedBox(width: 5),
+                      const Icon(Icons.edit_outlined, size: 14, color: Color(0xFF065F46)),
                     ],
                   ),
                 ),
@@ -2600,12 +2745,44 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           ),
           const SizedBox(height: 12),
 
+          // Hızlı Desi Seçim Çipleri
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'HIZLI DESİ SEÇİMİ:',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF475569), letterSpacing: 0.4),
+              ),
+              const SizedBox(height: 6),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildQuickDesiChip('Evrak (0 Desi)', 0.0, notifier),
+                    const SizedBox(width: 6),
+                    _buildQuickDesiChip('1 Desi', 1.0, notifier),
+                    const SizedBox(width: 6),
+                    _buildQuickDesiChip('2 Desi', 2.0, notifier),
+                    const SizedBox(width: 6),
+                    _buildQuickDesiChip('3 Desi', 3.0, notifier),
+                    const SizedBox(width: 6),
+                    _buildQuickDesiChip('5 Desi', 5.0, notifier),
+                    const SizedBox(width: 6),
+                    _buildQuickDesiChip('10 Desi', 10.0, notifier),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
           // Hızlı Kayıtlı Ürün Seçimi
           const Text(
-            'KAYITLI ÜRÜN KATALOĞUNDAN SEÇ:',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+            'KAYITLI ÜRÜNLERDEN SEÇ (İSTEĞE BAĞLI):',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
@@ -2614,18 +2791,18 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   menuMaxHeight: 250,
                   isExpanded: true,
                   initialValue: matchedProduct,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                     ),
                   ),
                   items: [
@@ -2654,8 +2831,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               ),
               const SizedBox(width: 8),
               Container(
-                height: 42,
-                width: 42,
+                height: 48,
+                width: 48,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(12),
@@ -2663,27 +2840,31 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                 ),
                 child: IconButton(
                   tooltip: 'Yeni Ürün Ekle',
-                  icon: const Icon(Icons.add_rounded, size: 20, color: Color(0xFF0F172A)),
+                  icon: const Icon(Icons.add_rounded, size: 22, color: Color(0xFF0F172A)),
                   onPressed: () => AddEditProductModal.show(context, ref),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-          // 4'lü Kompakt Boyut Girişi (En, Boy, Yükseklik, Ağırlık)
+          // 2x2 Temiz, Ferah ve Anlaşılır Boyut Grid'i (En, Boy / Yükseklik, Ağırlık)
           Row(
             children: [
-              _buildDimensionInput('En (cm)', _widthController),
-              const SizedBox(width: 6),
-              _buildDimensionInput('Boy (cm)', _lengthController),
-              const SizedBox(width: 6),
-              _buildDimensionInput('Yükseklik', _heightController),
-              const SizedBox(width: 6),
-              _buildDimensionInput('Ağırlık (kg)', _weightController),
+              _buildDimensionInput('EN (CM)', _widthController, 'Örn: 20'),
+              const SizedBox(width: 10),
+              _buildDimensionInput('BOY (CM)', _lengthController, 'Örn: 30'),
             ],
           ),
           const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildDimensionInput('YÜKSEKLİK (CM)', _heightController, 'Örn: 10'),
+              const SizedBox(width: 10),
+              _buildDimensionInput('AĞIRLIK (KG)', _weightController, 'Örn: 1.0'),
+            ],
+          ),
+          const SizedBox(height: 14),
 
           // Sipariş No & İçerik Açıklaması
           Row(
@@ -2694,24 +2875,29 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   children: [
                     const Text(
                       'SİPARİŞ / FATURA NO',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _orderNumberController,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                       decoration: InputDecoration(
                         hintText: 'Örn: TY-84920',
+                        hintStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
                         ),
                       ),
                       onChanged: (val) => notifier.updatePackageNotes(orderNumber: val),
@@ -2719,31 +2905,36 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'KARGO İÇERİK / ETİKET',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _descriptionController,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                       decoration: InputDecoration(
-                        hintText: 'Örn: Tekstil Ürünü',
+                        hintText: 'Örn: Tekstil, Ayakkabı',
+                        hintStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+                          borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
                         ),
                       ),
                       onChanged: (val) => notifier.updatePackageNotes(description: val),
@@ -2758,54 +2949,57 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     );
   }
 
-  Widget _buildDimensionInput(String label, TextEditingController controller) {
+  Widget _buildDimensionInput(String label, TextEditingController controller, [String? hint]) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label.toUpperCase(),
               style: const TextStyle(
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: FontWeight.w900,
-                color: Color(0xFF64748B),
+                color: Color(0xFF475569),
+                letterSpacing: 0.3,
               ),
-              textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             TextField(
               controller: controller,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 12.5,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
                 color: Color(0xFF0F172A),
               ),
               decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
                 isDense: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                  borderSide: const BorderSide(color: Color(0xFF059669), width: 2),
                 ),
               ),
               onChanged: (_) => _calculateDesi(),

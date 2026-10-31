@@ -253,27 +253,14 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     try {
       final authState = ref.read(authProvider);
       final accountId = authState.accountId ?? authState.user?.accounts.firstOrNull?.id;
-      final user = authState.user;
       final addresses = await _cargoService.getAddresses(accountId: accountId);
 
       final senders = addresses.where((a) => a.type == 4).toList();
       final recipients = addresses.where((a) => a.type == 1).toList();
 
-      AddressModel? defaultSender;
-      if (senders.isNotEmpty) {
-        if (user != null) {
-          defaultSender = senders.cast<AddressModel?>().firstWhere(
-            (a) => a != null && (a.name.toLowerCase() == user.fullName.toLowerCase() ||
-                   (user.phone != null && a.phone == user.phone)),
-            orElse: () => null,
-          );
-        }
-        defaultSender ??= senders.firstWhere((a) => a.isDefault, orElse: () => senders.first);
-      }
-
       state = state.copyWith(
         senderAddresses: senders,
-        selectedSenderAddress: defaultSender,
+        clearSelectedSender: true,
         recipientAddresses: recipients,
         isLoadingAddresses: false,
       );
@@ -290,7 +277,11 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
   }
 
   void setSenderAddress(AddressModel? address) {
-    state = state.copyWith(selectedSenderAddress: address);
+    if (address == null) {
+      state = state.copyWith(clearSelectedSender: true);
+    } else {
+      state = state.copyWith(selectedSenderAddress: address);
+    }
   }
 
   void setDirection(String direction) {
@@ -770,8 +761,8 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     if (state.selectedSenderAddress == null) {
       state = state.copyWith(
         errorMessage: isSend
-            ? 'Lütfen kayıtlı bir gönderici adresi seçiniz veya yeni ekleyiniz.'
-            : 'Lütfen kayıtlı bir varış deposu seçiniz veya yeni ekleyiniz.',
+            ? 'Lütfen kargonun çıkış yapacağı gönderici deposunu seçiniz.'
+            : 'Lütfen kargonun teslim alınacağı varış deposunu seçiniz.',
       );
       return false;
     }

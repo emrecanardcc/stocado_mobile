@@ -2301,7 +2301,7 @@ void main() {
       // 3. Bölüm 2: Adres Bilgileri
       expect(find.text('2'), findsOneWidget);
       expect(find.text('ADRES BİLGİLERİ'), findsOneWidget);
-      expect(find.text('REHBERDEN SEÇ'), findsOneWidget);
+      expect(find.text('Kayıtlı Alıcı Rehberinden Seç'), findsOneWidget);
       expect(find.text('Merkez Depo'), findsOneWidget);
       expect(find.text('Değiştir'), findsOneWidget);
       expect(find.text('Alıcı Müşteri Bilgileri'), findsOneWidget);
@@ -2582,8 +2582,8 @@ void main() {
 
       await tester.pump();
 
-      // REHBERDEN SEÇ butonuna tıkla
-      await tester.tap(find.text('REHBERDEN SEÇ'));
+      // Kayıtlı Alıcı Rehberinden Seç butonuna tıkla
+      await tester.tap(find.text('Kayıtlı Alıcı Rehberinden Seç'));
       await tester.pumpAndSettle();
 
       // Modal açılmış olmalı
@@ -3070,12 +3070,206 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Rehberden Seçildi: Ayşe Kaya'), findsOneWidget);
-      expect(find.text('Serbest Düzenle'), findsOneWidget);
+      expect(find.text('Manuel Düzenle'), findsOneWidget);
 
-      await tester.tap(find.text('Serbest Düzenle'));
+      await tester.tap(find.text('Manuel Düzenle'));
       await tester.pumpAndSettle();
 
       expect(find.text('Rehberden Seçildi: Ayşe Kaya'), findsNothing);
+    });
+
+    testWidgets('Gonderici secilmemisken empty state gosterilir ve gondermeye calisildiginda Turkce uyari verir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockSender = AddressModel(
+        id: 'snd-1',
+        title: 'Merkez Depo',
+        name: 'Merkez Depo',
+        phone: '0532 100 20 30',
+        details: 'Kadıköy / İstanbul',
+        cityId: 34,
+        isDefault: true,
+        type: 4,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                senderAddresses: [mockSender],
+                selectedSenderAddress: null, // Gonderici varsayilan bos!
+                cities: [City(id: 34, name: 'İstanbul')],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Empty state ogeleri gorunmeli
+      expect(find.text('Gönderici Deposu Seçiniz'), findsOneWidget);
+      expect(find.text('Kargonuzun çıkış yapacağı deponuzu seçin'), findsOneWidget);
+      expect(find.text('Depo Seç'), findsOneWidget);
+      expect(find.text('+ Yeni Depo Ekle'), findsOneWidget);
+
+      // Kargo Olustur'a bas
+      await tester.tap(find.text('KARGOYU OLUŞTUR'));
+      await tester.pumpAndSettle();
+
+      // Gizlice ilk depoyu secmek yerine Turkce uyari vermeli
+      expect(find.text('Lütfen kargonun çıkış yapacağı gönderici deposunu seçiniz.'), findsOneWidget);
+    });
+
+    testWidgets('Secili depoda Kaldir butonuna basildiginda empty state geri gelir ve gonderilmeye calisildiginda Turkce uyari verir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockSender = AddressModel(
+        id: 'snd-1',
+        title: 'Merkez Depo',
+        name: 'Merkez Depo',
+        phone: '0532 100 20 30',
+        details: 'Kadıköy / İstanbul',
+        cityId: 34,
+        isDefault: true,
+        type: 4,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                senderAddresses: [mockSender],
+                selectedSenderAddress: mockSender, // Başta seçili!
+                cities: [City(id: 34, name: 'İstanbul')],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Başta seçili depo kartı görünmeli
+      expect(find.text('Merkez Depo'), findsOneWidget);
+      expect(find.text('Kaldır'), findsOneWidget);
+
+      // Kaldır'a tıkla
+      await tester.tap(find.text('Kaldır'));
+      await tester.pumpAndSettle();
+
+      // Seçili depo kalkmalı, empty state gelmeli
+      expect(find.text('Gönderici Deposu Seçiniz'), findsOneWidget);
+      expect(find.text('Depo Seç'), findsOneWidget);
+
+      // Kargo oluşturmaya çalış
+      await tester.tap(find.text('KARGOYU OLUŞTUR'));
+      await tester.pumpAndSettle();
+
+      // Türkçe gönderici depo uyarısı çıkmalı
+      expect(find.text('Lütfen kargonun çıkış yapacağı gönderici deposunu seçiniz.'), findsOneWidget);
+    });
+
+    testWidgets('Kargo Bana Gelsin modunda varis deposu secilmemisken gonderilirse Turkce varis deposu uyarisi verir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                senderAddresses: [],
+                selectedSenderAddress: null,
+                cities: [City(id: 34, name: 'İstanbul')],
+                direction: 'receive',
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Varış Deposu Seçiniz empty state görünmeli
+      expect(find.text('Varış Deposu Seçiniz'), findsOneWidget);
+
+      // KARGOYU OLUŞTUR'a bas
+      await tester.tap(find.text('KARGOYU OLUŞTUR'));
+      await tester.pumpAndSettle();
+
+      // Türkçe varış deposu uyarısı çıkmalı
+      expect(find.text('Lütfen kargonun teslim alınacağı varış deposunu seçiniz.'), findsOneWidget);
     });
   });
 
@@ -3163,7 +3357,7 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      for (final size in [const Size(360, 780), const Size(390, 844), const Size(320, 640)]) {
+      for (final size in [const Size(360, 640), const Size(360, 780), const Size(390, 844), const Size(412, 915)]) {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1.0;
 
@@ -3222,11 +3416,9 @@ void main() {
         expect(find.text('Nasıl Yüklenir?'), findsOneWidget);
         expect(find.text('Tüm Hesap Bilgilerini Kopyala'), findsOneWidget);
 
-        // Standart ekranlarda (360x780 ve 390x844) kaydırmaya gerek kalmadan kopyalama butonu görünür olmalı
-        if (size.height >= 780) {
-          final buttonRect = tester.getRect(find.text('Tüm Hesap Bilgilerini Kopyala'));
-          expect(buttonRect.bottom, lessThanOrEqualTo(size.height));
-        }
+        // 360x640, 360x780, 390x844 ve 412x915 ekranlarda ekrana tam sığmalı ve kaydırmaya gerek kalmamalı
+        final buttonRect = tester.getRect(find.text('Tüm Hesap Bilgilerini Kopyala'));
+        expect(buttonRect.bottom, lessThanOrEqualTo(size.height));
       }
     });
   });

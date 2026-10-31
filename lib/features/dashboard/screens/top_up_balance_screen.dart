@@ -92,7 +92,7 @@ class TopUpBalanceScreen extends ConsumerWidget {
     int? maxLines,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.0),
       decoration: BoxDecoration(
         color: isHighlight ? AppColors.warningLight.withValues(alpha: 0.35) : AppColors.surface,
         border: Border(
@@ -114,7 +114,7 @@ class TopUpBalanceScreen extends ConsumerWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        fontSize: 8.5,
+                        fontSize: 9.0,
                         fontWeight: FontWeight.w700,
                         color: isHighlight ? const Color(0xFF92400E) : AppColors.textSecondary,
                         letterSpacing: 0.3,
@@ -131,7 +131,7 @@ class TopUpBalanceScreen extends ConsumerWidget {
                         child: Text(
                           badgeText,
                           style: const TextStyle(
-                            fontSize: 7.5,
+                            fontSize: 8.0,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF92400E),
                           ),
@@ -233,8 +233,8 @@ class TopUpBalanceScreen extends ConsumerWidget {
         },
         color: AppColors.primary,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 4.0),
-          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(10.0, 3.0, 10.0, 3.0),
+          physics: const ClampingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -348,124 +348,98 @@ class TopUpBalanceScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
 
-              // 3. Uyarı Kutusu
+              // 3. Nasıl Yüklenir & Önemli Uyarı Kartı (Kompakt ve Tek Parça)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB), // Amber-50
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFF59E0B), width: 1.1),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.info_outline_rounded,
-                      color: Color(0xFFD97706),
-                      size: 16,
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Uyarı',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFB45309),
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text.rich(
-                            TextSpan(
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF78350F),
-                                height: 1.25,
-                              ),
-                              children: [
-                                const TextSpan(
-                                  text: 'Havale yaparken açıklama kısmına ',
-                                ),
-                                TextSpan(
-                                  text: 'açıklama kodunuzu ($eftCode) ',
-                                  style: const TextStyle(fontWeight: FontWeight.w800),
-                                ),
-                                const TextSpan(
-                                  text: 'yazınız. Açıklama kodu girilmeyen transferler cariye otomatik işlenemez.',
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-
-              // 4. Nasıl Yüklenir?
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppColors.border),
                   boxShadow: AppColors.softShadow,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Nasıl Yüklenir?',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.help_outline_rounded, size: 14, color: AppColors.primary),
+                            SizedBox(width: 5),
+                            Text(
+                              'Nasıl Yüklenir?',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFF59E0B), width: 0.8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.warning_amber_rounded, size: 10, color: Color(0xFFB45309)),
+                              SizedBox(width: 3),
+                              Text(
+                                'Uyarı',
+                                style: TextStyle(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    _buildStepItem(
+                      stepNumber: '1',
+                      text: 'Banka uygulamanızdan Para Transferi / FAST / EFT adımına girip yukarıdaki IBAN\'ı yapıştırın.',
                     ),
                     const SizedBox(height: 3),
                     _buildStepItem(
-                      stepNumber: '1',
-                      text: 'Banka uygulamanızdan Para Transferi / FAST / EFT adımına girin.',
-                    ),
-                    const SizedBox(height: 2.5),
-                    _buildStepItem(
                       stepNumber: '2',
-                      text: 'Yukarıdaki IBAN ve Alıcı Adı bilgilerini kopyalayıp yapıştırın.',
-                    ),
-                    const SizedBox(height: 2.5),
-                    _buildStepItem(
-                      stepNumber: '3',
-                      text: 'Açıklama alanına SADECE "$eftCode" kodunuzu yazarak onaylayın.',
+                      text: 'Açıklama alanına SADECE "$eftCode" kodunuzu yazınız (otomatik eşleşme için şarttır).',
                       isBold: true,
                     ),
-                    const SizedBox(height: 2.5),
+                    const SizedBox(height: 3),
                     _buildStepItem(
-                      stepNumber: '4',
-                      text: 'FAST yüklemeleri birkaç dakika içinde otomatik olarak cüzdanınıza yansır.',
+                      stepNumber: '3',
+                      text: 'FAST yüklemeleri 7/24 birkaç dakika içinde otomatik olarak cüzdanınıza yansır.',
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 5),
 
-              // 5. Tümünü Kopyala Butonu
+              // 4. Tümünü Kopyala Butonu
               ElevatedButton.icon(
                 onPressed: () => _copyAll(context, eftCode),
-                icon: const Icon(Icons.copy_all_rounded, size: 16),
+                icon: const Icon(Icons.copy_all_rounded, size: 15),
                 label: const Text(
                   'Tüm Hesap Bilgilerini Kopyala',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
             ],
           ),
         ),
@@ -507,7 +481,7 @@ class TopUpBalanceScreen extends ConsumerWidget {
               fontSize: 10,
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
               color: isBold ? AppColors.textPrimary : AppColors.textSecondary,
-              height: 1.2,
+              height: 1.25,
             ),
           ),
         ),
