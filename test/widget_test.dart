@@ -3366,6 +3366,76 @@ void main() {
       expect(find.text('Kargo Tekliflerini ve Fiyatları Görmek İçin:'), findsOneWidget);
       expect(find.text('Lütfen gönderici depo, alıcı ve paket/desi bilgilerini giriniz.'), findsOneWidget);
     });
+
+    testWidgets('Kayitli urunler desi alanindan once konumlandirilir ve Kargo Bana Gelsin modunda kapida odeme, alici oder ve kontrollu teslimat gizlenir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                cities: [City(id: 34, name: 'İstanbul')],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // 1. Giden Kargo Modunda: "KAYITLI ÜRÜNLERDEN SEÇ" widget'ı "DESİ (KG) *" widget'ından önce gelir
+      final productSelectorFinder = find.text('KAYITLI ÜRÜNLERDEN SEÇ (İSTEĞE BAĞLI):');
+      final desiInputFinder = find.text('DESİ (KG) *');
+      expect(productSelectorFinder, findsOneWidget);
+      expect(desiInputFinder, findsOneWidget);
+
+      final productTop = tester.getTopLeft(productSelectorFinder).dy;
+      final desiTop = tester.getTopLeft(desiInputFinder).dy;
+      expect(productTop < desiTop, isTrue, reason: 'Kayıtlı ürünler seçimi Desi girişinden önce olmalıdır');
+
+      // 2. Giden Kargo modunda Standart, Kapıda Ödeme ve Alıcı Öder pill butonları mevcuttur
+      expect(find.text('Standart'), findsOneWidget);
+      expect(find.text('Kapıda Ödeme'), findsOneWidget);
+      expect(find.text('Alıcı Öder'), findsWidgets);
+      expect(find.text('Kontrollü Teslimat'), findsOneWidget);
+
+      // 3. Kargo Bana Gelsin moduna geç
+      await tester.tap(find.text('Kargo Bana Gelsin'));
+      await tester.pumpAndSettle();
+
+      // 4. Kargo Bana Gelsin modunda Kapıda Ödeme, Alıcı Öder ve Kontrollü Teslimat bulunmamalıdır
+      expect(find.text('Kapıda Ödeme'), findsNothing);
+      expect(find.text('Kontrollü Teslimat'), findsNothing);
+      expect(find.text('Standart Taşıma'), findsOneWidget);
+      expect(
+        find.text('Kargo Bana Gelsin gönderilerinde standart taşıma geçerlidir. Kapıda ödeme, alıcı öder ve kontrollü teslimat seçenekleri sunulmamaktadır.'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('Faz 4: Finans & TopUpBalanceScreen Testleri', () {

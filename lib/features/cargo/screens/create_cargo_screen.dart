@@ -130,18 +130,22 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
   }
 
   void _setDeliveryType(String type) {
+    final state = ref.read(createCargoProvider);
+    final isSend = state.direction == 'send' || state.direction == '1';
+    final effectiveType = isSend ? type : 'standard';
+
     setState(() {
-      _deliveryType = type;
+      _deliveryType = effectiveType;
     });
 
     final notifier = ref.read(createCargoProvider.notifier);
-    final state = ref.read(createCargoProvider);
-    if (type == 'standard') {
+    if (!isSend || effectiveType == 'standard') {
       notifier.updateAdditionalServices(
         payOnDelivery: false,
         receiverPays: false,
+        controlledDelivery: false,
       );
-    } else if (type == 'pod') {
+    } else if (effectiveType == 'pod') {
       final amt = AppFormatters.parseDouble(_podAmountController.text);
       final podAmt = amt > 0 ? amt : 850.0;
       notifier.updateAdditionalServices(
@@ -154,7 +158,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       if (_podAmountController.text.isEmpty) {
         _podAmountController.text = '850';
       }
-    } else if (type == 'receiver') {
+    } else if (effectiveType == 'receiver') {
       notifier.updateAdditionalServices(
         payOnDelivery: false,
         receiverPays: true,
@@ -1076,6 +1080,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
 
   // BÖLÜM 1: GÖNDERİ TÜRÜ & KAPIDA ÖDEME
   Widget _buildDeliveryTypeSection(CreateCargoState state, CreateCargoNotifier notifier) {
+    final isSend = state.direction == 'send' || state.direction == '1';
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1145,8 +1151,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           ),
           const SizedBox(height: 12),
 
-          // 3'lü Kalın Pill Butonlar
-          Container(
+          if (isSend) ...[
+            // 3'lü Kalın Pill Butonlar
+            Container(
             padding: const EdgeInsets.all(3.5),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
@@ -1463,10 +1470,52 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               ),
             ),
           ),
+        ] else ...[
+          // Kargo Bana Gelsin: Yalnızca Standart Taşıma
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Standart Taşıma',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Kargo Bana Gelsin gönderilerinde standart taşıma geçerlidir. Kapıda ödeme, alıcı öder ve kontrollü teslimat seçenekleri sunulmamaktadır.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   Widget _buildPillButton({
     required String title,
@@ -2652,7 +2701,78 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
           ),
           const SizedBox(height: 14),
 
-          // 1. DESİ (KG) Doğrudan Giriş Alanı + Hızlı Evrak Seçimi
+          // 1. Hızlı Kayıtlı Ürün Seçimi (İsteğe Bağlı - Seçildiğinde desi ve boyutlar otomatik doldurulur)
+          const Text(
+            'KAYITLI ÜRÜNLERDEN SEÇ (İSTEĞE BAĞLI):',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<ProductModel?>(
+                  key: ValueKey('product_${state.selectedProduct?.id}'),
+                  menuMaxHeight: 250,
+                  isExpanded: true,
+                  initialValue: matchedProduct,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem<ProductModel?>(
+                      value: null,
+                      child: Text('Özel / Manuel Paket Boyutu', overflow: TextOverflow.ellipsis),
+                    ),
+                    ...products.map((p) {
+                      return DropdownMenuItem<ProductModel?>(
+                        value: p,
+                        child: Text(
+                          '${p.name} (${p.desi.toStringAsFixed(1)} Desi - ${AppFormatters.formatCurrency(p.price)})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }),
+                  ],
+                  onChanged: (p) {
+                    if (p != null) {
+                      _populateFromProduct(p);
+                    } else {
+                      _clearSelectedProduct();
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                height: 48,
+                width: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                ),
+                child: IconButton(
+                  tooltip: 'Yeni Ürün Ekle',
+                  icon: const Icon(Icons.add_rounded, size: 22, color: Color(0xFF0F172A)),
+                  onPressed: () => AddEditProductModal.show(context, ref),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // 2. DESİ (KG) Doğrudan Giriş Alanı + Hızlı Evrak Seçimi
           const Text(
             'DESİ (KG) *',
             style: TextStyle(
@@ -2737,77 +2857,6 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               _buildDimensionInput('YÜKSEKLİK (CM)', _heightController, 'Örn: 10'),
               const SizedBox(width: 10),
               _buildDimensionInput('AĞIRLIK (KG)', _weightController, 'Örn: 1.0'),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // 2. Hızlı Kayıtlı Ürün Seçimi
-          const Text(
-            'KAYITLI ÜRÜNLERDEN SEÇ (İSTEĞE BAĞLI):',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<ProductModel?>(
-                  key: ValueKey('product_${state.selectedProduct?.id}'),
-                  menuMaxHeight: 250,
-                  isExpanded: true,
-                  initialValue: matchedProduct,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
-                    ),
-                  ),
-                  items: [
-                    const DropdownMenuItem<ProductModel?>(
-                      value: null,
-                      child: Text('Özel / Manuel Paket Boyutu', overflow: TextOverflow.ellipsis),
-                    ),
-                    ...products.map((p) {
-                      return DropdownMenuItem<ProductModel?>(
-                        value: p,
-                        child: Text(
-                          '${p.name} (${p.desi.toStringAsFixed(1)} Desi - ${AppFormatters.formatCurrency(p.price)})',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }),
-                  ],
-                  onChanged: (p) {
-                    if (p != null) {
-                      _populateFromProduct(p);
-                    } else {
-                      _clearSelectedProduct();
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                height: 48,
-                width: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
-                ),
-                child: IconButton(
-                  tooltip: 'Yeni Ürün Ekle',
-                  icon: const Icon(Icons.add_rounded, size: 22, color: Color(0xFF0F172A)),
-                  onPressed: () => AddEditProductModal.show(context, ref),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 14),
