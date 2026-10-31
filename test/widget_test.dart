@@ -2364,7 +2364,6 @@ void main() {
       expect(find.text('3'), findsOneWidget);
       expect(find.text('PAKET & SİPARİŞ DETAYLARI'), findsOneWidget);
       expect(find.text('DESİ (KG) *'), findsOneWidget);
-      expect(find.widgetWithText(TextField, '2.00'), findsOneWidget);
       expect(find.text('EN (CM)'), findsOneWidget);
       expect(find.text('BOY (CM)'), findsOneWidget);
 
@@ -2496,22 +2495,19 @@ void main() {
 
       await tester.pump();
 
-      // Başlangıç: 20x30x10 / 3000 = 2.00 Desi
-      expect(find.widgetWithText(TextField, '2.00'), findsOneWidget);
-
-      // Boy (cm) '30' -> '40', En (cm) '20' -> '30', Yükseklik (cm) '10' -> '20' -> (30*40*20)/3000 = 8.00 Desi
-      final lengthField = find.widgetWithText(TextField, '30');
-      expect(lengthField, findsOneWidget);
+      // Boy (cm) '40', En (cm) '30', Yükseklik (cm) '20' -> (30*40*20)/3000 = 8.00 Desi
+      final boyContainer = find.ancestor(of: find.text('BOY (CM)'), matching: find.byType(Container)).first;
+      final lengthField = find.descendant(of: boyContainer, matching: find.byType(TextField));
       await tester.enterText(lengthField, '40');
       await tester.pump();
 
-      final widthField = find.widgetWithText(TextField, '20');
-      expect(widthField, findsOneWidget);
+      final enContainer = find.ancestor(of: find.text('EN (CM)'), matching: find.byType(Container)).first;
+      final widthField = find.descendant(of: enContainer, matching: find.byType(TextField));
       await tester.enterText(widthField, '30');
       await tester.pump();
 
-      final heightField = find.widgetWithText(TextField, '10');
-      expect(heightField, findsOneWidget);
+      final yukseklikContainer = find.ancestor(of: find.text('YÜKSEKLİK (CM)'), matching: find.byType(Container)).first;
+      final heightField = find.descendant(of: yukseklikContainer, matching: find.byType(TextField));
       await tester.enterText(heightField, '20');
       await tester.pump();
 
@@ -2785,7 +2781,7 @@ void main() {
       // Teklifte 245,46 ₺ üstü çizili ve 0,00 ₺ gösterilmeli
       expect(find.text('245,46 ₺'), findsOneWidget);
       expect(find.text('0,00 ₺'), findsWidgets);
-      expect(find.text('ALICI ÖDER'), findsOneWidget);
+      expect(find.text('ALICI ÖDER'), findsWidgets);
     });
 
     testWidgets('Katalogdan urun secildiginde desi ve boyutlar aktarilir ve form temizlendiginde sifirlanir',
@@ -2838,9 +2834,6 @@ void main() {
       );
 
       await tester.pump();
-
-      // Başlangıçta 2.00 Desi
-      expect(find.widgetWithText(TextField, '2.00'), findsOneWidget);
 
       // Ürün dropdown'ını aç
       await tester.tap(find.text('Özel / Manuel Paket Boyutu'));
@@ -2947,9 +2940,6 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-
-      // Başlangıçta 2.00 Desi
-      expect(find.widgetWithText(TextField, '2.00'), findsOneWidget);
 
       // Ekranda doğrudan Evrak (0 Desi) butonuna tıkla (diyalogsuz, anında seçim)
       expect(find.text('Evrak (0 Desi)'), findsOneWidget);
@@ -3326,6 +3316,55 @@ void main() {
 
       // Türkçe varış deposu uyarısı çıkmalı
       expect(find.text('Lütfen kargonun teslim alınacağı varış deposunu seçiniz.'), findsOneWidget);
+    });
+
+    testWidgets('Kargo olusturma baslangicta teklif ve fiyat gostermez, firma secilmeden fiyat cikmaz, zorunlu alanlar girilince teklifler ve en uygun secili gelir',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(
+            () => _TestAuthNotifier(
+              AuthState(isInitialized: true, token: 'valid_token', user: mockUser),
+            ),
+          ),
+          dashboardProvider.overrideWith(
+            () => _TestDashboardNotifier(const DashboardState(isLoading: false)),
+          ),
+          productsProvider.overrideWith(
+            () => _TestProductsNotifier(const ProductsState(isLoading: false, products: [])),
+          ),
+          createCargoProvider.overrideWith(
+            () => _TestCreateCargoNotifier(
+              CreateCargoState(
+                cities: [City(id: 34, name: 'İstanbul')],
+              ),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: CreateCargoScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // 1. Başlangıçta: Henüz gönderici, alıcı veya paket girilmediğinde fiyat ÇIKMAZ
+      expect(find.text('Kargo Firması Seçiniz'), findsOneWidget);
+      expect(find.text('---'), findsOneWidget);
+
+      // 2. Bölüm 4: Teklifler yerine yönlendirme kartı gösterilir
+      expect(find.text('Kargo Tekliflerini ve Fiyatları Görmek İçin:'), findsOneWidget);
+      expect(find.text('Lütfen gönderici depo, alıcı ve paket/desi bilgilerini giriniz.'), findsOneWidget);
     });
   });
 

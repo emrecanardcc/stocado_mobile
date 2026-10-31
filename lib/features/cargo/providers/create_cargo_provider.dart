@@ -631,6 +631,13 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     state = state.copyWith(selectedOffer: offer);
   }
 
+  void clearOffers() {
+    state = state.copyWith(
+      offers: const [],
+      clearSelectedOffer: true,
+    );
+  }
+
   /// POST /cargos/offer (Fiyat Teklifi Hesapla)
   Future<void> calculateOffers() async {
     final auth = ref.read(authProvider);

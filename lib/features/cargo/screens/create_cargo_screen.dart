@@ -39,7 +39,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
   final TextEditingController _customerSearchController = TextEditingController();
 
   String _deliveryType = 'standard'; // 'standard', 'pod', 'receiver'
-  double _calculatedDesi = 2.0;
+  double _calculatedDesi = 0.0;
 
   @override
   void initState() {
@@ -50,31 +50,23 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       ref.read(productsProvider.notifier).loadProducts(reset: true);
       final cargoState = ref.read(createCargoProvider);
       final cargoNotifier = ref.read(createCargoProvider.notifier);
-      cargoNotifier.updatePackageDimensions(
-        width: 20,
-        length: 30,
-        height: 10,
-        weight: 1000,
-        directDesi: 2.0,
-      );
       if (cargoState.cities.isEmpty) {
         cargoNotifier.loadCities();
       }
       if (cargoState.senderAddresses.isEmpty) {
         cargoNotifier.loadAllAddresses();
       }
-      cargoNotifier.calculateOffers();
     });
   }
 
   void _setInitialDefaults() {
     _deliveryType = 'standard';
-    _widthController.text = '20';
-    _lengthController.text = '30';
-    _heightController.text = '10';
-    _weightController.text = '1';
-    _desiController.text = '2.00';
-    _calculatedDesi = 2.0;
+    _widthController.clear();
+    _lengthController.clear();
+    _heightController.clear();
+    _weightController.clear();
+    _desiController.clear();
+    _calculatedDesi = 0.0;
   }
 
   @override
@@ -94,6 +86,47 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     _podAmountController.dispose();
     _customerSearchController.dispose();
     super.dispose();
+  }
+
+  bool _canCalculateOffers(CreateCargoState state) {
+    // 1. Gönderici kontrolü
+    final isSend = state.direction == 'send' || state.direction == '1';
+    final hasSender = isSend
+        ? state.selectedSenderAddress != null
+        : (state.selectedRecipientAddress != null ||
+            (_nameController.text.trim().isNotEmpty &&
+                (state.selectedCity != null || _addressController.text.trim().isNotEmpty)));
+    if (!hasSender) return false;
+
+    // 2. Alıcı kontrolü
+    final hasReceiver = isSend
+        ? (state.selectedRecipientAddress != null ||
+            (_nameController.text.trim().isNotEmpty &&
+                (state.selectedCity != null || _addressController.text.trim().isNotEmpty)))
+        : state.selectedSenderAddress != null;
+    if (!hasReceiver) return false;
+
+    // 3. Paket / Desi / Ürün kontrolü
+    final hasPackage = state.selectedProduct != null ||
+        _desiController.text.trim().isNotEmpty ||
+        state.desi > 0 ||
+        _calculatedDesi > 0 ||
+        (AppFormatters.parseDouble(_widthController.text) > 0 &&
+            AppFormatters.parseDouble(_lengthController.text) > 0 &&
+            AppFormatters.parseDouble(_heightController.text) > 0);
+    if (!hasPackage) return false;
+
+    return true;
+  }
+
+  void _checkAndCalculateOffers(CreateCargoState state, CreateCargoNotifier notifier) {
+    if (_canCalculateOffers(state)) {
+      notifier.calculateOffers();
+    } else {
+      if (state.offers.isNotEmpty || state.selectedOffer != null) {
+        notifier.clearOffers();
+      }
+    }
   }
 
   void _setDeliveryType(String type) {
@@ -127,7 +160,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
         receiverPays: true,
       );
     }
-    notifier.calculateOffers();
+    _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
   }
 
   void _calculateDesi() {
@@ -144,7 +177,9 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       _calculatedDesi = rounded >= 0 ? rounded : 0.0;
     });
 
-    _desiController.text = _calculatedDesi.toStringAsFixed(2);
+    if (_calculatedDesi > 0 || (w > 0 && l > 0 && h > 0)) {
+      _desiController.text = _calculatedDesi.toStringAsFixed(2);
+    }
     final notifier = ref.read(createCargoProvider.notifier);
     notifier.updatePackageDimensions(
       width: w,
@@ -153,7 +188,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
       weight: weightKg * 1000,
       directDesi: _calculatedDesi,
     );
-    notifier.calculateOffers();
+    _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
   }
 
   void _populateFromProduct(ProductModel product) {
@@ -194,13 +229,13 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     _orderNumberController.clear();
     _podAmountController.clear();
     notifier.updatePackageDimensions(
-      width: 20,
-      length: 30,
-      height: 10,
-      weight: 1000,
-      directDesi: 2.0,
+      width: 0,
+      length: 0,
+      height: 0,
+      weight: 0,
+      directDesi: 0.0,
     );
-    notifier.calculateOffers();
+    _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
   }
 
   void _clearAllFormFields() {
@@ -214,6 +249,8 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     _podAmountController.clear();
     _customerSearchController.clear();
     _setInitialDefaults();
+    final notifier = ref.read(createCargoProvider.notifier);
+    notifier.clearOffers();
   }
 
   void _onDirectDesiChanged(String val) {
@@ -225,7 +262,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
     notifier.updatePackageDimensions(
       directDesi: _calculatedDesi,
     );
-    notifier.calculateOffers();
+    _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
   }
 
   void _showWarning(String message, {bool isError = false}) {
@@ -739,7 +776,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                                     _addressController.text = addr.details;
                                     _postalCodeController.text = addr.postalCode ?? '';
                                     await notifier.selectRecipientAddress(addr);
-                                    await notifier.calculateOffers();
+                                    _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                                     if (ctx.mounted) {
                                       Navigator.pop(ctx);
                                     }
@@ -863,7 +900,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                               borderRadius: BorderRadius.circular(14),
                               onTap: () {
                                 notifier.setSenderAddress(addr);
-                                notifier.calculateOffers();
+                                _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                                 Navigator.pop(ctx);
                               },
                               child: Padding(
@@ -1229,7 +1266,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                           onChanged: (val) {
                             final parsed = AppFormatters.parseDouble(val);
                             notifier.updateAdditionalServices(payOnDeliveryAmount: parsed);
-                            notifier.calculateOffers();
+                            _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                           },
                         ),
                       ],
@@ -1256,7 +1293,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                           isSelected: state.payOnDeliveryType == 'cash',
                           onTap: () {
                             notifier.updateAdditionalServices(payOnDeliveryType: 'cash');
-                            notifier.calculateOffers();
+                            _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                           },
                         ),
                       ),
@@ -1267,7 +1304,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                           isSelected: state.payOnDeliveryType == 'credit_card',
                           onTap: () {
                             notifier.updateAdditionalServices(payOnDeliveryType: 'credit_card');
-                            notifier.calculateOffers();
+                            _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                           },
                         ),
                       ),
@@ -1286,7 +1323,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                       borderRadius: BorderRadius.circular(12),
                       onTap: () {
                         notifier.updateAdditionalServices(canOffsetCargoFee: !state.canOffsetCargoFee);
-                        notifier.calculateOffers();
+                        _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1303,7 +1340,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                 onChanged: (val) {
                                   notifier.updateAdditionalServices(canOffsetCargoFee: val ?? false);
-                                  notifier.calculateOffers();
+                                  _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                                 },
                               ),
                             ),
@@ -1359,7 +1396,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               borderRadius: BorderRadius.circular(12),
               onTap: () {
                 notifier.updateAdditionalServices(controlledDelivery: !state.controlledDelivery);
-                notifier.calculateOffers();
+                _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
               },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1418,7 +1455,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       onChanged: (val) {
                         notifier.updateAdditionalServices(controlledDelivery: val);
-                        notifier.calculateOffers();
+                        _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                       },
                     ),
                   ],
@@ -1536,7 +1573,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               onTap: () {
                 if (!isSend) {
                   notifier.setDirection('send');
-                  notifier.calculateOffers();
+                  _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                 }
               },
               borderRadius: BorderRadius.circular(12),
@@ -1592,7 +1629,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   if (_deliveryType != 'standard') {
                     _setDeliveryType('standard');
                   }
-                  notifier.calculateOffers();
+                  _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                 }
               },
               borderRadius: BorderRadius.circular(12),
@@ -1919,7 +1956,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               InkWell(
                 onTap: () {
                   notifier.setSenderAddress(null);
-                  notifier.calculateOffers();
+                  _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                 },
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -2238,7 +2275,10 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           backgroundColor: Colors.white,
                         ),
-                        onPressed: () => notifier.clearSelectedRecipientAddress(),
+                        onPressed: () {
+                          notifier.clearSelectedRecipientAddress();
+                          _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
+                        },
                         icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF475569)),
                         label: const Text(
                           'Manuel Düzenle',
@@ -2291,7 +2331,10 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                         borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
                       ),
                     ),
-                    onChanged: (val) => notifier.updateRecipientInfo(name: val, clearSelectedRecipient: true),
+                    onChanged: (val) {
+                      notifier.updateRecipientInfo(name: val, clearSelectedRecipient: true);
+                      _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
+                    },
                   ),
                 ],
               ),
@@ -2379,7 +2422,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                     }).toList(),
                     onChanged: (city) {
                       notifier.selectCity(city);
-                      notifier.calculateOffers();
+                      _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                     },
                   ),
                 ],
@@ -2430,7 +2473,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                         ? null
                         : (dist) {
                             notifier.selectDistrict(dist);
-                            notifier.calculateOffers();
+                            _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
                           },
                   ),
                 ],
@@ -2518,7 +2561,7 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
             directDesi: desi,
           );
         }
-        notifier.calculateOffers();
+        _checkAndCalculateOffers(ref.read(createCargoProvider), notifier);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -3010,24 +3053,73 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
               ),
             )
           else if (state.offers.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(20),
-              alignment: Alignment.center,
-              child: Column(
-                children: [
-                  const Text(
-                    'Tarife bulunamadı.',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF64748B)),
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: () => notifier.calculateOffers(),
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Teklifleri Yenile', style: TextStyle(fontWeight: FontWeight.w900)),
-                  ),
-                ],
-              ),
-            )
+            if (!_canCalculateOffers(state))
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEDE9FE),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.local_shipping_outlined,
+                        color: Color(0xFF7C3AED),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Kargo Tekliflerini ve Fiyatları Görmek İçin:',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Lütfen gönderici depo, alıcı ve paket/desi bilgilerini giriniz.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(20),
+                alignment: Alignment.center,
+                child: Column(
+                  children: [
+                    const Text(
+                      'Uygun kargo teklifi bulunamadı.',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () => notifier.calculateOffers(),
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      label: const Text('Teklifleri Yenile', style: TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+                  ],
+                ),
+              )
           else
             ListView.separated(
               shrinkWrap: true,
@@ -3235,10 +3327,14 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
 
   // ALT SABİT ONAY BARI
   Widget _buildStickyBottomBar(BuildContext context, CreateCargoState state, CreateCargoNotifier notifier) {
-    final carrierTitle = state.selectedOffer != null
+    final bool hasSelectedOffer = state.selectedOffer != null;
+    final carrierTitle = hasSelectedOffer
         ? state.selectedOffer!.cargoCompany.title
-        : 'Firma Seçiniz';
+        : 'Kargo Firması Seçiniz';
     final totalPrice = state.receiverPays ? 0.0 : (state.selectedOffer?.price ?? 0.0);
+    final String priceText = hasSelectedOffer
+        ? AppFormatters.formatCurrency(totalPrice)
+        : '---';
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -3281,10 +3377,10 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                         carrierTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
+                          color: hasSelectedOffer ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
                         ),
                       ),
                     ],
@@ -3296,11 +3392,13 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Text(
-                        'TOPLAM KARGO BEDELİ',
+                      Text(
+                        hasSelectedOffer && state.receiverPays
+                            ? 'ALICI ÖDER'
+                            : 'TOPLAM KARGO BEDELİ',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w900,
                           color: Color(0xFF64748B),
@@ -3312,11 +3410,11 @@ class _CreateCargoScreenState extends ConsumerState<CreateCargoScreen> {
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerRight,
                         child: Text(
-                          AppFormatters.formatCurrency(totalPrice),
-                          style: const TextStyle(
+                          priceText,
+                          style: TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF0F172A),
+                            color: hasSelectedOffer ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
                             letterSpacing: -0.5,
                           ),
                         ),
