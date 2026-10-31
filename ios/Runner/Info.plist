@@ -70,6 +70,7 @@
 			<string>http</string>
 			<string>tel</string>
 			<string>mailto</string>
+			<string>whatsapp</string>
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>

@@ -424,7 +424,8 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     String? responsiblePersonLastname,
     String? responsiblePersonTckn,
   }) async {
-    final accountId = ref.read(authProvider).accountId;
+    final auth = ref.read(authProvider);
+    final accountId = auth.accountId ?? auth.user?.accounts.firstOrNull?.id;
     if (accountId == null || accountId.isEmpty) {
       return AddressCreationResult(
         isSuccess: false,
@@ -479,7 +480,8 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
     required String details,
     String? postalCode,
   }) async {
-    final accountId = ref.read(authProvider).accountId;
+    final auth = ref.read(authProvider);
+    final accountId = auth.accountId ?? auth.user?.accounts.firstOrNull?.id;
     if (accountId == null || accountId.isEmpty) {
       return AddressCreationResult(
         isSuccess: false,
@@ -662,6 +664,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
 
     final request = CargoCalculateRequest(
       accountId: accountId,
+      cargoCompanyId: state.selectedOffer?.cargoCompany.id?.toString(),
       localId: state.selectedSenderAddress?.id,
       foreignId: foreignId,
       package: PackageData(
@@ -676,7 +679,7 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       payOnDeliveryType: state.payOnDelivery ? state.payOnDeliveryType : 1,
       pastPayOnDelivery: state.payOnDelivery ? state.canOffsetCargoFee : false,
       podReceiverPays: state.receiverPays,
-      receiverPays: false, // Web Paritesi: Kapıda Alıcı Ödemeli için yalnızca pod_receiver_pays true gönderilir
+      receiverPays: false, // Web Paritesi: Kapıda Alıcı Ödemeli için pod_receiver_pays=true ve receiver_pays=false
       controlledDelivery: state.controlledDelivery,
       status: state.isDraft ? 0 : 1,
       direction: state.direction == 'receive' || state.direction == '2' ? 2 : 1,
@@ -833,11 +836,27 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       effectiveHeight = double.parse(side.toStringAsFixed(2));
     }
 
+    dynamic parsedAccId = accountId;
+    if (parsedAccId is String) {
+      final p = int.tryParse(parsedAccId);
+      if (p != null) parsedAccId = p;
+    }
+    dynamic parsedLocalId = state.selectedSenderAddress!.id;
+    if (parsedLocalId is String) {
+      final p = int.tryParse(parsedLocalId);
+      if (p != null) parsedLocalId = p;
+    }
+    dynamic parsedForeignId = foreignId;
+    if (parsedForeignId is String) {
+      final p = int.tryParse(parsedForeignId);
+      if (p != null) parsedForeignId = p;
+    }
+
     final payload = {
-      "account_id": accountId,
+      "account_id": parsedAccId,
       "cargo_company_id": cargoCompanyId,
-      "local_id": state.selectedSenderAddress!.id,
-      "foreign_id": foreignId,
+      "local_id": parsedLocalId,
+      "foreign_id": parsedForeignId,
       "package": {
         "desi": double.parse(effectiveDesi.toStringAsFixed(2)),
         "length": effectiveLength,
@@ -851,14 +870,14 @@ class CreateCargoNotifier extends Notifier<CreateCargoState> {
       "pay_on_delivery_type": state.payOnDelivery ? (state.payOnDeliveryType == 'cash' ? 1 : 2) : 1,
       "past_pay_on_delivery": state.payOnDelivery ? state.canOffsetCargoFee : false,
       "pod_receiver_pays": state.receiverPays,
-      "receiver_pays": state.receiverPays,
+      "receiver_pays": false,
       "controlled_delivery": state.controlledDelivery,
       "status": state.isDraft ? 0 : 1, // 0 = Taslak, 1 = Aktif
       if (state.orderNumber.trim().isNotEmpty) "order_number": state.orderNumber.trim(),
       "description": state.description.isNotEmpty ? state.description : 'Mobil Gönderi',
       "create_failed": true,
       "source": "app",
-      if (state.selectedProduct != null) "product_id": state.selectedProduct!.id,
+      if (state.selectedProduct != null) "product_id": int.tryParse(state.selectedProduct!.id) ?? state.selectedProduct!.id,
       "quantity": 1,
     };
 

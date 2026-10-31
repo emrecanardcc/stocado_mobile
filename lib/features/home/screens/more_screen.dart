@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/widgets/account_deletion_dialog.dart';
 import '../../dashboard/screens/top_up_balance_screen.dart';
 import '../../pricing/screens/pricing_screen.dart';
 import '../../products/screens/products_screen.dart';
@@ -266,11 +267,28 @@ class MoreScreen extends ConsumerWidget {
             const SizedBox(height: 10),
 
             _buildMenuItem(
+              icon: Icons.support_agent_rounded,
+              title: 'Müşteri Destek Merkezi',
+              subtitle: 'WhatsApp hattı (+90 553 448 81 92) üzerinden 7/24 destek',
+              iconColor: const Color(0xFF25D366),
+              onTap: () => launchSupportWhatsApp(context, customMessage: 'Merhaba, Stocado destek almak istiyorum.'),
+            ),
+
+            _buildMenuItem(
+              icon: Icons.person_remove_outlined,
+              title: 'Hesabımı Sil',
+              subtitle: 'Hesap kapatma ve kişisel verileri silme talebi',
+              iconColor: AppColors.error,
+              textColor: AppColors.error,
+              onTap: () => showAccountDeletionDialog(context),
+            ),
+
+            _buildMenuItem(
               icon: Icons.logout_rounded,
               title: 'Çıkış Yap',
               subtitle: 'Mevcut oturumunuzu güvenle sonlandırın',
-              iconColor: AppColors.error,
-              textColor: AppColors.error,
+              iconColor: const Color(0xFF64748B),
+              textColor: const Color(0xFF0E1E38),
               onTap: () => _showLogoutDialog(context, ref),
             ),
 

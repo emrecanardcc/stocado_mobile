@@ -159,7 +159,7 @@ class CargoModel {
   int? get effectiveTransactionType => latestTransaction?.type ?? latestTransactionType;
 
   double get effectiveDesi =>
-      (validDesi != null && validDesi! > 0) ? validDesi! : (userDesi ?? 1.0);
+      (validDesi != null && validDesi! >= 0) ? validDesi! : (userDesi ?? 0.0);
 
   double get payOnDeliveryNetAmount =>
       (payOnDeliveryAmount ?? 0) - (payOnDeliveryCost ?? 0);

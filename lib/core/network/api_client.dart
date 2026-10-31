@@ -37,10 +37,14 @@ class ApiClient {
 
     final Map<String, String> stringParams = {};
     queryParameters.forEach((key, value) {
-      if (value != null) {
-        stringParams[key] = value.toString();
+      if (value != null && value.toString().trim().isNotEmpty) {
+        stringParams[key] = value.toString().trim();
       }
     });
+
+    if (stringParams.isEmpty) {
+      return baseUri;
+    }
 
     return baseUri.replace(queryParameters: stringParams);
   }

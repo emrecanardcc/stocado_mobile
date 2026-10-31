@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/widgets/account_deletion_dialog.dart';
 import '../../cargo/providers/cargo_list_provider.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
 import '../../dashboard/widgets/dashboard_balance_hero_card.dart';
@@ -90,12 +91,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -107,32 +109,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               CircleAvatar(
-                radius: 28,
+                radius: 24,
                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 child: Text(
                   user?.firstName.isNotEmpty == true ? user!.firstName[0].toUpperCase() : 'S',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
                 user != null ? '${user.firstName} ${user.lastName}' : 'Stocado Kullanıcısı',
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF0E1E38)),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0E1E38)),
               ),
               if (companyName.isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(
                   companyName,
-                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
                 ),
               ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                leading: const Icon(Icons.logout_rounded, color: AppColors.error),
-                title: const Text('Oturumu Kapat', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                leading: const Icon(Icons.support_agent_rounded, color: Color(0xFF25D366), size: 22),
+                title: const Text('Müşteri Desteği (WhatsApp)', style: TextStyle(color: Color(0xFF0E1E38), fontWeight: FontWeight.w600, fontSize: 13.5)),
+                subtitle: const Text('+90 553 448 81 92 hattı ile iletişime geçin', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  launchSupportWhatsApp(context, customMessage: 'Merhaba, Stocado destek almak istiyorum.');
+                },
+              ),
+              ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                leading: const Icon(Icons.person_remove_outlined, color: AppColors.error, size: 22),
+                title: const Text('Hesabımı Sil', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600, fontSize: 13.5)),
+                subtitle: const Text('Hesap kapatma ve veri silme talebi', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showAccountDeletionDialog(context);
+                },
+              ),
+              ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                leading: const Icon(Icons.logout_rounded, color: Color(0xFF64748B), size: 22),
+                title: const Text('Oturumu Kapat', style: TextStyle(color: Color(0xFF0E1E38), fontWeight: FontWeight.w600, fontSize: 13.5)),
                 onTap: () {
                   Navigator.pop(ctx);
                   ref.read(authProvider.notifier).logout();

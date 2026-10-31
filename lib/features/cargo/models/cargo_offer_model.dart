@@ -129,6 +129,7 @@ class PackageData {
 
 class CargoCalculateRequest {
   final dynamic accountId;
+  final String? cargoCompanyId;
   final dynamic localId;
   final dynamic foreignId;
   final PackageData package;
@@ -146,6 +147,7 @@ class CargoCalculateRequest {
 
   CargoCalculateRequest({
     required this.accountId,
+    this.cargoCompanyId,
     this.localId,
     this.foreignId,
     required this.package,
@@ -186,7 +188,7 @@ class CargoCalculateRequest {
 
     return {
       'account_id': accId,
-      'cargo_company_id': '',
+      if (cargoCompanyId != null && cargoCompanyId!.isNotEmpty) 'cargo_company_id': cargoCompanyId,
       if (lId != null && (lId is! String || lId.isNotEmpty)) 'local_id': lId,
       if (fId != null && (fId is! String || fId.isNotEmpty)) 'foreign_id': fId,
       'package': package.toJson(),

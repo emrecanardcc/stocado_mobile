@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../providers/auth_provider.dart';
 
@@ -94,6 +95,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  Future<void> _openRegistrationPage() async {
+    const registerUrl = 'https://portal.stocado.com/tr/auth/register/';
+    final uri = Uri.parse(registerUrl);
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        await launchUrl(uri);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kayıt sayfası açılamadı. Lütfen https://portal.stocado.com/tr/auth/register/ adresini tarayıcınızda açınız.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
     }
   }
 
@@ -243,6 +264,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     Text('Giriş Yap', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                                   ],
                                 ),
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Kayıt Ol Yönlendirmesi (Web Portalı)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Hesabınız yok mu?',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            TextButton(
+                              key: const ValueKey('login_register_button'),
+                              onPressed: _openRegistrationPage,
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Kayıt Ol',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
