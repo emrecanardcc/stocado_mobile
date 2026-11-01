@@ -278,25 +278,36 @@ class CargoCompanyLogo extends StatelessWidget {
         );
 
       case CargoCompanyType.surat:
-        final fs = h * 0.82;
+        final fs = h * 0.84;
         return Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CustomPaint(
-              size: Size(h * 0.86, h * 0.86),
+              size: Size(h * 1.15, h * 0.92),
               painter: const SuratEmblemPainter(),
             ),
-            SizedBox(width: h * 0.2),
+            SizedBox(width: h * 0.12),
             Text(
-              'SURAT',
+              'surat',
               style: TextStyle(
                 fontFamily: 'Roboto',
-                fontSize: fs,
+                fontSize: fs * 0.94,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFFE53D2F),
+                letterSpacing: -0.4,
+                height: 1.0,
+              ),
+            ),
+            Text(
+              'kargo',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: fs * 0.94,
                 fontWeight: FontWeight.w900,
                 fontStyle: FontStyle.italic,
-                color: const Color(0xFF00387A),
-                letterSpacing: 0.6,
+                color: const Color(0xFF0D519E),
+                letterSpacing: -0.4,
                 height: 1.0,
               ),
             ),
@@ -566,43 +577,49 @@ class CargoCompanyLogo extends StatelessWidget {
   }
 }
 
-/// Sürat Kargo'nun kurumsal dinamik paralelkenar amblemi
+/// Sürat Kargo'nun kurumsal çift kanatlı (üst kırmızı, alt mavi) hız amblemi
 class SuratEmblemPainter extends CustomPainter {
-  final Color color;
-  const SuratEmblemPainter({this.color = const Color(0xFFE30613)});
+  final Color redColor;
+  final Color blueColor;
+
+  const SuratEmblemPainter({
+    this.redColor = const Color(0xFFE53D2F),
+    this.blueColor = const Color(0xFF0D519E),
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    final paint = Paint()
-      ..color = color
+    // 1. Üst Kırmızı Dinamik Kanat (Swoosh)
+    final redPaint = Paint()
+      ..color = redColor
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
 
-    final path = Path()
-      ..moveTo(w * 0.28, 0)
-      ..lineTo(w * 0.95, 0)
-      ..lineTo(w * 0.72, h)
-      ..lineTo(w * 0.05, h)
+    final redPath = Path()
+      ..moveTo(w * 0.99, 0)
+      ..cubicTo(w * 0.72, h * 0.015, w * 0.45, h * 0.09, w * 0.116, h * 0.314)
+      ..lineTo(w * 0.28, h * 0.443)
+      ..cubicTo(w * 0.38, h * 0.34, w * 0.65, h * 0.17, w * 0.98, h * 0.028)
       ..close();
 
-    canvas.drawPath(path, paint);
+    canvas.drawPath(redPath, redPaint);
 
-    final whitePaint = Paint()
-      ..color = Colors.white
+    // 2. Alt Mavi Dinamik Kanat (Swoosh)
+    final bluePaint = Paint()
+      ..color = blueColor
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
 
-    final cut = Path()
-      ..moveTo(w * 0.44, 0)
-      ..lineTo(w * 0.54, 0)
-      ..lineTo(w * 0.34, h)
-      ..lineTo(w * 0.24, h)
+    final bluePath = Path()
+      ..moveTo(w * 0.92, h * 0.314)
+      ..cubicTo(w * 0.68, h * 0.20, w * 0.42, h * 0.40, w * 0.012, h * 0.971)
+      ..cubicTo(w * 0.18, h * 0.76, w * 0.52, h * 0.51, w * 0.92, h * 0.314)
       ..close();
 
-    canvas.drawPath(cut, whitePaint);
+    canvas.drawPath(bluePath, bluePaint);
   }
 
   @override

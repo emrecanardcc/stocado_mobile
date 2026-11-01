@@ -1614,7 +1614,7 @@ void main() {
 
       expect(find.text('hepsi'), findsOneWidget);
       expect(find.text('Ptt'), findsOneWidget);
-      expect(find.text('SURAT'), findsOneWidget);
+      expect(find.text('surat'), findsOneWidget);
       expect(find.text('kolay gelsin'), findsOneWidget);
       expect(find.text('UPS'), findsOneWidget);
       expect(find.text('yurtiçi'), findsOneWidget);
