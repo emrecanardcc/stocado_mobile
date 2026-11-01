@@ -11,12 +11,16 @@ class CargoListState {
   final List<CargoModel> cargos;
   final List<CargoModel> recentCargos;
   final PaginationMeta? meta;
-  final String activeTab; // 'all', 'pod', 'drafts'
+  final String activeTab; // 'all', 'delivered', 'sorunlu', 'yolda', 'drafts', 'pod'
   final String searchQuery;
   final String? errorMessage;
   final String? selectedCargoCompany; // 'ptt', 'surat', 'yurtici', 'hepsijet', 'ups' or null
   final String? selectedStatus; // '0', '1', '2', '3', '4' or null
   final String sortDirection; // 'desc' | 'asc'
+  final int? allCount;
+  final int? inTransitCount;
+  final int? deliveredCount;
+  final int? problematicCount;
   final int? draftCount;
 
   const CargoListState({
@@ -31,6 +35,10 @@ class CargoListState {
     this.selectedCargoCompany,
     this.selectedStatus,
     this.sortDirection = 'desc',
+    this.allCount,
+    this.inTransitCount,
+    this.deliveredCount,
+    this.problematicCount,
     this.draftCount,
   });
 
@@ -53,6 +61,10 @@ class CargoListState {
     String? selectedCargoCompany,
     String? selectedStatus,
     String? sortDirection,
+    int? allCount,
+    int? inTransitCount,
+    int? deliveredCount,
+    int? problematicCount,
     int? draftCount,
     bool clearCompany = false,
     bool clearStatus = false,
@@ -69,6 +81,10 @@ class CargoListState {
       selectedCargoCompany: clearCompany ? null : (selectedCargoCompany ?? this.selectedCargoCompany),
       selectedStatus: clearStatus ? null : (selectedStatus ?? this.selectedStatus),
       sortDirection: sortDirection ?? this.sortDirection,
+      allCount: allCount ?? this.allCount,
+      inTransitCount: inTransitCount ?? this.inTransitCount,
+      deliveredCount: deliveredCount ?? this.deliveredCount,
+      problematicCount: problematicCount ?? this.problematicCount,
       draftCount: draftCount ?? this.draftCount,
     );
   }
@@ -180,14 +196,27 @@ class CargoListNotifier extends Notifier<CargoListState> {
     // Seçili sıralama kuralına göre sırala
     resolved.sort((a, b) => CargoModel.compareCargos(a, b, sortDirection: state.sortDirection));
 
+    int? currentAllCount = state.allCount;
+    int? currentInTransitCount = state.inTransitCount;
+    int? currentDeliveredCount = state.deliveredCount;
+    int? currentProblematicCount = state.problematicCount;
     int? currentDraftCount = state.draftCount;
-    if (state.activeTab == 'drafts') {
-      currentDraftCount = response.meta?.total ?? response.data.length;
-    } else {
-      final inListDrafts = resolved.where((c) => c.status == 0).length;
-      if (currentDraftCount == null && inListDrafts > 0) {
-        currentDraftCount = inListDrafts;
-      }
+
+    final totalFromMeta = response.meta?.total ?? response.data.length;
+
+    if (state.activeTab == 'all' &&
+        state.searchQuery.isEmpty &&
+        state.selectedCargoCompany == null &&
+        (state.selectedStatus == null || state.selectedStatus == 'all')) {
+      currentAllCount = totalFromMeta;
+    } else if (state.activeTab == 'yolda') {
+      currentInTransitCount = totalFromMeta;
+    } else if (state.activeTab == 'delivered' || state.activeTab == 'teslim') {
+      currentDeliveredCount = totalFromMeta;
+    } else if (state.activeTab == 'sorunlu') {
+      currentProblematicCount = totalFromMeta;
+    } else if (state.activeTab == 'drafts') {
+      currentDraftCount = totalFromMeta;
     }
 
     final bool isUnfiltered = state.activeTab == 'all' &&
@@ -204,6 +233,10 @@ class CargoListNotifier extends Notifier<CargoListState> {
           : (state.recentCargos.isNotEmpty ? state.recentCargos : resolved),
       meta: response.meta,
       errorMessage: response.errorMessage,
+      allCount: currentAllCount,
+      inTransitCount: currentInTransitCount,
+      deliveredCount: currentDeliveredCount,
+      problematicCount: currentProblematicCount,
       draftCount: currentDraftCount,
     );
 
@@ -269,13 +302,15 @@ class CargoListNotifier extends Notifier<CargoListState> {
     }
   }
 
-  /// Sekme Değiştirme ('all', 'yolda', 'sorunlu', 'pod', 'drafts')
+  /// Sekme Değiştirme ('all', 'delivered', 'sorunlu', 'yolda', 'drafts', 'pod')
   void setTab(String tab) {
     String? status;
-    if (tab == 'yolda') {
-      status = '1';
+    if (tab == 'delivered' || tab == 'teslim') {
+      status = '2';
     } else if (tab == 'sorunlu') {
       status = '4';
+    } else if (tab == 'yolda') {
+      status = '1';
     } else if (tab == 'drafts') {
       status = '0';
     } else if (tab == 'all') {
@@ -302,6 +337,8 @@ class CargoListNotifier extends Notifier<CargoListState> {
       String newTab = 'all';
       if (status == '1' || status == 'active' || status == 'yolda') {
         newTab = 'yolda';
+      } else if (status == '2' || status == 'delivered' || status == 'teslim' || status == 'completed') {
+        newTab = 'delivered';
       } else if (status == '4' || status == 'failed' || status == 'problematic' || status == 'sorunlu') {
         newTab = 'sorunlu';
       } else if (status == '0' || status == 'drafts') {
@@ -344,8 +381,12 @@ class CargoListNotifier extends Notifier<CargoListState> {
       String newTab = state.activeTab;
       if (status == '1' || status == 'active' || status == 'yolda') {
         newTab = 'yolda';
+      } else if (status == '2' || status == 'delivered' || status == 'teslim' || status == 'completed') {
+        newTab = 'delivered';
       } else if (status == '4' || status == 'failed' || status == 'problematic' || status == 'sorunlu') {
         newTab = 'sorunlu';
+      } else if (status == '0' || status == 'drafts') {
+        newTab = 'drafts';
       } else if (status == null || status == 'all') {
         newTab = 'all';
       }

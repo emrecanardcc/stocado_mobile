@@ -311,8 +311,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       DashboardPackageStatusRow(
                         stats: stats,
                         onStatusTap: (filter) {
-                          ref.read(cargoListProvider.notifier).setTab('all');
-                          ref.read(cargoListProvider.notifier).setStatusFilter(filter);
+                          if (filter == '0') {
+                            ref.read(cargoListProvider.notifier).setTab('drafts');
+                          } else if (filter == '1') {
+                            ref.read(cargoListProvider.notifier).setTab('yolda');
+                          } else if (filter == '2') {
+                            ref.read(cargoListProvider.notifier).setTab('delivered');
+                          } else if (filter == '4') {
+                            ref.read(cargoListProvider.notifier).setTab('sorunlu');
+                          } else {
+                            ref.read(cargoListProvider.notifier).setTab('all');
+                          }
                           ref.read(mainNavigationProvider.notifier).selectTab(1);
                         },
                       ),

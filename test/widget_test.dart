@@ -1335,19 +1335,22 @@ void main() {
       expect(container.read(cargoListProvider).activeTab, 'all');
       expect(container.read(cargoListProvider).selectedStatus, isNull);
 
-      // Durum kutusu tıklaması Tab 1'e geçmeli ve filtreyi ayarlamalı
+      // Durum kutusu tıklaması Tab 1'e geçmeli ve ilgili sekmeyi ve filtreyi ayarlamalı
       await tester.tap(find.text('Hazırlanan'));
       expect(container.read(mainNavigationProvider).tabIndex, 1);
-      expect(container.read(cargoListProvider).activeTab, 'all');
+      expect(container.read(cargoListProvider).activeTab, 'drafts');
       expect(container.read(cargoListProvider).selectedStatus, '0');
 
       await tester.tap(find.text('Yolda'));
+      expect(container.read(cargoListProvider).activeTab, 'yolda');
       expect(container.read(cargoListProvider).selectedStatus, '1');
 
       await tester.tap(find.text('Teslim'));
+      expect(container.read(cargoListProvider).activeTab, 'delivered');
       expect(container.read(cargoListProvider).selectedStatus, '2');
 
       await tester.tap(find.text('İade'));
+      expect(container.read(cargoListProvider).activeTab, 'sorunlu');
       expect(container.read(cargoListProvider).selectedStatus, '4');
     });
 
@@ -1812,14 +1815,17 @@ void main() {
       // 2. Arama Kutusu
       expect(find.text('Ad, telefon veya barkod ara'), findsOneWidget);
 
-      // 3. 4 Kompakt Pill Tab ve Sayaclar (Mockup uyumu: Tumu 252, Yolda 28, Sorunlu 3, Taslak 0)
+      // 3. 5 Kompakt Pill Tab ve Sayaclar (Tumu 252, Teslim Edilen 206, Sorunlu Olan 3, Yolda Olan 28, Taslak 5)
       expect(find.text('Tümü'), findsOneWidget);
       expect(find.text('252'), findsOneWidget);
-      expect(find.text('Yolda'), findsNWidgets(2)); // Üst filtre sekmesinde ve kargo kartı rozetinde
-      expect(find.text('28'), findsOneWidget);
-      expect(find.text('Sorunlu'), findsOneWidget);
+      expect(find.text('Teslim Edilen'), findsOneWidget);
+      expect(find.text('206'), findsOneWidget);
+      expect(find.text('Sorunlu Olan'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
+      expect(find.text('Yolda Olan'), findsOneWidget);
+      expect(find.text('28'), findsOneWidget);
       expect(find.text('Taslak'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
 
       // 4. Kargo Kartlari
       expect(find.text('Ayşe Yılmaz'), findsOneWidget);
@@ -1827,18 +1833,24 @@ void main() {
       expect(find.text('Teslim Edildi'), findsOneWidget); // Mehmet Kaya'nın durum rozetinde
 
       // 5. Pill sekmesine tiklama testi
-      await tester.tap(find.text('Yolda').first);
+      await tester.tap(find.text('Teslim Edilen'));
       await tester.pump();
-      expect(container.read(cargoListProvider).selectedStatus, '1');
+      expect(container.read(cargoListProvider).selectedStatus, '2');
 
-      await tester.tap(find.text('Sorunlu'));
+      await tester.tap(find.text('Sorunlu Olan'));
       await tester.pump();
       expect(container.read(cargoListProvider).selectedStatus, '4');
 
+      await tester.tap(find.text('Yolda Olan'));
+      await tester.pump();
+      expect(container.read(cargoListProvider).selectedStatus, '1');
+
+      await tester.ensureVisible(find.text('Taslak'));
       await tester.tap(find.text('Taslak'));
       await tester.pump();
       expect(container.read(cargoListProvider).selectedStatus, '0');
 
+      await tester.ensureVisible(find.text('Tümü'));
       await tester.tap(find.text('Tümü'));
       await tester.pump();
       expect(container.read(cargoListProvider).selectedStatus, isNull);

@@ -76,18 +76,21 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
         return 'Taslak';
       case '1':
       case 'active':
-        return 'Aktif';
+      case 'yolda':
+        return 'Yolda Olan';
       case '2':
       case 'delivered':
       case 'completed':
-        return 'Tamamlandı';
+      case 'teslim':
+        return 'Teslim Edilen';
       case '3':
       case 'cancelled':
         return 'İptal Edildi';
       case '4':
       case 'failed':
       case 'problematic':
-        return 'Başarısız';
+      case 'sorunlu':
+        return 'Sorunlu Olan';
       default:
         return 'Tümü';
     }
@@ -210,59 +213,54 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
       border = Border.all(color: const Color(0xFFE2E8F0), width: 0.8);
     }
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(12),
-            border: border,
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF0E1E38).withValues(alpha: 0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                    color: textColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(12),
+          border: border,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF0E1E38).withValues(alpha: 0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: textColor,
+              ),
+              maxLines: 1,
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: badgeBg,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Text(
+                countStr,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: badgeText,
                 ),
               ),
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: Text(
-                  countStr,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: badgeText,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -428,13 +426,13 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                           onSelected: () => setSheetState(() => tempStatus = '0'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Aktif / Yolda',
+                          label: 'Yolda Olan',
                           isSelected: tempStatus == '1' || tempStatus == 'active' || tempStatus == 'yolda',
                           onSelected: () => setSheetState(() => tempStatus = '1'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Tamamlandı',
-                          isSelected: tempStatus == '2' || tempStatus == 'delivered' || tempStatus == 'completed',
+                          label: 'Teslim Edilen',
+                          isSelected: tempStatus == '2' || tempStatus == 'delivered' || tempStatus == 'completed' || tempStatus == 'teslim',
                           onSelected: () => setSheetState(() => tempStatus = '2'),
                         ),
                         _buildFilterChipItem(
@@ -443,7 +441,7 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                           onSelected: () => setSheetState(() => tempStatus = '3'),
                         ),
                         _buildFilterChipItem(
-                          label: 'Başarısız / Sorunlu',
+                          label: 'Sorunlu Olan',
                           isSelected: tempStatus == '4' || tempStatus == 'failed' || tempStatus == 'problematic' || tempStatus == 'sorunlu',
                           onSelected: () => setSheetState(() => tempStatus = '4'),
                         ),
@@ -528,46 +526,65 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
     final notifier = ref.read(cargoListProvider.notifier);
     final dashStats = ref.watch(dashboardProvider).stats;
 
-    // Sayaç verileri (Dashboard istatistikleri veya meta verisi üzerinden)
-    final allCount = dashStats?.totalCargos ?? (state.meta?.total ?? state.cargos.length);
-    final inTransitCount = dashStats?.activeCargos ??
-        state.cargos.where((c) {
-          final t = c.effectiveTransactionType;
-          if (t != null) return [2, 3, 4, 5, 9].contains(t);
-          return c.status == 1;
-        }).length;
+    // Sayaç verileri (Dashboard istatistikleri veya kategori meta verisi üzerinden kararlı hesaplama)
+    final allCount = dashStats?.totalCargos ??
+        state.allCount ??
+        (state.activeTab == 'all' ? state.meta?.total : null) ??
+        state.cargos.length;
+    final deliveredCount = dashStats?.deliveredToday ??
+        state.deliveredCount ??
+        (state.activeTab == 'delivered' ? state.meta?.total : null) ??
+        0;
     final problematicCount = dashStats?.problematicCargos ??
-        state.cargos.where((c) {
-          final t = c.effectiveTransactionType;
-          if (t != null) return [0, 7, 8, 10, 11, 12, 13].contains(t);
-          return c.status == 4 || c.status == 3;
-        }).length;
+        state.problematicCount ??
+        (state.activeTab == 'sorunlu' ? state.meta?.total : null) ??
+        0;
+    final inTransitCount = dashStats?.activeCargos ??
+        state.inTransitCount ??
+        (state.activeTab == 'yolda' ? state.meta?.total : null) ??
+        0;
+    final draftCount = state.draftCount ??
+        dashStats?.pendingCargos ??
+        (state.activeTab == 'drafts' ? state.meta?.total : null) ??
+        (state.cargos.where((c) => c.status == 0).isNotEmpty
+            ? state.cargos.where((c) => c.status == 0).length
+            : 0);
 
     // Aktif sekme kontrolü
     final isDraftsSelected = state.activeTab == 'drafts' ||
         state.selectedStatus == '0' ||
         state.selectedStatus == 'drafts';
-    final isAllSelected = (state.selectedStatus == null || state.selectedStatus == 'all') &&
-        (state.activeTab == 'all' || !isDraftsSelected);
-    final isInTransitSelected = state.activeTab == 'yolda' ||
-        state.selectedStatus == '1' ||
-        state.selectedStatus == 'active' ||
-        state.selectedStatus == 'yolda';
+    final isDeliveredSelected = state.activeTab == 'delivered' ||
+        state.activeTab == 'teslim' ||
+        state.selectedStatus == '2' ||
+        state.selectedStatus == 'delivered' ||
+        state.selectedStatus == 'teslim' ||
+        state.selectedStatus == 'completed';
     final isProblematicSelected = state.activeTab == 'sorunlu' ||
         state.selectedStatus == '4' ||
         state.selectedStatus == 'failed' ||
         state.selectedStatus == 'problematic' ||
         state.selectedStatus == 'sorunlu';
-
-    final draftCount = isDraftsSelected
-        ? (state.meta?.total ?? state.cargos.length)
-        : (state.draftCount ?? state.cargos.where((c) => c.status == 0).length);
+    final isInTransitSelected = state.activeTab == 'yolda' ||
+        state.selectedStatus == '1' ||
+        state.selectedStatus == 'active' ||
+        state.selectedStatus == 'yolda';
+    final isAllSelected = (state.selectedStatus == null || state.selectedStatus == 'all') &&
+        (state.activeTab == 'all' ||
+            (!isDraftsSelected &&
+                !isDeliveredSelected &&
+                !isProblematicSelected &&
+                !isInTransitSelected));
 
     final isTabStatus = state.selectedStatus == null ||
         state.selectedStatus == 'all' ||
         state.selectedStatus == '1' ||
         state.selectedStatus == 'active' ||
         state.selectedStatus == 'yolda' ||
+        state.selectedStatus == '2' ||
+        state.selectedStatus == 'delivered' ||
+        state.selectedStatus == 'completed' ||
+        state.selectedStatus == 'teslim' ||
         state.selectedStatus == '4' ||
         state.selectedStatus == 'failed' ||
         state.selectedStatus == 'problematic' ||
@@ -715,8 +732,10 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                 ),
               ),
 
-              // 3. Kompakt Filtre Çipleri (Pill Tabs: Tümü, Yolda, Sorunlu, Taslak)
-              Padding(
+              // 3. Kompakt Filtre Çipleri (Pill Tabs: Tümü, Teslim Edilen, Sorunlu Olan, Yolda Olan, Taslak)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
                 child: Row(
                   children: [
@@ -726,22 +745,29 @@ class _CargosScreenState extends ConsumerState<CargosScreen> {
                       isSelected: isAllSelected,
                       onTap: () => notifier.setTab('all'),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     _buildPillTab(
-                      label: 'Yolda',
+                      label: 'Teslim Edilen',
+                      count: deliveredCount,
+                      isSelected: isDeliveredSelected,
+                      onTap: () => notifier.setTab('delivered'),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildPillTab(
+                      label: 'Sorunlu Olan',
+                      count: problematicCount,
+                      isSelected: isProblematicSelected,
+                      isHighlight: problematicCount > 0,
+                      onTap: () => notifier.setTab('sorunlu'),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildPillTab(
+                      label: 'Yolda Olan',
                       count: inTransitCount,
                       isSelected: isInTransitSelected,
                       onTap: () => notifier.setTab('yolda'),
                     ),
-                    const SizedBox(width: 6),
-                    _buildPillTab(
-                      label: 'Sorunlu',
-                      count: problematicCount,
-                      isSelected: isProblematicSelected,
-                      isHighlight: true,
-                      onTap: () => notifier.setTab('sorunlu'),
-                    ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     _buildPillTab(
                       label: 'Taslak',
                       count: draftCount,
